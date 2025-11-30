@@ -1,83 +1,107 @@
-from flask import Flask, render_template, request, redirect, session, url_for
-from werkzeug.security import generate_password_hash, check_password_hash
+from flask import Flask, render_template, url_for, redirect
 from flask_sqlalchemy import SQLAlchemy
+from flask_login import UserMixin, login_user, LoginManager, login_required, logout_user, current_user
+from flask_wtf import FlaskForm
+from wtforms import StringField, PasswordField, SubmitField
+from wtforms.validators import InputRequired, Length, ValidationError
+from flask_bcrypt import Bcrypt
 
 app = Flask(__name__)
-app.secret_key = "your_secret_key"
 
-# Configure SQL Alchemy
-app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///users.db"
-app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///database.db'
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+app.config['SECRET_KEY'] = 'A&WGirlies'
+
 db = SQLAlchemy(app)
+bcrypt = Bcrypt(app)
 
-# Database Model ~ Single Row with our DB
-class User(db.Model):
-    # Class Variables
+login_manager = LoginManager()
+login_manager.init_app(app)
+login_manager.login_view = 'login'
+
+
+class User(db.Model, UserMixin):
     id = db.Column(db.Integer, primary_key=True)
-    username = db.Column(db.String(25), unique=True, nullable=False)
-    password_hash = db.Column(db.String(150), nullable=False)
+    username = db.Column(db.String(20), nullable=False, unique=True)
+    password = db.Column(db.String(80), nullable=False)
 
-    def set_password(self, password):
-        self.password_hash = generate_password_hash(password)
+@login_manager.user_loader
+def load_user(user_id):
+    # Flask-Login uses this to reload the user from the session
+    return User.query.get(int(user_id))
 
-    def check_password(self, password):
-        return check_password_hash(self.password_hash, password)
+
+class RegisterForm(FlaskForm):
+    username = StringField(validators=[InputRequired(), Length(min=4, max=20)], render_kw={"placeholder": "Username"})
+    password = PasswordField(validators=[InputRequired(), Length(min=4, max=20)], render_kw={"placeholder": "Password"})
+    submit = SubmitField("Register")
+
+    def validate_username(self, username):
+        existing_user_username = User.query.filter_by(username=username.data).first()
+        if existing_user_username:
+            raise ValidationError("That username already exists. Please choose a different one.")
 
 
-# Routes
-@app.route("/")
+class LoginForm(FlaskForm):
+    username = StringField(validators=[InputRequired(), Length(min=4, max=20)], render_kw={"placeholder": "Username"})
+    password = PasswordField(validators=[InputRequired(), Length(min=4, max=20)], render_kw={"placeholder": "Password"})
+    submit = SubmitField("Login")
+
+
+@app.route('/')
 def home():
-    if "username" in session:
-        return redirect(url_for('dashboard'))
-    return render_template("index.html")
+    return render_template('home.html')
 
-# Login
-@app.route("/login", methods=["POST"])
+
+@app.route('/login', methods=['GET', 'POST'])
 def login():
-    # Collect info from the form
-    username = request.form['username']
-    password = request.form['password']
-    user = User.query.filter_by(username=username).first()
-    if user and user.check_password(password):
-        session['username'] = username
-        return redirect(url_for('dashboard'))
-    else:
-        return render_template("index.html")
+    form = LoginForm()
+    error_message = None
+
+    if form.validate_on_submit():
+        user = User.query.filter_by(username=form.username.data).first()
+        if user:
+            if bcrypt.check_password_hash(user.password, form.password.data):
+                login_user(user)
+                return redirect(url_for('dashboard'))
+            else:
+                error_message = "Invalid password. Please try again."
+        else:
+            error_message = "Username does not exist. Please try again."
+
+    return render_template('login.html', form=form, error_message=error_message)
 
 
-# Register
-@app.route("/register", methods=["POST"])
+@app.route('/dashboard', methods=['GET', 'POST'])
+@login_required
+def dashboard():
+    return render_template('dashboard.html')
+
+
+@app.route('/logout', methods=['GET', 'POST'])
+@login_required
+def logout():
+    logout_user()
+    return redirect(url_for('login'))
+
+
+@app.route('/register', methods=['GET', 'POST'])
 def register():
-    username = request.form['username']
-    password = request.form['password']
-    user = User.query.filter_by(username=username).first()
-    if user:
-        return render_template("index.html", error="User already here!")
-    else:
-        new_user = User(username=username)
-        new_user.set_password(password)
+    form = RegisterForm()
+
+    if form.validate_on_submit(): 
+        hashed_pw = bcrypt.generate_password_hash(form.password.data).decode('utf-8')
+        new_user = User(username=form.username.data, password=hashed_pw)
+
         db.session.add(new_user)
         db.session.commit()
-        session["username"] = username
-        return redirect(url_for('dashboard'))
+
+        return redirect(url_for('login'))
+
+    return render_template('register.html', form=form)
 
 
-# Dashboard
-@app.route("/dashboard")
-def dashboard():
-    if "username" in session:
-        return render_template("dashboard.html", username=session['username'])
-    return redirect(url_for('home'))
-
-
-# Logout
-@app.route("/logout")
-def logout():
-    session.pop('username',None)
-    return redirect(url_for('home'))
-
-
-if __name__ == "__main__":
+if __name__ == '__main__':
     with app.app_context():
         db.create_all()
     app.run(debug=True)
