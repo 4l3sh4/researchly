@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Login - Researchly</title>
+    <title>Login</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/login.css') }}">
 </head>
 <body>
@@ -18,9 +18,9 @@
             {{ form.hidden_tag() }}
 
             <div class="form-group">
-                {{ form.username.label }}
-                {{ form.username(placeholder="Email") }}
-                {% for err in form.username.errors %}
+                {{ form.email.label }}
+                {{ form.email(placeholder="Email") }}
+                {% for err in form.email.errors %}
                     <span class="error-message">{{ err }}</span>
                 {% endfor %}
             </div>
