@@ -34,8 +34,8 @@ def load_user(user_id):
 
 class RegisterForm(FlaskForm):
     email = StringField(validators=[InputRequired(), Length(min=4, max=255)], render_kw={"placeholder": "Email"})
-    password = PasswordField(validators=[InputRequired(), Length(min=4, max=50)], render_kw={"placeholder": "Password"})
     full_name = StringField(validators=[InputRequired(), Length(min=4, max=80)], render_kw={"placeholder": "Full Name"})
+    password = PasswordField(validators=[InputRequired(), Length(min=4, max=50)], render_kw={"placeholder": "Password"})
     submit = SubmitField("Register")
 
     def validate_email(self, email):
@@ -73,12 +73,15 @@ def login():
 
     return render_template('login.html', form=form, error_message=error_message)
 
+@app.route('/edit_profile', methods=['GET', 'POST'])
+@login_required
+def edit_profile():
+    return render_template('edit_profile.html')
 
 @app.route('/dashboard', methods=['GET', 'POST'])
 @login_required
 def dashboard():
     return render_template('dashboard.html')
-
 
 @app.route('/logout', methods=['GET', 'POST'])
 @login_required
@@ -93,12 +96,13 @@ def register():
 
     if form.validate_on_submit(): 
         hashed_pw = bcrypt.generate_password_hash(form.password.data).decode('utf-8')
-        new_user = User(full_name=form.full_name.data, email=form.email.data, password=hashed_pw)
+        new_user = User(email=form.email.data, full_name=form.full_name.data, password=hashed_pw)
 
         db.session.add(new_user)
         db.session.commit()
 
-        return redirect(url_for('login'))
+        login_user(new_user)
+        return redirect(url_for('edit_profile'))
 
     return render_template('register.html', form=form)
 

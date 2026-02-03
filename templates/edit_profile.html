@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Edit Profile</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/edit_profile.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/colors.css') }}">
+</head>
+<body>
+  <div class="page">
+    <div class="card header-card">
+      <h1>Edit Profile</h1>
+      <p>Please ensure that the information given is correct and accurate.</p>
+    </div>
+
+    <div class="card form-card">
+      <div class="left-panel">
+        <div class="avatar">
+          <div class="avatar-circle">
+            <div class="avatar-head"></div>
+            <div class="avatar-body"></div>
+          </div>
+        </div>
+
+        <label class="field-label">Full Name</label>
+        <input class="input" type="text" placeholder="John Doe" />
+
+        <label class="field-label">Email</label>
+        <input class="input" type="email" placeholder="johndoe@mmu.edu.my" />
+      </div>
+
+      <div class="right-panel">
+        <div class="grid">
+          <div class="col">
+            <label class="field-label">Contact Number</label>
+            <input class="input" type="text" />
+
+            <label class="field-label">Address</label>
+            <input class="input" type="text" />
+
+            <label class="field-label">Role</label>
+            <div class="select">
+              <select>
+                <option selected disabled>Choose one...</option>
+                <option>Student</option>
+                <option>Staff</option>
+              </select>
+            </div>
+
+            <label class="field-label">Department</label>
+            <div class="select">
+              <select>
+                <option selected disabled>Choose one...</option>
+                <option>Engineering</option>
+                <option>Business</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="col">
+            <label class="field-label">Emergency Contact Name</label>
+            <input class="input" type="text" />
+
+            <label class="field-label">Emergency Contact Number</label>
+            <input class="input" type="text" />
+
+            <label class="field-label">
+              <span class="help">?</span>
+              Bank Account Number
+            </label>
+            <input class="input" type="text" />
+
+            <label class="field-label">
+              <span class="help">?</span>
+              Bank Name
+            </label>
+            <input class="input" type="text" />
+          </div>
+        </div>
+
+        <button class="btn"><a href="{{ url_for('dashboard') }}">Save Profile</a></button>
+      </div>
+    </div>
+  </div>
+</body>
+</html>
