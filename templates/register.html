@@ -3,18 +3,52 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Register</title>
+    <title>Register - Researchly</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/register.css') }}">
 </head>
 <body>
-    <h1>Register Page</h1>
+    <div class="register-container">
+        <div class="logo">
+            <h1>Researchly™</h1>
+            <p>Create an Account!</p>
+        </div>
+        <p class="subtitle">Join us today.</p>
 
-    <form method="POST" action="">
-        {{ form.hidden_tag() }}
-        {{ form.username }}
-        {{ form.password }}
-        {{ form.submit }}
-    </form>
+        <form method="POST" action="">
+            {{ form.hidden_tag() }}
+            
+            <div class="form-group">
+                {{ form.email.label }}
+                {{ form.email(placeholder="Email", class="form-control") }}
+                {% if form.email.errors %}
+                    <span class="error-message">{{ form.email.errors[0] }}</span>
+                {% endif %}
+            </div>
 
-    <a href="{{url_for('login')}}">Already have an account? Log In</a><br>
+            <div class="form-group">
+                {{ form.full_name.label }}
+                {{ form.full_name(placeholder="Full Name", class="form-control") }}
+                {% if form.full_name.errors %}
+                    <span class="error-message">{{ form.full_name.errors[0] }}</span>
+                {% endif %}
+            </div>
+
+            <div class="form-group">
+                {{ form.password.label }}
+                {{ form.password(placeholder="Password", class="form-control") }}
+                {% if form.password.errors %}
+                    <span class="error-message">{{ form.password.errors[0] }}</span>
+                {% endif %}
+            </div>
+
+            <div class="form-group">
+                {{ form.submit(class="btn btn-primary") }}
+            </div>
+        </form>
+
+        <div class="login-link">
+            Already have an account? <a href="{{url_for('login')}}">Log in.</a>
+        </div>
+    </div>
 </body>
 </html>

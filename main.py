@@ -22,8 +22,9 @@ login_manager.login_view = 'login'
 
 class User(db.Model, UserMixin):
     id = db.Column(db.Integer, primary_key=True)
-    username = db.Column(db.String(20), nullable=False, unique=True)
-    password = db.Column(db.String(80), nullable=False)
+    full_name = db.Column(db.String(80), nullable=False)
+    email = db.Column(db.String(255), nullable=False, unique=True)
+    password = db.Column(db.String(50), nullable=False)
 
 @login_manager.user_loader
 def load_user(user_id):
@@ -32,19 +33,20 @@ def load_user(user_id):
 
 
 class RegisterForm(FlaskForm):
-    username = StringField(validators=[InputRequired(), Length(min=4, max=20)], render_kw={"placeholder": "Username"})
-    password = PasswordField(validators=[InputRequired(), Length(min=4, max=20)], render_kw={"placeholder": "Password"})
+    email = StringField(validators=[InputRequired(), Length(min=4, max=255)], render_kw={"placeholder": "Email"})
+    password = PasswordField(validators=[InputRequired(), Length(min=4, max=50)], render_kw={"placeholder": "Password"})
+    full_name = StringField(validators=[InputRequired(), Length(min=4, max=80)], render_kw={"placeholder": "Full Name"})
     submit = SubmitField("Register")
 
-    def validate_username(self, username):
-        existing_user_username = User.query.filter_by(username=username.data).first()
-        if existing_user_username:
-            raise ValidationError("That username already exists. Please choose a different one.")
+    def validate_email(self, email):
+        existing_user_email = User.query.filter_by(email=email.data).first()
+        if existing_user_email:
+            raise ValidationError("This email is already in use. Please type in the correct one or retry your password.")
 
 
 class LoginForm(FlaskForm):
-    username = StringField(validators=[InputRequired(), Length(min=4, max=20)], render_kw={"placeholder": "Username"})
-    password = PasswordField(validators=[InputRequired(), Length(min=4, max=20)], render_kw={"placeholder": "Password"})
+    email = StringField(validators=[InputRequired(), Length(min=4, max=255)], render_kw={"placeholder": "Email"})
+    password = PasswordField(validators=[InputRequired(), Length(min=4, max=50)], render_kw={"placeholder": "Password"})
     submit = SubmitField("Login")
 
 
@@ -59,7 +61,7 @@ def login():
     error_message = None
 
     if form.validate_on_submit():
-        user = User.query.filter_by(username=form.username.data).first()
+        user = User.query.filter_by(email=form.email.data).first()
         if user:
             if bcrypt.check_password_hash(user.password, form.password.data):
                 login_user(user)
@@ -67,7 +69,7 @@ def login():
             else:
                 error_message = "Invalid password. Please try again."
         else:
-            error_message = "Username does not exist. Please try again."
+            error_message = "This email has not registered. Please try again."
 
     return render_template('login.html', form=form, error_message=error_message)
 
@@ -91,7 +93,7 @@ def register():
 
     if form.validate_on_submit(): 
         hashed_pw = bcrypt.generate_password_hash(form.password.data).decode('utf-8')
-        new_user = User(username=form.username.data, password=hashed_pw)
+        new_user = User(full_name=form.full_name.data, email=form.email.data, password=hashed_pw)
 
         db.session.add(new_user)
         db.session.commit()
