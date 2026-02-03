@@ -5,6 +5,7 @@ from flask_wtf import FlaskForm
 from wtforms import StringField, PasswordField, SubmitField
 from wtforms.validators import InputRequired, Length, ValidationError
 from flask_bcrypt import Bcrypt
+from datetime import datetime
 
 app = Flask(__name__)
 
@@ -25,6 +26,21 @@ class User(db.Model, UserMixin):
     full_name = db.Column(db.String(80), nullable=False)
     email = db.Column(db.String(255), nullable=False, unique=True)
     password = db.Column(db.String(50), nullable=False)
+
+class UserProfile(db.Model):
+    user_id = db.Column(
+        db.Integer,
+        db.ForeignKey('user.id'),
+        primary_key=True
+    )
+
+    contact_number = db.Column(db.String(15), nullable=False)
+    role = db.Column(db.String(10), nullable=False)
+    address = db.Column(db.String(100), nullable=False)
+    emergency_contact_name = db.Column(db.String(80), nullable=False)
+    emergency_contact_number = db.Column(db.String(15), nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    account_status = db.Column(db.String(15), nullable=False)
 
 @login_manager.user_loader
 def load_user(user_id):
@@ -52,7 +68,7 @@ class LoginForm(FlaskForm):
 
 @app.route('/')
 def home():
-    return render_template('home.html')
+    return render_template('login.html')
 
 
 @app.route('/login', methods=['GET', 'POST'])
