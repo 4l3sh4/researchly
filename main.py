@@ -5,6 +5,7 @@ from flask_wtf import FlaskForm
 from wtforms import StringField, PasswordField, SubmitField
 from wtforms.validators import InputRequired, Length, ValidationError
 from flask_bcrypt import Bcrypt
+from datetime import datetime
 
 app = Flask(__name__)
 
@@ -26,6 +27,21 @@ class User(db.Model, UserMixin):
     email = db.Column(db.String(255), nullable=False, unique=True)
     password = db.Column(db.String(50), nullable=False)
 
+class UserProfile(db.Model):
+    user_id = db.Column(
+        db.Integer,
+        db.ForeignKey('user.id'),
+        primary_key=True
+    )
+
+    contact_number = db.Column(db.String(15), nullable=False)
+    role = db.Column(db.String(10), nullable=False)
+    address = db.Column(db.String(100), nullable=False)
+    emergency_contact_name = db.Column(db.String(80), nullable=False)
+    emergency_contact_number = db.Column(db.String(15), nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    account_status = db.Column(db.String(15), nullable=False)
+
 @login_manager.user_loader
 def load_user(user_id):
     # Flask-Login uses this to reload the user from the session
@@ -34,8 +50,8 @@ def load_user(user_id):
 
 class RegisterForm(FlaskForm):
     email = StringField(validators=[InputRequired(), Length(min=4, max=255)], render_kw={"placeholder": "Email"})
-    password = PasswordField(validators=[InputRequired(), Length(min=4, max=50)], render_kw={"placeholder": "Password"})
     full_name = StringField(validators=[InputRequired(), Length(min=4, max=80)], render_kw={"placeholder": "Full Name"})
+    password = PasswordField(validators=[InputRequired(), Length(min=4, max=50)], render_kw={"placeholder": "Password"})
     submit = SubmitField("Register")
 
     def validate_email(self, email):
@@ -52,7 +68,7 @@ class LoginForm(FlaskForm):
 
 @app.route('/')
 def home():
-    return render_template('home.html')
+    return render_template('login.html')
 
 
 @app.route('/login', methods=['GET', 'POST'])
@@ -73,12 +89,15 @@ def login():
 
     return render_template('login.html', form=form, error_message=error_message)
 
+@app.route('/edit_profile', methods=['GET', 'POST'])
+@login_required
+def edit_profile():
+    return render_template('edit_profile.html')
 
 @app.route('/dashboard', methods=['GET', 'POST'])
 @login_required
 def dashboard():
     return render_template('dashboard.html')
-
 
 @app.route('/logout', methods=['GET', 'POST'])
 @login_required
@@ -93,12 +112,13 @@ def register():
 
     if form.validate_on_submit(): 
         hashed_pw = bcrypt.generate_password_hash(form.password.data).decode('utf-8')
-        new_user = User(full_name=form.full_name.data, email=form.email.data, password=hashed_pw)
+        new_user = User(email=form.email.data, full_name=form.full_name.data, password=hashed_pw)
 
         db.session.add(new_user)
         db.session.commit()
 
-        return redirect(url_for('login'))
+        login_user(new_user)
+        return redirect(url_for('edit_profile'))
 
     return render_template('register.html', form=form)
 

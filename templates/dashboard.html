@@ -3,10 +3,24 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dashboard</title>
+    <title>Dashboard - Researchly</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/colors.css') }}">
 </head>
 <body>
-    <h1>Hello you are logged in</h1>
-    <a href="{{url_for('logout')}}">Press here to logout</a>
+    <header class="topbar">
+        <div class="logo">Researchly™</div>
+        <div class="icons">
+            <span class="icon bell"></span>
+            <span class="icon user"></span>
+        </div>
+    </header>
+
+    <main class="page">
+        <section class="card">
+            <h2>Your account is pending.</h2>
+            <p>You’ll be notified when your account is activated!</p>
+        </section>
+    </main>
 </body>
 </html>
