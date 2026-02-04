@@ -496,6 +496,51 @@ def admin_remove_user(user_id):
     db.session.commit()
     return redirect(url_for("admin_users", status="DEACTIVATED"))
 
+@app.route("/admin/users/create", methods=["POST"])
+@login_required
+@admin_required
+def admin_create_user():
+    full_name = (request.form.get("full_name") or "").strip()
+    email = (request.form.get("email") or "").strip().lower()
+    role = (request.form.get("role") or "UNASSIGNED").strip().upper()
+    temp_password = (request.form.get("temp_password") or "").strip()
+
+    # basic validation
+    if not full_name or not email or not temp_password:
+        flash("Full name, email and temporary password are required.", "error")
+        return redirect(url_for("admin_users", status="ACTIVE"))
+
+    # prevent duplicates
+    if User.query.filter_by(email=email).first():
+        flash("Email already exists. Please use another email.", "error")
+        return redirect(url_for("admin_users", status="ACTIVE"))
+
+    # hash password
+    hashed_pw = bcrypt.generate_password_hash(temp_password).decode("utf-8")
+
+    # create user
+    new_user = User(email=email, full_name=full_name, password=hashed_pw)
+    db.session.add(new_user)
+    db.session.commit()
+
+    # create profile as ACTIVE (since admin is creating manually)
+    prof = UserProfile(user_id=new_user.id, role=role, account_status="ACTIVE")
+    db.session.add(prof)
+
+    # keep role tables consistent (same idea as admin_approve_user) :contentReference[oaicite:2]{index=2}
+    if role == "ADMIN" and not Admin.query.filter_by(user_id=new_user.id).first():
+        db.session.add(Admin(user_id=new_user.id))
+    if role == "HOD" and not HOD.query.filter_by(user_id=new_user.id).first():
+        db.session.add(HOD(user_id=new_user.id))
+    if role == "REVIEWER" and not Reviewer.query.filter_by(user_id=new_user.id).first():
+        db.session.add(Reviewer(user_id=new_user.id))
+    if role == "RESEARCHER" and not Researcher.query.filter_by(user_id=new_user.id).first():
+        db.session.add(Researcher(user_id=new_user.id))
+
+    db.session.commit()
+
+    flash(f"User created successfully. Temporary password: {temp_password}", "success")
+    return redirect(url_for("admin_users", status="ACTIVE"))
 
 if __name__ == '__main__':
     with app.app_context():

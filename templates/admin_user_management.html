@@ -53,7 +53,7 @@
         </div>
 
         <div class="toolbar-right">
-          <button class="btn new-user" type="button" disabled title="Optional: add later">
+          <button class="btn new-user" type="button" onclick="openNewUserModal()">
             + New User
           </button>
 
@@ -165,6 +165,46 @@
         </form>
       </dialog>
 
+      <dialog id="newUserModal" class="modal">
+         <form method="POST" action="{{ url_for('admin_create_user') }}">
+            <h2 class="modal-title">Add New User</h2>
+
+            <div class="modal-col">
+              <label>Full Name</label>
+              <input name="full_name" type="text" placeholder="Full name" required>
+            </div>
+
+            <div class="modal-col">
+              <label>Email</label>
+              <input name="email" type="email" placeholder="Email" required>
+            </div>
+
+            <div class="modal-row">
+              <label for="newRole">Role</label>
+              <select id="newRole" name="role">
+                 <option value="RESEARCHER">Researcher</option>
+                 <option value="REVIEWER">Reviewer</option>
+                 <option value="HOD">Head of Department</option>
+                 <option value="ADMIN">Admin</option>
+              </select>
+            </div>
+
+            <div class="modal-col">
+              <label>Temporary Password</label>
+              <div class="pw-row">
+                 <input id="tempPassword" name="temp_password" type="text" placeholder="Temp password" required>
+                 <button class="btn ghost" type="button" onclick="generateTempPassword()">Generate</button>
+              </div>
+              <small class="hint">Give this password to the user. They can change it later.</small>
+            </div>
+
+            <div class="modal-actions">
+               <button type="button" class="btn ghost" onclick="closeNewUserModal()">Cancel</button>
+               <button type="submit" class="btn primary">Add User</button>
+           </div>
+         </form>
+      </dialog>
+
     </section>
   </main>
 
@@ -191,5 +231,21 @@
       document.getElementById('roleModal').close();
     }
   </script>
+
+  <script>
+     function openNewUserModal() {
+        document.getElementById("newUserModal").showModal();
+     }
+     function closeNewUserModal() {
+        document.getElementById("newUserModal").close();
+     }
+     function generateTempPassword() {
+       const chars = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789@#$!";
+       let out = "";
+       for (let i = 0; i < 10; i++) out += chars[Math.floor(Math.random() * chars.length)];
+       document.getElementById("tempPassword").value = out;
+     }
+  </script>
+
 </body>
 </html>

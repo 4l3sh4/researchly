@@ -259,9 +259,12 @@ tbody td {
 }
 
 /* Pills */
-.pill {
-  display: inline-block;
-  padding: 6px 10px;
+.pill{
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  white-space: nowrap;     
+  padding: 6px 14px;        
   border-radius: 999px;
   font-weight: 800;
   font-size: 13px;
@@ -350,4 +353,34 @@ tbody td {
 .btn.primary {
   background: #0fa7a1;
   color: #fff;
+}
+
+.modal-col {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 10px 0 14px;
+}
+
+.modal-col input {
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 2px solid rgba(0,0,0,0.18);
+  font-size: 14px;
+}
+
+.pw-row {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.pw-row input {
+  flex: 1;
+}
+
+.hint {
+  display: block;
+  color: #7b7b7b;
+  margin-top: 6px;
 }
