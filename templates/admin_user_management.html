@@ -19,7 +19,15 @@
 
     <div class="icons">
       <span class="icon bell" title="Notifications"></span>
-      <span class="icon user" title="Profile"></span>
+      <a href="{{ url_for('view_profile') }}" class="icon user" title="Profile">
+        {% if prof.profile_picture %}
+          <img class="top-avatar"
+            src="{{ url_for('static', filename='uploads/' ~ prof.profile_picture) }}"
+            alt="Profile">
+        {% else %}
+          <span class="fallback-user">👤</span>
+        {% endif %}
+      </a>
     </div>
   </header>
 

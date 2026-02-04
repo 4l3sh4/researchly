@@ -1,2 +1,113 @@
 <!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>View Profile</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/view_profile.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/colors.css') }}">
+</head>
+
+<body>
+  <header class="topbar">
+    <div class="left">
+      <button class="hamburger" type="button" aria-label="Menu">&#9776;</button>
+      <div class="brand">Researchly™</div>
+    </div>
+    <div class="icons">
+      <span class="icon bell" title="Notifications"></span>
+      <a href="{{ url_for('view_profile') }}" class="icon user" title="Profile">
+        {% if prof.profile_picture %}
+          <img class="top-avatar"
+            src="{{ url_for('static', filename='uploads/' ~ prof.profile_picture) }}"
+            alt="Profile">
+        {% else %}
+          <span class="fallback-user">👤</span>
+        {% endif %}
+      </a>
+    </div>
+  </header>
+
+  <main class="page">
+    <h2 class="title">View Profile</h2>
+
+    <div class="layout">
+      <section class="profile-card">
+        <div class="profile-top">
+          <div class="avatar">
+            <div class="avatar-circle">
+              {% if prof.profile_picture %}
+                <img class="avatar-img"
+                  src="{{ url_for('static', filename='uploads/' ~ prof.profile_picture) }}"
+                  alt="Profile picture">
+              {% else %}
+                <div class="avatar-head"></div>
+                <div class="avatar-body"></div>
+              {% endif %}
+            </div>
+          </div>
+
+          <div class="top-info">
+            <div class="name">{{ user.full_name }}</div>
+
+            <div class="badges">
+              <span class="pill teal">
+                {{ "Head of Department" if prof.role == "HOD" else prof.role|capitalize }}
+              </span>
+
+              {% if prof.role != "ADMIN" and prof.department_name %}
+                <span class="pill pill-dept">{{ prof.department_name }}</span>
+              {% endif %}
+            </div>
+          </div>
+
+          <div class="address-block">
+            <div class="label">Address</div>
+            <div class="value">{{ prof.address or "-" }}</div>
+          </div>
+        </div>
+
+        <div class="grid">
+          <div class="col">
+            <div class="label">Contact Number</div>
+            <div class="value">{{ prof.contact_number or "-" }}</div>
+
+            <div class="label" style="margin-top:18px;">Email</div>
+            <div class="value">{{ user.email }}</div>
+
+            {% if prof.role == 'RESEARCHER' %}
+              <div class="bank-title">
+                <span class="bank-icon">Ⓢ</span> Bank Account Details
+              </div>
+
+              <div class="bank-grid">
+                <div>
+                  <div class="label">Account Number</div>
+                  <div class="value">{{ bank.bank_account_number if bank else '-' }}</div>
+                </div>
+                <div>
+                  <div class="label">Bank Name</div>
+                  <div class="value">{{ bank.bank_name if bank else '-' }}</div>
+                </div>
+              </div>
+            {% endif %}
+          </div>
+
+          <div class="col">
+            <div class="label">Emergency Contact Name</div>
+            <div class="value">{{ prof.emergency_contact_name or "-" }}</div>
+
+            <div class="label" style="margin-top:18px;">Emergency Contact Number</div>
+            <div class="value">{{ prof.emergency_contact_number or "-" }}</div>
+          </div>
+        </div>
+      </section>
+
+      <aside class="actions">
+        <a class="btn primary" href="{{ url_for('edit_profile') }}">Edit Profile</a>
+        <a class="btn ghost" href="{{ url_for('dashboard') }}">Back to Dashboard</a>
+      </aside>
+    </div>
+  </main>
+</body>
 </html>

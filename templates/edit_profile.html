@@ -4,84 +4,127 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Edit Profile</title>
+
   <link rel="stylesheet" href="{{ url_for('static', filename='css/edit_profile.css') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/colors.css') }}">
 </head>
 <body>
-  <div class="page">
-    <div class="card header-card">
-      <h1>Edit Profile</h1>
-      <p>Please ensure that the information given is correct and accurate.</p>
-    </div>
 
-    <div class="card form-card">
-      <div class="left-panel">
-        <div class="avatar">
-          <div class="avatar-circle">
-            <div class="avatar-head"></div>
-            <div class="avatar-body"></div>
-          </div>
-        </div>
+  <form method="POST" action="{{ url_for('edit_profile') }}" enctype="multipart/form-data">
+    <div class="page">
 
-        <label class="field-label">Full Name</label>
-        <input class="input" type="text" placeholder="John Doe" />
-
-        <label class="field-label">Email</label>
-        <input class="input" type="email" placeholder="johndoe@mmu.edu.my" />
+      <div class="card header-card">
+        <h1>Edit Profile</h1>
+        <p>Please ensure that the information given is correct and accurate.</p>
       </div>
 
-      <div class="right-panel">
-        <div class="grid">
-          <div class="col">
-            <label class="field-label">Contact Number</label>
-            <input class="input" type="text" />
+      <div class="card form-card">
+        <div class="layout">
 
-            <label class="field-label">Address</label>
-            <input class="input" type="text" />
-
-            <label class="field-label">Role</label>
-            <div class="select">
-              <select>
-                <option selected disabled>Choose one...</option>
-                <option>Student</option>
-                <option>Staff</option>
-              </select>
+          <!-- ================= LEFT PANEL ================= -->
+          <div class="left-panel">
+            <div class="avatar">
+              <div class="avatar-circle">
+                {% if prof.profile_picture %}
+                  <img class="avatar-img"
+                       src="{{ url_for('static', filename='uploads/' ~ prof.profile_picture) }}"
+                       alt="Profile picture">
+                {% else %}
+                  <div class="avatar-head"></div>
+                  <div class="avatar-body"></div>
+                {% endif %}
+              </div>
             </div>
 
-            <label class="field-label">Department</label>
-            <div class="select">
-              <select>
-                <option selected disabled>Choose one...</option>
-                <option>Engineering</option>
-                <option>Business</option>
-              </select>
+            <label class="field-label">Profile Picture</label>
+            <input class="input file-input" type="file" name="profile_picture" accept="image/*" />
+
+            <label class="field-label">Full Name</label>
+            <input class="input" type="text" name="full_name" value="{{ user.full_name }}" />
+
+            <label class="field-label">Email</label>
+            <input class="input input-disabled" type="email" value="{{ user.email }}" disabled />
+          </div>
+
+          <!-- ================= RIGHT PANEL ================= -->
+          <div class="right-panel">
+
+            <!-- row 1 -->
+            <div class="two-col">
+              <div>
+                <label class="field-label">Contact Number</label>
+                <input class="input" type="text" name="contact_number" value="{{ prof.contact_number or '' }}" />
+              </div>
+
+              <div>
+                <label class="field-label">Emergency Contact Name</label>
+                <input class="input" type="text" name="emergency_contact_name" value="{{ prof.emergency_contact_name or '' }}" />
+              </div>
             </div>
+
+            <!-- row 2 -->
+            <div class="two-col">
+              <div>
+                <label class="field-label">Address</label>
+                <input class="input" type="text" name="address" value="{{ prof.address or '' }}" />
+              </div>
+
+              <div>
+                <label class="field-label">Emergency Contact Number</label>
+                <input class="input" type="text" name="emergency_contact_number" value="{{ prof.emergency_contact_number or '' }}" />
+              </div>
+            </div>
+
+            <!-- row 3 -->
+            <div class="two-col">
+              <div>
+                <label class="field-label">Role</label>
+                <input class="input input-disabled" type="text" value="{{ prof.role }}" disabled />
+              </div>
+
+              <div>
+                {% if prof.role != "ADMIN" %}
+                  <label class="field-label">Department</label>
+                  <input class="input" type="text" name="department_name" value="{{ prof.department_name or '' }}" />
+                {% endif %}
+              </div>
+            </div>
+
+            <!-- Bank section (Researcher only) -->
+            {% if prof.role == "RESEARCHER" %}
+              <div class="section">
+                <h3 class="section-title">Bank Account Details</h3>
+
+                <div class="two-col">
+                  <div>
+                    <label class="field-label">
+                      Bank Account Number
+                    </label>
+                    <input class="input" type="text" name="bank_account_number"
+                           value="{{ bank.bank_account_number if bank else '' }}"
+                           placeholder="e.g., 9999 9999 9999" />
+                  </div>
+
+                  <div>
+                    <label class="field-label">
+                      Bank Name
+                    </label>
+                    <input class="input" type="text" name="bank_name"
+                           value="{{ bank.bank_name if bank else '' }}"
+                           placeholder="e.g., Public Bank" />
+                  </div>
+                </div>
+              </div>
+            {% endif %}
+
+            <button class="btn" type="submit">Save Profile</button>
           </div>
 
-          <div class="col">
-            <label class="field-label">Emergency Contact Name</label>
-            <input class="input" type="text" />
-
-            <label class="field-label">Emergency Contact Number</label>
-            <input class="input" type="text" />
-
-            <label class="field-label">
-              <span class="help">?</span>
-              Bank Account Number
-            </label>
-            <input class="input" type="text" />
-
-            <label class="field-label">
-              <span class="help">?</span>
-              Bank Name
-            </label>
-            <input class="input" type="text" />
-          </div>
         </div>
-
-        <button class="btn"><a href="{{ url_for('dashboard') }}">Save Profile</a></button>
       </div>
+
     </div>
-  </div>
+  </form>
+
 </body>
 </html>

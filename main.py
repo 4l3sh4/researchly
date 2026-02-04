@@ -8,13 +8,21 @@ from flask_bcrypt import Bcrypt
 from datetime import datetime, timezone
 from flask import request, abort, flash
 from functools import wraps
+from werkzeug.utils import secure_filename
 import uuid
+import os
 
 app = Flask(__name__)
 
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///database.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['SECRET_KEY'] = 'A&WGirlies'
+
+app.config["UPLOAD_FOLDER"] = os.path.join(app.root_path, "static", "uploads")
+app.config["MAX_CONTENT_LENGTH"] = 2 * 1024 * 1024  # 2MB limit
+ALLOWED_EXTENSIONS = {"png", "jpg", "jpeg", "gif"}
+
+os.makedirs(app.config["UPLOAD_FOLDER"], exist_ok=True)
 
 db = SQLAlchemy(app)
 bcrypt = Bcrypt(app)
@@ -37,6 +45,8 @@ class UserProfile(db.Model):
     address = db.Column(db.String(100), nullable=True)                
     emergency_contact_name = db.Column(db.String(80), nullable=True)  
     emergency_contact_number = db.Column(db.String(15), nullable=True)
+    profile_picture = db.Column(db.String(255), nullable=True)
+    department_name = db.Column(db.String(80), nullable=True)
 
     role = db.Column(db.String(20), nullable=False, default="UNASSIGNED")
     created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc), nullable=False)
@@ -277,6 +287,17 @@ class LoginForm(FlaskForm):
 def get_profile(user_id: str):
     return UserProfile.query.filter_by(user_id=user_id).first()
 
+def get_researcher(user_id: str):
+    return Researcher.query.filter_by(user_id=user_id).first()
+
+def get_bank_account(bank_account_number: str):
+    if not bank_account_number:
+        return None
+    return BankAccount.query.filter_by(bank_account_number=bank_account_number).first()
+
+def allowed_file(filename: str) -> bool:
+    return "." in filename and filename.rsplit(".", 1)[1].lower() in ALLOWED_EXTENSIONS
+
 def is_admin_user(user: User) -> bool:
     prof = get_profile(user.id)
     return bool(prof and prof.account_status == "ACTIVE" and prof.role == "ADMIN")
@@ -290,6 +311,12 @@ def admin_required(fn):
             abort(403)
         return fn(*args, **kwargs)
     return wrapper
+
+@app.context_processor
+def inject_profile():
+    if current_user.is_authenticated:
+        return {"prof": get_profile(current_user.id)}
+    return {"prof": None}
 
 @app.route("/")
 def home():
@@ -321,11 +348,6 @@ def login():
 
     return render_template('login.html', form=form, error_message=error_message)
 
-@app.route('/edit_profile', methods=['GET', 'POST'])
-@login_required
-def edit_profile():
-    return render_template('edit_profile.html')
-
 @app.route("/dashboard")
 @login_required
 def dashboard():
@@ -345,6 +367,96 @@ def dashboard():
 
     # Others -> normal dashboard (for now reuse the same template or create user_dashboard.html later)
     return render_template("dashboard.html")
+
+@app.route("/profile")
+@login_required
+def view_profile():
+    prof = get_profile(current_user.id)
+    if not prof:
+        flash("Profile not found. Please contact admin.", "error")
+        return redirect(url_for("dashboard"))
+
+    researcher = get_researcher(current_user.id)
+    bank = get_bank_account(researcher.bank_account_number) if researcher else None
+
+    return render_template(
+        "view_profile.html",
+        user=current_user,
+        prof=prof,
+        researcher=researcher,
+        bank=bank
+    )
+
+@app.route("/edit_profile", methods=["GET", "POST"])
+@login_required
+def edit_profile():
+    prof = get_profile(current_user.id)
+    if not prof:
+        abort(404)
+
+    if request.method == "POST":
+        # basic fields (shared for all roles)
+        current_user.full_name = (request.form.get("full_name") or "").strip()
+
+        prof.contact_number = (request.form.get("contact_number") or "").strip()
+        prof.address = (request.form.get("address") or "").strip()
+        prof.emergency_contact_name = (request.form.get("emergency_contact_name") or "").strip()
+        prof.emergency_contact_number = (request.form.get("emergency_contact_number") or "").strip()
+
+        # department: only for non-admin
+        if prof.role != "ADMIN":
+            prof.department_name = (request.form.get("department_name") or "").strip()
+        else:
+            prof.department_name = None
+
+        # profile picture upload
+        file = request.files.get("profile_picture")
+        if file and file.filename:
+            if not allowed_file(file.filename):
+                flash("Invalid file type. Please upload PNG/JPG/JPEG/GIF only.", "error")
+                return redirect(url_for("edit_profile"))
+
+            ext = file.filename.rsplit(".", 1)[1].lower()
+            filename = secure_filename(f"{current_user.id}.{ext}")  # stable name per user
+            save_path = os.path.join(app.config["UPLOAD_FOLDER"], filename)
+            file.save(save_path)
+            prof.profile_picture = filename
+
+        # bank details: only for researchers
+        if prof.role == "RESEARCHER":
+            researcher = get_researcher(current_user.id)
+            if not researcher:
+                researcher = Researcher(user_id=current_user.id)
+                db.session.add(researcher)
+
+            bank_acc = (request.form.get("bank_account_number") or "").strip()
+            bank_name = (request.form.get("bank_name") or "").strip()
+
+            # If both empty -> remove link (optional behavior)
+            if not bank_acc and not bank_name:
+                researcher.bank_account_number = None
+
+            # If one filled but not the other -> error
+            elif not bank_acc or not bank_name:
+                flash("Please fill in BOTH Bank Account Number and Bank Name.", "error")
+                return redirect(url_for("edit_profile"))
+
+            else:
+                # upsert BankAccount
+                bank = BankAccount.query.filter_by(bank_account_number=bank_acc).first()
+                if not bank:
+                    bank = BankAccount(bank_account_number=bank_acc, bank_name=bank_name)
+                    db.session.add(bank)
+                else:
+                    bank.bank_name = bank_name  # update name if changed
+
+                researcher.bank_account_number = bank_acc
+
+        db.session.commit()
+        flash("Profile updated successfully!", "success")
+        return redirect(url_for("view_profile"))
+
+    return render_template("edit_profile.html", user=current_user, prof=prof)
 
 @app.route('/logout', methods=['GET', 'POST'])
 @login_required

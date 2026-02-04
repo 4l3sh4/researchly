@@ -70,12 +70,39 @@ body {
   background-position: center;
 }
 
-.icon.user::before {
-  content: "👤";
-  font-size: 22px;
-  background: #fff;
+/* Make the profile icon a fixed circle and CLIP what's inside */
+.icon.user{
+  width: 40px;
+  height: 40px;
   border-radius: 50%;
-  padding: 2px;
+  overflow: hidden;
+
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  background: #fff;
+  text-decoration: none;
+  flex: 0 0 40px; /* prevents flex stretching */
+}
+
+/* Force the image to stay inside the circle */
+.icon.user .top-avatar{
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+/* fallback icon centered */
+.icon.user .fallback-user{
+  font-size: 22px;
+  line-height: 1;
+}
+
+a.icon {
+  text-decoration: none;
+  color: inherit;
 }
 
 /* Layout */
