@@ -75,7 +75,7 @@ class Researcher(db.Model):
     )
     bank_account_number = db.Column(
         db.String(34),
-        db.ForeignKey('bankaccount.bank_account_number')
+        db.ForeignKey('bank_account.bank_account_number')
     )
 
 class Department(db.Model):
@@ -113,7 +113,7 @@ class Proposal(db.Model):
     proposal_id = db.Column(db.String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
     scheme_id = db.Column(
         db.String(36),
-        db.ForeignKey('grantscheme.scheme_id'),
+        db.ForeignKey('grant_scheme.scheme_id'),
     )
     researcher_id = db.Column(
         db.String(36),
@@ -192,7 +192,7 @@ class Project(db.Model):
     )
     scheme_id = db.Column(
         db.String(36),
-        db.ForeignKey('grantscheme.scheme_id'),
+        db.ForeignKey('grant_scheme.scheme_id'),
     )
     start_date = db.Column(db.Date, nullable=False)
     end_date = db.Column(db.Date, nullable=False)
@@ -254,7 +254,7 @@ class Notification(db.Model):
 @login_manager.user_loader
 def load_user(user_id):
     # Flask-Login uses this to reload the user from the session
-    return User.query.get(int(user_id))
+    return User.query.get(user_id)
 
 
 class RegisterForm(FlaskForm):
@@ -277,7 +277,8 @@ class LoginForm(FlaskForm):
 
 @app.route('/')
 def home():
-    return render_template('login.html')
+    form = RegisterForm()
+    return render_template('register.html', form=form)
 
 
 @app.route('/login', methods=['GET', 'POST'])
