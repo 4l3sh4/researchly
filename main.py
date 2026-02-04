@@ -73,6 +73,10 @@ class Researcher(db.Model):
         db.String(36),
         db.ForeignKey('user.id')
     )
+    bank_account_number = db.Column(
+        db.String(34),
+        db.ForeignKey('bankaccount.bank_account_number')
+    )
 
 class Department(db.Model):
     department_id = db.Column(db.String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
