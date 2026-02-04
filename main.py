@@ -6,6 +6,8 @@ from wtforms import StringField, PasswordField, SubmitField
 from wtforms.validators import InputRequired, Length, ValidationError
 from flask_bcrypt import Bcrypt
 from datetime import datetime, timezone
+from flask import request, abort, flash
+from functools import wraps
 import uuid
 
 app = Flask(__name__)
@@ -29,17 +31,15 @@ class User(db.Model, UserMixin):
     password = db.Column(db.String(50), nullable=False)
 
 class UserProfile(db.Model):
-    user_id = db.Column(
-        db.String(36),
-        db.ForeignKey('user.id'),
-        primary_key=True
-    )
-    contact_number = db.Column(db.String(15), nullable=False)
-    role = db.Column(db.String(10), nullable=False)
-    address = db.Column(db.String(100), nullable=False)
-    emergency_contact_name = db.Column(db.String(80), nullable=False)
-    emergency_contact_number = db.Column(db.String(15), nullable=False)
-    created_at = db.Column(db.DateTime, default=lambda:datetime.now(timezone.utc), nullable=False)
+    user_id = db.Column(db.String(36), db.ForeignKey('user.id'), primary_key=True)
+
+    contact_number = db.Column(db.String(15), nullable=True)         
+    address = db.Column(db.String(100), nullable=True)                
+    emergency_contact_name = db.Column(db.String(80), nullable=True)  
+    emergency_contact_number = db.Column(db.String(15), nullable=True)
+
+    role = db.Column(db.String(20), nullable=False, default="UNASSIGNED")
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc), nullable=False)
     account_status = db.Column(db.String(15), nullable=False)
 
 class BankAccount(db.Model):
@@ -274,12 +274,26 @@ class LoginForm(FlaskForm):
     password = PasswordField(validators=[InputRequired(), Length(min=4, max=50)], render_kw={"placeholder": "Password"})
     submit = SubmitField("Login")
 
+def get_profile(user_id: str):
+    return UserProfile.query.filter_by(user_id=user_id).first()
 
-@app.route('/')
+def is_admin_user(user: User) -> bool:
+    prof = get_profile(user.id)
+    return bool(prof and prof.account_status == "ACTIVE" and prof.role == "ADMIN")
+
+def admin_required(fn):
+    @wraps(fn)
+    def wrapper(*args, **kwargs):
+        if not current_user.is_authenticated:
+            return login_manager.unauthorized()
+        if not is_admin_user(current_user):
+            abort(403)
+        return fn(*args, **kwargs)
+    return wrapper
+
+@app.route("/")
 def home():
-    form = RegisterForm()
-    return render_template('register.html', form=form)
-
+    return redirect(url_for("register"))
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
@@ -288,14 +302,22 @@ def login():
 
     if form.validate_on_submit():
         user = User.query.filter_by(email=form.email.data).first()
-        if user:
-            if bcrypt.check_password_hash(user.password, form.password.data):
-                login_user(user)
-                return redirect(url_for('dashboard'))
+
+        if user and bcrypt.check_password_hash(user.password, form.password.data):
+            prof = get_profile(user.id)
+
+            if not prof:
+                error_message = "Profile not found. Please contact admin."
+            elif prof.account_status != "ACTIVE":
+                error_message = "Your account is not active yet. Please wait for admin approval."
             else:
-                error_message = "Invalid password. Please try again."
+                login_user(user)
+                # optional: send admins to admin dashboard
+                if prof.role == "ADMIN":
+                    return redirect(url_for("admin_users"))
+                return redirect(url_for('dashboard'))
         else:
-            error_message = "This email has not registered. Please try again."
+            error_message = "Invalid email or password. Please try again."
 
     return render_template('login.html', form=form, error_message=error_message)
 
@@ -304,10 +326,25 @@ def login():
 def edit_profile():
     return render_template('edit_profile.html')
 
-@app.route('/dashboard', methods=['GET', 'POST'])
+@app.route("/dashboard")
 @login_required
 def dashboard():
-    return render_template('dashboard.html')
+    prof = get_profile(current_user.id)
+
+    # If profile missing, treat as pending (or block)
+    if not prof:
+        return render_template("dashboard.html")
+
+    # Pending / Deactivated -> show the existing pending template
+    if prof.account_status != "ACTIVE":
+        return render_template("dashboard.html")  # your pending page
+
+    # Admin -> go to admin dashboard
+    if prof.role == "ADMIN":
+        return redirect(url_for("admin_dashboard"))
+
+    # Others -> normal dashboard (for now reuse the same template or create user_dashboard.html later)
+    return render_template("dashboard.html")
 
 @app.route('/logout', methods=['GET', 'POST'])
 @login_required
@@ -315,22 +352,149 @@ def logout():
     logout_user()
     return redirect(url_for('login'))
 
-
 @app.route('/register', methods=['GET', 'POST'])
 def register():
     form = RegisterForm()
 
-    if form.validate_on_submit(): 
+    if form.validate_on_submit():
+        # Check if this is the first user
+        is_first_user = (User.query.count() == 0)
+
         hashed_pw = bcrypt.generate_password_hash(form.password.data).decode('utf-8')
         new_user = User(email=form.email.data, full_name=form.full_name.data, password=hashed_pw)
-
         db.session.add(new_user)
         db.session.commit()
 
-        login_user(new_user)
-        return redirect(url_for('edit_profile'))
+        # Create profile immediately
+        if is_first_user:
+            prof = UserProfile(user_id=new_user.id, role="ADMIN", account_status="ACTIVE")
+            db.session.add(prof)
+
+            # Create Admin record too (for your FK relationships)
+            db.session.add(Admin(user_id=new_user.id))
+            db.session.commit()
+
+            login_user(new_user)
+            return redirect(url_for('admin_users'))  # straight to admin panel
+        else:
+            prof = UserProfile(user_id=new_user.id, role="UNASSIGNED", account_status="PENDING")
+            db.session.add(prof)
+            db.session.commit()
+
+            # Don’t log them in yet (they are pending)
+            flash("Registration submitted. Please wait for admin approval.", "info")
+            return redirect(url_for('login'))
 
     return render_template('register.html', form=form)
+
+#---------------------------------------------------------------------------------------------------------
+# ADMIN ROUTES
+#---------------------------------------------------------------------------------------------------------
+
+@app.route("/admin/dashboard")
+@login_required
+@admin_required
+def admin_dashboard():
+    pending_count = UserProfile.query.filter_by(account_status="PENDING").count()
+    active_count = UserProfile.query.filter_by(account_status="ACTIVE").count()
+    deactivated_count = UserProfile.query.filter_by(account_status="DEACTIVATED").count()
+    return render_template("admin_dashboard.html", pending_count=pending_count, active_count=active_count, deactivated_count=deactivated_count)
+
+@app.route("/admin/users")
+@login_required
+@admin_required
+def admin_users():
+    status = request.args.get("status", "PENDING")   # PENDING / ACTIVE / DEACTIVATED
+    q = request.args.get("q", "").strip()
+
+    query = db.session.query(User, UserProfile)\
+        .join(UserProfile, User.id == UserProfile.user_id)\
+        .filter(UserProfile.account_status == status)
+
+    if q:
+        like = f"%{q}%"
+        query = query.filter((User.full_name.ilike(like)) | (User.email.ilike(like)))
+
+    rows = query.order_by(UserProfile.created_at.desc()).all()
+    return render_template("admin_user_management.html", rows=rows, status=status, q=q)
+
+@app.route("/admin/users/<user_id>/approve", methods=["POST"])
+@login_required
+@admin_required
+def admin_approve_user(user_id):
+    role = request.form.get("role", "UNASSIGNED").upper()
+
+    prof = get_profile(user_id)
+    if not prof:
+        abort(404)
+
+    prof.role = role
+    prof.account_status = "ACTIVE"
+
+    # keep role tables consistent
+    if role == "ADMIN" and not Admin.query.filter_by(user_id=user_id).first():
+        db.session.add(Admin(user_id=user_id))
+    if role == "HOD" and not HOD.query.filter_by(user_id=user_id).first():
+        db.session.add(HOD(user_id=user_id))
+    if role == "REVIEWER" and not Reviewer.query.filter_by(user_id=user_id).first():
+        db.session.add(Reviewer(user_id=user_id))
+    if role == "RESEARCHER" and not Researcher.query.filter_by(user_id=user_id).first():
+        db.session.add(Researcher(user_id=user_id))
+
+    db.session.commit()
+    return redirect(url_for("admin_users", status="PENDING"))
+
+@app.route("/admin/users/<user_id>/reject", methods=["POST"])
+@login_required
+@admin_required
+def admin_reject_user(user_id):
+    prof = get_profile(user_id)
+    if prof:
+        db.session.delete(prof)
+
+    user = User.query.get(user_id)
+    if user:
+        db.session.delete(user)
+
+    db.session.commit()
+    return redirect(url_for("admin_users", status="PENDING"))
+
+@app.route("/admin/users/<user_id>/deactivate", methods=["POST"])
+@login_required
+@admin_required
+def admin_deactivate_user(user_id):
+    prof = get_profile(user_id)
+    if not prof:
+        abort(404)
+    prof.account_status = "DEACTIVATED"
+    db.session.commit()
+    return redirect(url_for("admin_users", status="ACTIVE"))
+
+@app.route("/admin/users/<user_id>/activate", methods=["POST"])
+@login_required
+@admin_required
+def admin_activate_user(user_id):
+    prof = get_profile(user_id)
+    if not prof:
+        abort(404)
+    prof.account_status = "ACTIVE"
+    db.session.commit()
+    return redirect(url_for("admin_users", status="DEACTIVATED"))
+
+@app.route("/admin/users/<user_id>/remove", methods=["POST"])
+@login_required
+@admin_required
+def admin_remove_user(user_id):
+    prof = get_profile(user_id)
+    if prof:
+        db.session.delete(prof)
+
+    user = User.query.get(user_id)
+    if user:
+        db.session.delete(user)
+
+    db.session.commit()
+    return redirect(url_for("admin_users", status="DEACTIVATED"))
 
 
 if __name__ == '__main__':

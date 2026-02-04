@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>User Management - Researchly</title>
+
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/admin_user_management.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/colors.css') }}">
+</head>
+
+<body>
+  <!-- Top bar -->
+  <header class="topbar">
+    <div class="left">
+      <button class="hamburger" type="button" aria-label="Menu">&#9776;</button>
+      <div class="brand">Researchly™</div>
+    </div>
+
+    <div class="icons">
+      <span class="icon bell" title="Notifications"></span>
+      <span class="icon user" title="Profile"></span>
+    </div>
+  </header>
+
+  <main class="layout">
+    <!-- Sidebar -->
+    <aside class="sidebar">
+      <a class="side-link" href="{{ url_for('admin_dashboard') }}">Admin Dashboard</a>
+      <a class="side-link active" href="{{ url_for('admin_users', status=status) }}">User Management</a>
+      <a class="side-link" href="#">Grant Scheme<br/>Management</a>
+      <a class="side-link" href="#">Funding Allocation</a>
+      <a class="side-link" href="#">Final Approval<br/>Decision</a>
+      <a class="side-link" href="#">Assign Reviewers</a>
+      <a class="side-link" href="#">Proposal List</a>
+
+      <div class="side-spacer"></div>
+      <a class="side-link logout" href="{{ url_for('logout') }}">Logout</a>
+    </aside>
+
+    <!-- Content -->
+    <section class="content">
+      <div class="toolbar">
+        <div class="tabs">
+          <a class="tab {{ 'active' if status=='PENDING' else '' }}"
+             href="{{ url_for('admin_users', status='PENDING', q=q) }}">Pending</a>
+
+          <a class="tab {{ 'active' if status=='ACTIVE' else '' }}"
+             href="{{ url_for('admin_users', status='ACTIVE', q=q) }}">Active</a>
+
+          <a class="tab {{ 'active' if status=='DEACTIVATED' else '' }}"
+             href="{{ url_for('admin_users', status='DEACTIVATED', q=q) }}">Deactivated</a>
+        </div>
+
+        <div class="toolbar-right">
+          <button class="btn new-user" type="button" disabled title="Optional: add later">
+            + New User
+          </button>
+
+          <form class="search" method="GET" action="{{ url_for('admin_users') }}">
+            <input type="hidden" name="status" value="{{ status }}">
+            <input type="text" name="q" placeholder="Search" value="{{ q }}">
+            <button type="submit" aria-label="Search"></button>
+          </form>
+        </div>
+      </div>
+
+      <div class="table-card">
+        <table>
+          <thead>
+            <tr>
+              <th class="col-name">Name</th>
+              <th class="col-email">Email</th>
+              <th class="col-role">Role</th>
+              <th class="col-actions"></th>
+            </tr>
+          </thead>
+
+          <tbody>
+            {% if rows|length == 0 %}
+              <tr>
+                <td colspan="4" class="empty">No users found.</td>
+              </tr>
+            {% endif %}
+
+            {% for u, p in rows %}
+              <tr>
+                <td>{{ u.full_name }}</td>
+                <td>{{ u.email }}</td>
+
+                <td>
+                  {% if p.role == 'UNASSIGNED' %}
+                    <span class="pill gray">Unassigned</span>
+                  {% elif p.role == 'ADMIN' %}
+                    <span class="pill teal">Admin</span>
+                  {% elif p.role == 'RESEARCHER' %}
+                    <span class="pill blue">Researcher</span>
+                  {% elif p.role == 'REVIEWER' %}
+                    <span class="pill purple">Reviewer</span>
+                  {% elif p.role == 'HOD' %}
+                    <span class="pill orange">Head of Department</span>
+                  {% else %}
+                    <span class="pill gray">{{ p.role }}</span>
+                  {% endif %}
+                </td>
+
+                <td class="actions">
+                  {% if status == 'PENDING' %}
+                    <button class="btn approve" type="button"
+                            onclick="openRoleModal('{{ u.id }}','{{ u.full_name|e }}')">
+                      Approve
+                    </button>
+
+                    <form method="POST" action="{{ url_for('admin_reject_user', user_id=u.id) }}" class="inline">
+                      <button class="btn reject" type="submit">Reject</button>
+                    </form>
+
+                  {% elif status == 'ACTIVE' %}
+                    <button class="btn edit" type="button"
+                            onclick="openRoleModal('{{ u.id }}','{{ u.full_name|e }}','{{ p.role }}')">
+                      Edit
+                    </button>
+
+                    <form method="POST" action="{{ url_for('admin_deactivate_user', user_id=u.id) }}" class="inline">
+                      <button class="btn deactivate" type="submit">Deactivate</button>
+                    </form>
+
+                  {% elif status == 'DEACTIVATED' %}
+                    <form method="POST" action="{{ url_for('admin_activate_user', user_id=u.id) }}" class="inline">
+                      <button class="btn activate" type="submit">Activate</button>
+                    </form>
+
+                    <form method="POST" action="{{ url_for('admin_remove_user', user_id=u.id) }}" class="inline">
+                      <button class="btn remove" type="submit">Remove</button>
+                    </form>
+                  {% endif %}
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Modal: Approve/Edit role -->
+      <dialog id="roleModal" class="modal">
+        <form method="POST" id="roleForm">
+          <h2 class="modal-title">
+            Assign Role to <span id="modalName" class="highlight">User</span>
+          </h2>
+
+          <div class="modal-row">
+            <label for="roleSelect">Role</label>
+            <select id="roleSelect" name="role">
+              <option value="RESEARCHER">Researcher</option>
+              <option value="REVIEWER">Reviewer</option>
+              <option value="HOD">Head of Department</option>
+              <option value="ADMIN">Admin</option>
+            </select>
+          </div>
+
+          <div class="modal-actions">
+            <button type="button" class="btn ghost" onclick="closeRoleModal()">Cancel</button>
+            <button type="submit" class="btn primary">Activate Account</button>
+          </div>
+        </form>
+      </dialog>
+
+    </section>
+  </main>
+
+  <script>
+    function openRoleModal(userId, fullName, currentRole) {
+      const modal = document.getElementById('roleModal');
+      const nameEl = document.getElementById('modalName');
+      const form = document.getElementById('roleForm');
+      const select = document.getElementById('roleSelect');
+
+      nameEl.textContent = fullName;
+      form.action = `/admin/users/${userId}/approve`;
+
+      if (currentRole) {
+        select.value = currentRole;
+      } else {
+        select.value = "RESEARCHER";
+      }
+
+      modal.showModal();
+    }
+
+    function closeRoleModal() {
+      document.getElementById('roleModal').close();
+    }
+  </script>
+</body>
+</html>

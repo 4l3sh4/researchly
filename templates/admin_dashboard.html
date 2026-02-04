@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Admin Dashboard - Researchly</title>
+
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/admin_dashboard.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/colors.css') }}">
+</head>
+
+<body>
+  <!-- Top bar -->
+  <header class="topbar">
+    <div class="left">
+      <button class="hamburger" type="button" aria-label="Menu">&#9776;</button>
+      <div class="brand">Researchly™</div>
+    </div>
+
+    <div class="icons">
+      <span class="icon bell" title="Notifications"></span>
+      <span class="icon user" title="Profile"></span>
+    </div>
+  </header>
+
+  <main class="layout">
+    <!-- Sidebar -->
+    <aside class="sidebar">
+      <a class="side-link active" href="{{ url_for('admin_dashboard') }}">Admin Dashboard</a>
+      <a class="side-link" href="{{ url_for('admin_users', status='PENDING') }}">User Management</a>
+      <a class="side-link" href="#">Grant Scheme<br/>Management</a>
+      <a class="side-link" href="#">Funding Allocation</a>
+      <a class="side-link" href="#">Final Approval<br/>Decision</a>
+      <a class="side-link" href="#">Assign Reviewers</a>
+      <a class="side-link" href="#">Proposal List</a>
+
+      <div class="side-spacer"></div>
+      <a class="side-link logout" href="{{ url_for('logout') }}">Logout</a>
+    </aside>
+
+    <!-- Content -->
+    <section class="content">
+      <div class="card">
+        <h1>Admin Dashboard</h1>
+        <p class="muted">
+          Manage registrations, users, approvals, reviewer assignments, and funding workflows from here.
+        </p>
+
+        <div class="quick-grid">
+          <a class="quick" href="{{ url_for('admin_users', status='PENDING') }}">
+            <div class="quick-title">Pending Registrations</div>
+            <div class="quick-desc">Approve and assign roles</div>
+          </a>
+
+          <a class="quick" href="{{ url_for('admin_users', status='ACTIVE') }}">
+            <div class="quick-title">Active Users</div>
+            <div class="quick-desc">Update roles / deactivate access</div>
+          </a>
+
+          <a class="quick" href="{{ url_for('admin_users', status='DEACTIVATED') }}">
+            <div class="quick-title">Deactivated Users</div>
+            <div class="quick-desc">Restore or remove accounts</div>
+          </a>
+        </div>
+
+        <div class="cta-row">
+          <a class="btn primary" href="{{ url_for('admin_users', status='PENDING') }}">Go to User Management</a>
+          <a class="btn ghost" href="#">Grant Scheme Management</a>
+        </div>
+      </div>
+    </section>
+  </main>
+</body>
+</html>
