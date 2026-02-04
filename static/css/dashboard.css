@@ -31,15 +31,21 @@ body {
 }
 
 .icon {
-  width: 28px;
-  height: 28px;
+  width: 40px;
+  height: 40px;
   display: inline-block;
   position: relative;
 }
 
-.icon.bell::before {
-  content: "🔔";
-  font-size: 22px;
+.icon:hover {
+  cursor:pointer;
+}
+
+.icon.bell {
+  background-image: url('../img/white_bell.png');
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: center;
 }
 
 .icon.user::before {
