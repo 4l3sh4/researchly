@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Allocate Funding</title>
+
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/admin_funding_allocation_form.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/colors.css') }}">
+</head>
+
+<body>
+  <header class="topbar">
+    <div class="left">
+      <button class="hamburger" type="button" aria-label="Menu">&#9776;</button>
+      <div class="brand">Researchly™</div>
+    </div>
+
+    <div class="icons">
+      <span class="icon bell" title="Notifications"></span>
+
+      <a href="{{ url_for('view_profile') }}" class="icon user" title="Profile">
+        {% if prof and prof.profile_picture %}
+          <img class="top-avatar"
+               src="{{ url_for('static', filename='uploads/' ~ prof.profile_picture) }}"
+               alt="Profile">
+        {% else %}
+          <span class="fallback-user">👤</span>
+        {% endif %}
+      </a>
+    </div>
+  </header>
+
+  <main class="layout">
+    <aside class="sidebar">
+      <a class="side-link" href="{{ url_for('admin_dashboard') }}">Admin Dashboard</a>
+      <a class="side-link" href="{{ url_for('admin_users', status='PENDING') }}">User Management</a>
+      <a class="side-link" href="{{ url_for('admin_grants', status='ALL') }}">Grant Scheme<br/>Management</a>
+
+      <a class="side-link" href="{{ url_for('admin_funding_list', dept='ALL') }}">Funding Allocation</a>
+      <a class="side-link" href="#">Final Approval<br/>Decision</a>
+      <a class="side-link" href="#">Assign Reviewers</a>
+      <a class="side-link" href="#">Proposal List</a>
+
+      <div class="side-spacer"></div>
+      <a class="side-link logout" href="{{ url_for('logout') }}">Logout</a>
+    </aside>
+
+    <section class="content">
+      <div class="page-wrap">
+        <div class="header-row">
+          <div class="page-title">
+            Proposal: <span class="linkish">{{ proposal.project_title }}</span>
+          </div>
+        </div>
+
+        <div class="card">
+          <form method="POST" class="form" id="fundForm">
+            <div class="grid">
+
+              <div class="field full">
+                <label>Total Budget</label>
+                <input type="number" name="total_amount" id="total"
+                       value="{{ allocation.total_amount if allocation else 0 }}" min="0" required>
+              </div>
+
+              <div class="field">
+                <label>Equipment</label>
+                <input type="number" name="equipment_amount" class="part"
+                       value="{{ allocation.equipment_amount if allocation else 0 }}" min="0" required>
+              </div>
+
+              <div class="field">
+                <label>Materials</label>
+                <input type="number" name="materials_amount" class="part"
+                       value="{{ allocation.materials_amount if allocation else 0 }}" min="0" required>
+              </div>
+
+              <div class="field">
+                <label>Travel</label>
+                <input type="number" name="travel_amount" class="part"
+                       value="{{ allocation.travel_amount if allocation else 0 }}" min="0" required>
+              </div>
+
+              <div class="field">
+                <label>Other</label>
+                <input type="number" name="other_amount" class="part"
+                       value="{{ allocation.other_amount if allocation else 0 }}" min="0" required>
+              </div>
+
+              <div class="field full">
+                <label>Project Duration</label>
+                <div class="range">
+                  <input type="date" name="start_date"
+                         value="{{ project.start_date.strftime('%Y-%m-%d') if project else '' }}">
+                  <span>–</span>
+                  <input type="date" name="end_date"
+                         value="{{ project.end_date.strftime('%Y-%m-%d') if project else '' }}">
+                </div>
+              </div>
+
+            </div>
+
+            <div class="actions">
+              <a class="btn ghost" href="{{ url_for('admin_funding_list') }}">Back</a>
+              <button class="btn secondary" name="action" value="draft" type="submit">Save Draft</button>
+              <button class="btn primary" name="action" value="confirm" type="submit">Confirm Funding</button>
+            </div>
+
+            <p class="note">
+              Note: Total Budget must equal Equipment + Materials + Travel + Other.
+            </p>
+          </form>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    // auto-update Total = sum(parts) (optional convenience)
+    const parts = document.querySelectorAll(".part");
+    const total = document.getElementById("total");
+
+    function sumParts(){
+      let s = 0;
+      parts.forEach(i => s += Number(i.value || 0));
+      total.value = s;
+    }
+    parts.forEach(i => i.addEventListener("input", sumParts));
+  </script>
+</body>
+</html>

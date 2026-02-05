@@ -331,6 +331,33 @@ def inject_profile():
 def home():
     return redirect(url_for("register"))
 
+# @app.route('/login', methods=['GET', 'POST'])
+# def login():
+#     form = LoginForm()
+#     error_message = None
+
+#     if form.validate_on_submit():
+#         user = User.query.filter_by(email=form.email.data).first()
+
+#         if user and bcrypt.check_password_hash(user.password, form.password.data):
+#             prof = get_profile(user.id)
+
+#             if not prof:
+#                 error_message = "Profile not found. Please contact admin."
+#             elif prof.account_status != "ACTIVE":
+#                 error_message = "Your account is not active yet. Please wait for admin approval."
+#             else:
+#                 login_user(user)
+#                 # optional: send admins to admin dashboard
+#                 if prof.role == "ADMIN":
+#                     return redirect(url_for("admin_users"))
+#                 return redirect(url_for('dashboard'))
+#         else:
+#             error_message = "Invalid email or password. Please try again."
+
+#     return render_template('login.html', form=form, error_message=error_message)
+
+# Temporary to allow seed_demo_data.py
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     form = LoginForm()
@@ -339,7 +366,16 @@ def login():
     if form.validate_on_submit():
         user = User.query.filter_by(email=form.email.data).first()
 
-        if user and bcrypt.check_password_hash(user.password, form.password.data):
+        # ✅ Option 1: accept BOTH bcrypt-hash passwords and plain-text demo passwords
+        ok = False
+        if user:
+            try:
+                ok = bcrypt.check_password_hash(user.password, form.password.data)
+            except ValueError:
+                # stored password is not a bcrypt hash (e.g. "demo")
+                ok = (user.password == form.password.data)
+
+        if user and ok:
             prof = get_profile(user.id)
 
             if not prof:
@@ -684,6 +720,20 @@ def admin_grants():
             (GrantScheme.description.ilike(like))
         )
 
+    from datetime import date
+
+    # auto-close OPEN schemes that already passed close_date
+    today = date.today()
+    expired = GrantScheme.query.filter(
+        db.func.upper(GrantScheme.scheme_status) == "OPEN",
+        GrantScheme.close_date < today
+    ).all()
+
+    if expired:
+        for s in expired:
+            s.scheme_status = "CLOSED"
+        db.session.commit()
+
     rows = query.order_by(GrantScheme.created_at.desc()).all()
 
     # AUTO-CLOSE expired OPEN schemes
@@ -900,6 +950,173 @@ def admin_grant_view(scheme_id):
         "admin_grant_scheme_view.html",
         scheme=scheme,
         departments=departments
+    )
+
+from sqlalchemy import or_
+
+@app.route("/admin/funding")
+@login_required
+@admin_required
+def admin_funding_list():
+    q = (request.args.get("q") or "").strip()
+    dept_id = (request.args.get("dept") or "").strip()   # department_id
+    prof = get_profile(current_user.id)
+
+    # dropdown options
+    departments = Department.query.order_by(Department.department_name.asc()).all()
+
+    # Base: only APPROVED proposals (so status column not needed)
+    query = (
+        db.session.query(Proposal, Department)
+        .join(FinalDecision, FinalDecision.proposal_id == Proposal.proposal_id)
+        .filter(db.func.upper(FinalDecision.decision) == "APPROVED")
+        .join(GrantScheme, GrantScheme.scheme_id == Proposal.scheme_id)
+        .join(Department, Department.department_id == GrantScheme.department_id)
+    )
+
+    # department filter
+    if dept_id and dept_id != "ALL":
+        query = query.filter(Department.department_id == dept_id)
+
+    # search filter
+    if q:
+        like = f"%{q}%"
+        query = query.filter(
+            (Proposal.project_title.ilike(like)) |
+            (Department.department_name.ilike(like))
+        )
+
+    rows = query.order_by(Proposal.submission_date.desc()).all()
+
+    return render_template(
+        "admin_funding_allocation.html",
+        rows=rows,
+        q=q,
+        dept=dept_id or "ALL",
+        departments=departments,
+        prof=prof
+    )
+
+@app.route("/admin/funding/<proposal_id>", methods=["GET", "POST"])
+@login_required
+@admin_required
+def admin_funding_allocate(proposal_id):
+    prof = get_profile(current_user.id)
+    admin = get_admin_by_user(current_user.id)
+    if not admin:
+        flash("Admin record not found for this user.", "error")
+        return redirect(url_for("admin_dashboard"))
+
+    proposal = Proposal.query.get_or_404(proposal_id)
+    scheme = GrantScheme.query.get(proposal.scheme_id)
+    department = Department.query.get(scheme.department_id) if scheme else None
+
+    # Check if already allocated (Project exists)
+    project = Project.query.filter_by(proposal_id=proposal.proposal_id).first()
+    existing_allocation = None
+    if project:
+        existing_allocation = FundingAllocation.query.filter_by(project_id=project.project_id).first()
+
+    if request.method == "POST":
+        action = (request.form.get("action") or "draft").lower()  # draft / confirm
+
+        # read amounts
+        total_amount = request.form.get("total_amount") or "0"
+        equipment_amount = request.form.get("equipment_amount") or "0"
+        materials_amount = request.form.get("materials_amount") or "0"
+        travel_amount = request.form.get("travel_amount") or "0"
+        other_amount = request.form.get("other_amount") or "0"
+
+        start_date = parse_date_yyyy_mm_dd(request.form.get("start_date"))
+        end_date = parse_date_yyyy_mm_dd(request.form.get("end_date"))
+
+        try:
+            total_amount = int(total_amount)
+            equipment_amount = int(equipment_amount)
+            materials_amount = int(materials_amount)
+            travel_amount = int(travel_amount)
+            other_amount = int(other_amount)
+        except ValueError:
+            flash("All amounts must be numbers.", "error")
+            return redirect(url_for("admin_funding_allocate", proposal_id=proposal_id))
+
+        if any(x < 0 for x in [total_amount, equipment_amount, materials_amount, travel_amount, other_amount]):
+            flash("Amounts cannot be negative.", "error")
+            return redirect(url_for("admin_funding_allocate", proposal_id=proposal_id))
+
+        # simple consistency check
+        parts_sum = equipment_amount + materials_amount + travel_amount + other_amount
+        if total_amount != parts_sum:
+            flash("Total Budget must equal Equipment + Materials + Travel + Other.", "error")
+            return redirect(url_for("admin_funding_allocate", proposal_id=proposal_id))
+
+        if action == "confirm":
+            # validate dates
+            if not start_date or not end_date:
+                flash("Please fill in Start Date and End Date before confirming.", "error")
+                return redirect(url_for("admin_funding_allocate", proposal_id=proposal_id))
+            if end_date < start_date:
+                flash("End Date must be after Start Date.", "error")
+                return redirect(url_for("admin_funding_allocate", proposal_id=proposal_id))
+
+        # ensure Project exists (one per proposal)
+        if not project:
+            project = Project(
+                proposal_id=proposal.proposal_id,
+                researcher_id=proposal.researcher_id,
+                scheme_id=proposal.scheme_id,
+                start_date=start_date or date.today(),
+                end_date=end_date or date.today(),
+                project_status="DRAFT" if action == "draft" else "ONGOING",
+            )
+            db.session.add(project)
+            db.session.flush()  # get project_id without committing yet
+        else:
+            # update project dates/status
+            if start_date:
+                project.start_date = start_date
+            if end_date:
+                project.end_date = end_date
+            project.project_status = "DRAFT" if action == "draft" else "ONGOING"
+
+        # upsert FundingAllocation
+        if not existing_allocation:
+            existing_allocation = FundingAllocation(
+                admin_id=admin.admin_id,
+                project_id=project.project_id,
+                total_amount=total_amount,
+                equipment_amount=equipment_amount,
+                materials_amount=materials_amount,
+                travel_amount=travel_amount,
+                other_amount=other_amount,
+                allocation_status="DRAFT" if action == "draft" else "CONFIRMED",
+            )
+            db.session.add(existing_allocation)
+        else:
+            existing_allocation.admin_id = admin.admin_id
+            existing_allocation.total_amount = total_amount
+            existing_allocation.equipment_amount = equipment_amount
+            existing_allocation.materials_amount = materials_amount
+            existing_allocation.travel_amount = travel_amount
+            existing_allocation.other_amount = other_amount
+            existing_allocation.allocation_status = "DRAFT" if action == "draft" else "CONFIRMED"
+
+        # update proposal status if confirmed
+        if action == "confirm":
+            proposal.proposal_status = "FUNDED"
+
+        db.session.commit()
+        flash("Funding saved as draft." if action == "draft" else "Funding confirmed!", "success")
+        return redirect(url_for("admin_funding_list"))
+
+    return render_template(
+        "admin_funding_allocation_form.html",
+        proposal=proposal,
+        scheme=scheme,
+        department=department,
+        project=project,
+        allocation=existing_allocation,
+        prof=prof
     )
 
 if __name__ == '__main__':

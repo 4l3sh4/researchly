@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Funding Allocation</title>
+
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/admin_funding_allocation.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/colors.css') }}">
+</head>
+
+<body>
+  <!-- Topbar (same structure as admin_dashboard.html) -->
+  <header class="topbar">
+    <div class="left">
+      <button class="hamburger" type="button" aria-label="Menu">&#9776;</button>
+      <div class="brand">Researchly™</div>
+    </div>
+
+    <div class="icons">
+      <span class="icon bell" title="Notifications"></span>
+
+      <a href="{{ url_for('view_profile') }}" class="icon user" title="Profile">
+        {% if prof and prof.profile_picture %}
+          <img class="top-avatar"
+               src="{{ url_for('static', filename='uploads/' ~ prof.profile_picture) }}"
+               alt="Profile">
+        {% else %}
+          <span class="fallback-user">👤</span>
+        {% endif %}
+      </a>
+    </div>
+  </header>
+
+  <main class="layout">
+    <!-- Sidebar -->
+    <aside class="sidebar">
+      <a class="side-link" href="{{ url_for('admin_dashboard') }}">Admin Dashboard</a>
+      <a class="side-link" href="{{ url_for('admin_users', status='PENDING') }}">User Management</a>
+      <a class="side-link" href="{{ url_for('admin_grants', status='ALL') }}">Grant Scheme<br/>Management</a>
+
+      <!-- ✅ Active on this page -->
+      <a class="side-link active" href="{{ url_for('admin_funding_list', dept='ALL', q=q) }}">Funding Allocation</a>
+
+      <a class="side-link" href="#">Final Approval<br/>Decision</a>
+      <a class="side-link" href="#">Assign Reviewers</a>
+      <a class="side-link" href="#">Proposal List</a>
+
+      <div class="side-spacer"></div>
+      <a class="side-link logout" href="{{ url_for('logout') }}">Logout</a>
+    </aside>
+
+    <section class="content">
+      <div class="page-wrap">
+
+        <!-- ✅ Toolbar: search left, filter right (filter = department) -->
+        <form class="toolbar" method="GET" action="{{ url_for('admin_funding_list') }}">
+          <div class="toolbar-left">
+            <input class="search" type="text" name="q" value="{{ q }}" placeholder="Search">
+          </div>
+
+          <div class="toolbar-right">
+            <select class="filter" name="dept" onchange="this.form.submit()">
+              <option value="ALL" {{ 'selected' if dept=='ALL' else '' }}>All</option>
+              {% for d in departments %}
+                <option value="{{ d.department_id }}" {{ 'selected' if dept==d.department_id else '' }}>
+                  {{ d.department_name }}
+                </option>
+              {% endfor %}
+            </select>
+
+            <button class="btn-go" type="submit" aria-label="Search">🔍</button>
+          </div>
+        </form>
+
+        <div class="card">
+          <div class="card-head">Pending Fund Allocation</div>
+
+          <table class="table">
+            <thead>
+              <tr>
+                <th>Project Title</th>
+                <th>Department</th>
+                <th style="width:140px;"></th>
+              </tr>
+            </thead>
+
+            <tbody>
+              <!-- ✅ FIX: rows contains (proposal, dept) -->
+              {% for proposal, dept in rows %}
+                <tr>
+                  <td>{{ proposal.project_title }}</td>
+                  <td>{{ dept.department_name if dept else '-' }}</td>
+                  <td class="actions">
+                    <a class="btn" href="{{ url_for('admin_funding_allocate', proposal_id=proposal.proposal_id) }}">Allocate</a>
+                  </td>
+                </tr>
+              {% else %}
+                <tr><td class="empty" colspan="3">No proposals found.</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+
+        </div>
+      </div>
+    </section>
+  </main>
+</body>
+</html>
