@@ -1119,6 +1119,26 @@ def admin_funding_allocate(proposal_id):
         prof=prof
     )
 
+@app.route("/admin/proposals/<proposal_id>")
+@login_required
+def admin_view_proposal(proposal_id):
+    proposal = Proposal.query.get_or_404(proposal_id)
+
+    researcher = Researcher.query.get(proposal.researcher_id)
+    scheme = GrantScheme.query.get(proposal.scheme_id)
+    dept = Department.query.get(scheme.department_id) if scheme else None
+
+    prof = get_profile(current_user.id)
+
+    return render_template(
+        "admin_view_proposal.html",
+        proposal=proposal,
+        researcher=researcher,
+        scheme=scheme,
+        dept=dept,
+        prof=prof
+    )
+
 if __name__ == '__main__':
     with app.app_context():
         db.create_all()

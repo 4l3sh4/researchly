@@ -89,8 +89,28 @@ body { margin: 0; min-height: 100vh; background: #f7f7f7; }
 .page-wrap { max-width: 1100px; margin: 0 auto; }
 
 .header-row { margin: 6px 0 14px; }
-.page-title { font-size: 22px; font-weight: 900; color: #111; }
-.linkish { color: #0f7aa1; }
+.page-title-row{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:16px;
+  margin-bottom:14px;
+}
+
+.btn.view-proposal{
+  background:#19a5a5;
+  color:#fff;
+  padding:10px 16px;
+  border-radius:10px;
+  font-weight:900;
+  text-decoration:none;
+  display:inline-flex;
+  align-items:center;
+  gap:8px;
+}
+.btn.view-proposal:hover{
+  filter: brightness(0.95);
+}
 
 .card{
   background: #fff;

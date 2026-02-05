@@ -49,9 +49,14 @@
     <section class="content">
       <div class="page-wrap">
         <div class="header-row">
-          <div class="page-title">
+          <h2 class="page-title">
             Proposal: <span class="linkish">{{ proposal.project_title }}</span>
-          </div>
+          </h2>
+          <br>
+          <a class="btn view-proposal"
+            href="{{ url_for('admin_view_proposal', proposal_id=proposal.proposal_id) }}">
+            View Proposal
+          </a>
         </div>
 
         <div class="card">
@@ -106,10 +111,6 @@
               <button class="btn secondary" name="action" value="draft" type="submit">Save Draft</button>
               <button class="btn primary" name="action" value="confirm" type="submit">Confirm Funding</button>
             </div>
-
-            <p class="note">
-              Note: Total Budget must equal Equipment + Materials + Travel + Other.
-            </p>
           </form>
         </div>
       </div>
