@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Create Grant Scheme</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/admin_grant_scheme_create.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/colors.css') }}">
+</head>
+
+<body>
+  <!-- Top bar (same as admin_dashboard) -->
+  <header class="topbar">
+    <div class="left">
+      <button class="hamburger" type="button" aria-label="Menu">&#9776;</button>
+      <div class="brand">Researchly™</div>
+    </div>
+
+    <div class="icons">
+      <span class="icon bell" title="Notifications"></span>
+
+      <a href="{{ url_for('view_profile') }}" class="icon user" title="Profile">
+        {% if prof and prof.profile_picture %}
+          <img class="top-avatar"
+               src="{{ url_for('static', filename='uploads/' ~ prof.profile_picture) }}"
+               alt="Profile">
+        {% else %}
+          <span class="fallback-user">👤</span>
+        {% endif %}
+      </a>
+    </div>
+  </header>
+
+  <main class="layout">
+    <!-- Sidebar (same as admin_dashboard) -->
+    <aside class="sidebar">
+      <a class="side-link" href="{{ url_for('admin_dashboard') }}">Admin Dashboard</a>
+      <a class="side-link" href="{{ url_for('admin_users', status='PENDING') }}">User Management</a>
+      <a class="side-link active" href="{{ url_for('admin_grants') }}">Grant Scheme<br/>Management</a>
+      <a class="side-link" href="#">Funding Allocation</a>
+      <a class="side-link" href="#">Final Approval<br/>Decision</a>
+      <a class="side-link" href="#">Assign Reviewers</a>
+      <a class="side-link" href="#">Proposal List</a>
+
+      <div class="side-spacer"></div>
+      <a class="side-link logout" href="{{ url_for('logout') }}">Logout</a>
+    </aside>
+
+    <!-- Content -->
+    <section class="content">
+      <div class="page-wrap">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+          {% if messages %}
+            <div class="flash-wrap">
+              {% for category, msg in messages %}
+                <div class="flash {{ category }}">{{ msg }}</div>
+              {% endfor %}
+            </div>
+          {% endif %}
+        {% endwith %}
+
+        <h1 class="title">Create Grant Scheme</h1>
+
+        <form class="form" method="POST">
+          <div class="row">
+            <label>Department</label>
+
+            <div>
+              <input
+                type="text"
+                name="department_name"
+                placeholder="e.g., Computer Science"
+                required
+              />
+            </div>
+          </div>
+
+          <div class="row">
+            <label>Description</label>
+            <input type="text" name="description" placeholder="Enter description">
+          </div>
+
+          <div class="row">
+            <label>Eligibility</label>
+            <input type="text" name="eligibiliity" placeholder="Enter eligibility">
+          </div>
+
+          <div class="row">
+            <label>Application Period</label>
+            <div class="date-range">
+              <input type="date" name="open_date">
+              <span class="dash">–</span>
+              <input type="date" name="close_date">
+            </div>
+          </div>
+
+          <div class="row">
+            <label>Maximum Budget (RM)</label>
+            <input type="number" name="max_budget" placeholder="e.g., 50000">
+          </div>
+
+          <div class="row">
+            <label>Project Duration Limit (Months)</label>
+            <input type="number" name="project_duration_limit" placeholder="e.g., 12">
+          </div>
+
+          <div class="row">
+            <label>Required Documents</label>
+            <input type="text" name="required_documents" placeholder="e.g., proposal, CV, quotations">
+          </div>
+
+          <div class="row">
+            <label>Reporting Requirements</label>
+            <input type="text" name="reporting_requirements" placeholder="e.g., monthly report, final report">
+          </div>
+
+          <div class="buttons">
+            <button class="btn secondary" name="action" value="draft" type="submit">Save Draft</button>
+            <button class="btn primary" name="action" value="confirm" type="submit">Confirm Scheme</button>
+          </div>
+        </form>
+      </div>
+    </section>
+  </main>
+</body>
+</html>

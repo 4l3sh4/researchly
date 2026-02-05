@@ -1,0 +1,287 @@
+* {
+  box-sizing: border-box;
+  font-family: "Segoe UI", Arial, sans-serif;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  background: #f7f7f7;
+}
+
+/* =========================================================
+   TOPBAR (match admin_dashboard.css)
+========================================================= */
+.topbar {
+  height: 64px;
+  padding: 0 18px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: linear-gradient(90deg, var(--accent-2), var(--accent-1));
+  color: #fff;
+}
+
+.topbar .left {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.hamburger {
+  border: none;
+  background: transparent;
+  color: #fff;
+  font-size: 28px;
+  cursor: pointer;
+  padding: 6px 10px;
+  border-radius: 10px;
+}
+
+.hamburger:hover {
+  background: rgba(255,255,255,0.15);
+}
+
+.brand {
+  font-size: 30px;
+  font-weight: 800;
+  letter-spacing: 0.3px;
+}
+
+.icons {
+  display: flex;
+  gap: 14px;
+  align-items: center;
+}
+
+.icon {
+  width: 40px;
+  height: 40px;
+  display: inline-block;
+  position: relative;
+}
+
+.icon:hover {
+  cursor: pointer;
+}
+
+.icon.bell {
+  background-image: url('../img/white_bell.png');
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: center;
+}
+
+/* Profile icon circle + clipping */
+.icon.user {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  overflow: hidden;
+
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  background: #fff;
+  text-decoration: none;
+  flex: 0 0 40px;
+}
+
+.icon.user .top-avatar {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.icon.user .fallback-user {
+  font-size: 22px;
+  line-height: 1;
+}
+
+/* =========================================================
+   LAYOUT + SIDEBAR (match admin_dashboard.css)
+========================================================= */
+.layout {
+  display: grid;
+  grid-template-columns: 280px 1fr; /* match other pages */
+  min-height: calc(100vh - 64px);
+}
+
+.sidebar {
+  background: linear-gradient(180deg, #0fa7a1, #6bd24f);
+  padding: 14px 0;
+  color: #fff;
+}
+
+.side-link {
+  display: block;
+  padding: 18px 22px;
+  color: #fff;
+  text-decoration: none;
+  font-weight: 700;
+  font-size: 22px;
+  line-height: 1.1;
+}
+
+.side-link:hover {
+  background: rgba(255,255,255,0.16);
+}
+
+.side-link.active {
+  background: rgba(0,0,0,0.12);
+}
+
+.side-spacer {
+  height: 40px;
+}
+
+.side-link.logout {
+  margin-top: 12px;
+}
+
+/* Content background matches dashboard */
+.content {
+  padding: 26px 24px 40px;
+  background: repeating-linear-gradient(
+    135deg,
+    rgba(0,0,0,0.03) 0,
+    rgba(0,0,0,0.03) 20px,
+    rgba(255,255,255,0) 20px,
+    rgba(255,255,255,0) 40px
+  );
+}
+
+/* =========================================================
+   YOUR EXISTING PAGE STYLES (kept)
+========================================================= */
+.toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 14px;
+  margin: 10px 0 14px;
+}
+
+.btn-create {
+  background: #20a7a9;
+  color: #fff;
+  text-decoration: none;
+  font-weight: 800;
+  padding: 12px 18px;
+  border-radius: 10px;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.search {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.search input {
+  height: 36px;
+  width: 260px;
+  padding: 0 12px;
+  border: 1px solid #cfcfcf;
+  border-radius: 6px;
+  background: #fff;
+}
+
+.search button {
+  height: 36px;
+  width: 42px;
+  border: 1px solid #cfcfcf;
+  border-radius: 6px;
+  background: #fff;
+  cursor: pointer;
+}
+
+.card {
+  background: #fff;
+  border-radius: 12px;
+  border: 1px solid #e2e2e2;
+  overflow: hidden;
+}
+
+.tabs {
+  display: flex;
+  gap: 10px;
+  padding: 12px 14px;
+  border-bottom: 1px solid #ececec;
+}
+
+.tab {
+  padding: 8px 14px;
+  border-radius: 999px;
+  text-decoration: none;
+  font-weight: 800;
+  color: #2b2b2b;
+  background: #f1f1f1;
+}
+
+.tab.active {
+  background: #18a6a6;
+  color: #fff;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.table thead th {
+  background: #efefef;
+  text-align: left;
+  padding: 12px 14px;
+  font-weight: 800;
+}
+
+.table tbody td {
+  padding: 14px;
+  border-top: 1px solid #eee;
+}
+
+.actions {
+  text-align: right;
+}
+
+.btn-view {
+  background: #19a5a5;
+  color: #fff;
+  text-decoration: none;
+  font-weight: 800;
+  padding: 8px 14px;
+  border-radius: 6px;
+  display: inline-block;
+}
+
+.badge {
+  padding: 6px 12px;
+  border-radius: 999px;
+  font-weight: 800;
+  display: inline-block;
+}
+
+.badge.open { background: #e8ffe8; color: #2d9b2d; }
+.badge.closed { background: #ffe8e8; color: #c03434; }
+.badge.draft { background: #eef2ff; color: #3a4bd6; }
+
+.empty {
+  text-align: center;
+  color: #777;
+  padding: 30px 0;
+}
+
+/* Optional: small-screen stacking */
+@media (max-width: 900px) {
+  .layout {
+    grid-template-columns: 1fr;
+  }
+  .sidebar {
+    display: none; /* if you want it hidden on mobile */
+  }
+}

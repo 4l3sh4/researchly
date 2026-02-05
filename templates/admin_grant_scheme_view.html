@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>View Grant Scheme</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/admin_grant_scheme_create.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/colors.css') }}">
+</head>
+<body>
+  <header class="topbar">
+    <div class="left">
+      <span class="hamburger">☰</span>
+      <div class="logo">Researchly™</div>
+    </div>
+    <div class="icons">
+      <span class="icon bell"></span>
+      <a class="icon user" href="{{ url_for('view_profile') }}" title="Profile"></a>
+    </div>
+  </header>
+
+  <div class="layout">
+    <aside class="sidebar">
+      <a href="{{ url_for('admin_dashboard') }}">Admin Dashboard</a>
+      <a href="{{ url_for('admin_users') }}">User Management</a>
+      <a class="active" href="{{ url_for('admin_grants') }}">Grant Scheme Management</a>
+      <a href="{{ url_for('logout') }}">Logout</a>
+    </aside>
+
+    <main class="content">
+      <h1 class="title">View / Edit Grant Scheme</h1>
+
+      <form class="form" method="POST">
+        <div class="row">
+          <label>Department</label>
+          <select name="department_id" required>
+            {% for d in departments %}
+              <option value="{{ d.department_id }}" {% if d.department_id == scheme.department_id %}selected{% endif %}>
+                {{ d.department_name }}
+              </option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <div class="row">
+          <label>Description</label>
+          <input type="text" name="description" value="{{ scheme.description }}">
+        </div>
+
+        <div class="row">
+          <label>Eligibility</label>
+          <input type="text" name="eligibiliity" value="{{ scheme.eligibiliity }}">
+        </div>
+
+        <div class="row split">
+          <div>
+            <label>Opening Date</label>
+            <input type="date" name="open_date" value="{{ scheme.open_date.strftime('%Y-%m-%d') }}">
+          </div>
+          <div>
+            <label>Closing Date</label>
+            <input type="date" name="close_date" value="{{ scheme.close_date.strftime('%Y-%m-%d') }}">
+          </div>
+        </div>
+
+        <div class="row">
+          <label>Maximum Budget</label>
+          <input type="number" name="max_budget" value="{{ scheme.max_budget }}">
+        </div>
+
+        <div class="row">
+          <label>Project Duration Limit (months)</label>
+          <input type="number" name="project_duration_limit" value="{{ scheme.project_duration_limit }}">
+        </div>
+
+        <div class="row">
+          <label>Required Documents</label>
+          <input type="text" name="required_documents" value="{{ scheme.required_documents }}">
+        </div>
+
+        <div class="row">
+          <label>Reporting Requirements</label>
+          <input type="text" name="reporting_requirements" value="{{ scheme.reporting_requirements }}">
+        </div>
+
+        <div class="buttons">
+          <button class="btn secondary" name="action" value="draft" type="submit">Save as Draft</button>
+          <button class="btn primary" name="action" value="open" type="submit">Open Scheme</button>
+          <button class="btn secondary" name="action" value="close" type="submit">Close Scheme</button>
+        </div>
+      </form>
+    </main>
+  </div>
+</body>
+</html>

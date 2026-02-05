@@ -312,6 +312,15 @@ def admin_required(fn):
         return fn(*args, **kwargs)
     return wrapper
 
+def get_admin_by_user(user_id: str):
+    return Admin.query.filter_by(user_id=user_id).first()
+
+def parse_date_yyyy_mm_dd(value: str):
+    if not value:
+        return None
+    # HTML <input type="date"> sends YYYY-MM-DD
+    return datetime.strptime(value, "%Y-%m-%d").date()
+
 @app.context_processor
 def inject_profile():
     if current_user.is_authenticated:
@@ -653,6 +662,193 @@ def admin_create_user():
 
     flash(f"User created successfully. Temporary password: {temp_password}", "success")
     return redirect(url_for("admin_users", status="ACTIVE"))
+
+@app.route("/admin/grants")
+@login_required
+@admin_required
+def admin_grants():
+    q = (request.args.get("q") or "").strip()
+    status = (request.args.get("status") or "ALL").upper()
+    prof = get_profile(current_user.id)
+
+    query = db.session.query(GrantScheme, Department)\
+        .outerjoin(Department, GrantScheme.department_id == Department.department_id)
+
+    if status != "ALL":
+        query = query.filter(db.func.upper(GrantScheme.scheme_status) == status)
+
+    if q:
+        like = f"%{q}%"
+        query = query.filter(
+            (Department.department_name.ilike(like)) |
+            (GrantScheme.description.ilike(like))
+        )
+
+    rows = query.order_by(GrantScheme.created_at.desc()).all()
+
+    return render_template(
+        "admin_grant_scheme_management.html",
+        rows=rows,
+        q=q,
+        status=status,
+        prof=prof,
+    )
+
+
+@app.route("/admin/grants/create", methods=["GET", "POST"])
+@login_required
+@admin_required
+def admin_grant_create():
+    prof = get_profile(current_user.id)
+    admin = get_admin_by_user(current_user.id)
+
+    # for the datalist suggestions in your HTML
+    departments = Department.query.order_by(Department.department_name.asc()).all()
+
+    if not admin:
+        flash("Admin record not found for this user.", "error")
+        return redirect(url_for("admin_dashboard"))
+
+    if request.method == "POST":
+        department_name = (request.form.get("department_name") or "").strip()
+        description = (request.form.get("description") or "").strip()
+        eligibiliity = (request.form.get("eligibiliity") or "").strip()
+        required_documents = (request.form.get("required_documents") or "").strip()
+        reporting_requirements = (request.form.get("reporting_requirements") or "").strip()
+
+        open_date = parse_date_yyyy_mm_dd(request.form.get("open_date"))
+        close_date = parse_date_yyyy_mm_dd(request.form.get("close_date"))
+
+        max_budget = (request.form.get("max_budget") or "").strip()
+        project_duration_limit = (request.form.get("project_duration_limit") or "").strip()
+
+        action = (request.form.get("action") or "draft").lower()  # draft / confirm
+
+        # -----------------------------
+        # 1) Department: auto-create if missing
+        # -----------------------------
+        if not department_name:
+            flash("Please enter a department name.", "error")
+            return redirect(url_for("admin_grant_create"))
+
+        department = Department.query.filter(
+            db.func.lower(Department.department_name) == department_name.lower()
+        ).first()
+
+        if not department:
+            # Auto-create the department if it doesn't exist
+            department = Department(
+                department_name=department_name,
+                department_description="(Created by Admin)"
+            )
+            db.session.add(department)
+            db.session.commit()
+
+        department_id = department.department_id
+
+        # -----------------------------
+        # 2) Validation rules
+        # -----------------------------
+        if action == "confirm":
+            # require important fields
+            if not (description and eligibiliity and open_date and close_date and max_budget and project_duration_limit):
+                flash("Please fill in all required fields before confirming.", "error")
+                return redirect(url_for("admin_grant_create"))
+
+            if close_date < open_date:
+                flash("Closing date must be after opening date.", "error")
+                return redirect(url_for("admin_grant_create"))
+
+        # convert numbers safely
+        try:
+            max_budget_int = int(max_budget) if max_budget else 0
+            duration_int = int(project_duration_limit) if project_duration_limit else 0
+        except ValueError:
+            flash("Max Budget and Project Duration Limit must be numbers.", "error")
+            return redirect(url_for("admin_grant_create"))
+
+        scheme_status = "DRAFT" if action == "draft" else "OPEN"
+
+        # -----------------------------
+        # 3) Create scheme
+        # -----------------------------
+        scheme = GrantScheme(
+            admin_id=admin.admin_id,
+            department_id=department_id,
+            description=description or "(Draft) - not final",
+            eligibiliity=eligibiliity or "(Draft)",
+            open_date=open_date or datetime.today().date(),
+            close_date=close_date or datetime.today().date(),
+            max_budget=max_budget_int,
+            project_duration_limit=duration_int,
+            required_documents=required_documents or "(Draft)",
+            reporting_requirements=reporting_requirements or "(Draft)",
+            scheme_status=scheme_status
+        )
+
+        db.session.add(scheme)
+        db.session.commit()
+
+        flash("Grant scheme saved!" if action == "draft" else "Grant scheme confirmed and opened!", "success")
+        return redirect(url_for("admin_grants", status="ALL"))
+
+    return render_template(
+        "admin_grant_scheme_create.html",
+        departments=departments,
+        prof=prof
+    )
+
+@app.route("/admin/grants/<scheme_id>", methods=["GET", "POST"])
+@login_required
+@admin_required
+def admin_grant_view(scheme_id):
+    scheme = GrantScheme.query.get_or_404(scheme_id)
+    department = Department.query.get(scheme.department_id)
+    departments = Department.query.order_by(Department.department_name.asc()).all()
+
+    if request.method == "POST":
+        scheme.department_id = request.form.get("department_id") or scheme.department_id
+        scheme.description = (request.form.get("description") or "").strip()
+        scheme.eligibiliity = (request.form.get("eligibiliity") or "").strip()
+        scheme.required_documents = (request.form.get("required_documents") or "").strip()
+        scheme.reporting_requirements = (request.form.get("reporting_requirements") or "").strip()
+
+        open_date = parse_date_yyyy_mm_dd(request.form.get("open_date"))
+        close_date = parse_date_yyyy_mm_dd(request.form.get("close_date"))
+        if open_date:
+            scheme.open_date = open_date
+        if close_date:
+            scheme.close_date = close_date
+
+        try:
+            scheme.max_budget = int(request.form.get("max_budget") or scheme.max_budget)
+            scheme.project_duration_limit = int(request.form.get("project_duration_limit") or scheme.project_duration_limit)
+        except ValueError:
+            flash("Max Budget and Project Duration Limit must be numbers.", "error")
+            return redirect(url_for("admin_grant_view", scheme_id=scheme_id))
+
+        action = (request.form.get("action") or "save").lower()  # save / open / close / draft
+
+        if action == "draft":
+            scheme.scheme_status = "DRAFT"
+        elif action == "open":
+            if scheme.close_date < scheme.open_date:
+                flash("Closing date must be after opening date.", "error")
+                return redirect(url_for("admin_grant_view", scheme_id=scheme_id))
+            scheme.scheme_status = "OPEN"
+        elif action == "close":
+            scheme.scheme_status = "CLOSED"
+
+        db.session.commit()
+        flash("Scheme updated.", "success")
+        return redirect(url_for("admin_grants"))
+
+    return render_template(
+        "admin_grant_scheme_view.html",
+        scheme=scheme,
+        department=department,
+        departments=departments
+    )
 
 if __name__ == '__main__':
     with app.app_context():
