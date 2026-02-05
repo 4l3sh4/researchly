@@ -49,16 +49,6 @@
     <!-- Content -->
     <section class="content">
       <div class="page-wrap">
-        {% with messages = get_flashed_messages(with_categories=true) %}
-          {% if messages %}
-            <div class="flash-wrap">
-              {% for category, msg in messages %}
-                <div class="flash {{ category }}">{{ msg }}</div>
-              {% endfor %}
-            </div>
-          {% endif %}
-        {% endwith %}
-
         <h1 class="title">Create Grant Scheme</h1>
 
         <form class="form" method="POST">

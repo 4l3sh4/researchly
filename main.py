@@ -663,6 +663,8 @@ def admin_create_user():
     flash(f"User created successfully. Temporary password: {temp_password}", "success")
     return redirect(url_for("admin_users", status="ACTIVE"))
 
+from datetime import date
+
 @app.route("/admin/grants")
 @login_required
 @admin_required
@@ -674,9 +676,7 @@ def admin_grants():
     query = db.session.query(GrantScheme, Department)\
         .outerjoin(Department, GrantScheme.department_id == Department.department_id)
 
-    if status != "ALL":
-        query = query.filter(db.func.upper(GrantScheme.scheme_status) == status)
-
+    # Search/filter first (optional)
     if q:
         like = f"%{q}%"
         query = query.filter(
@@ -686,14 +686,28 @@ def admin_grants():
 
     rows = query.order_by(GrantScheme.created_at.desc()).all()
 
+    # AUTO-CLOSE expired OPEN schemes
+    today = date.today()
+    changed = False
+    for scheme, _dept in rows:
+        if (scheme.scheme_status or "").upper() == "OPEN" and scheme.close_date and today > scheme.close_date:
+            scheme.scheme_status = "CLOSED"
+            changed = True
+
+    if changed:
+        db.session.commit()
+
+    # Apply status tab filter AFTER auto-close, so it shows correctly
+    if status != "ALL":
+        rows = [(s, d) for (s, d) in rows if (s.scheme_status or "").upper() == status]
+
     return render_template(
         "admin_grant_scheme_management.html",
         rows=rows,
         q=q,
         status=status,
-        prof=prof,
+        prof=prof
     )
-
 
 @app.route("/admin/grants/create", methods=["GET", "POST"])
 @login_required
@@ -803,11 +817,53 @@ def admin_grant_create():
 @admin_required
 def admin_grant_view(scheme_id):
     scheme = GrantScheme.query.get_or_404(scheme_id)
-    department = Department.query.get(scheme.department_id)
     departments = Department.query.order_by(Department.department_name.asc()).all()
 
+    st = (scheme.scheme_status or "").upper()
+
     if request.method == "POST":
-        scheme.department_id = request.form.get("department_id") or scheme.department_id
+        action = (request.form.get("action") or "").lower()
+
+        # CLOSED: admin can ONLY view (block all modifications)
+        if st == "CLOSED":
+            flash("This scheme is CLOSED. You can only view it.", "error")
+            return redirect(url_for("admin_grant_view", scheme_id=scheme_id))
+
+        # OPEN: view/edit/delete (+ close allowed)
+        if st == "OPEN":
+            if action == "delete":
+                db.session.delete(scheme)
+                db.session.commit()
+                flash("Scheme deleted.", "success")
+                return redirect(url_for("admin_grants"))
+
+            if action == "close":
+                scheme.scheme_status = "CLOSED"
+                db.session.commit()
+                flash("Scheme closed.", "success")
+                return redirect(url_for("admin_grants"))
+
+            if action != "save":
+                flash("Invalid action for an OPEN scheme.", "error")
+                return redirect(url_for("admin_grant_view", scheme_id=scheme_id))
+
+        # DRAFT: edit / confirm(open) / delete
+        if st == "DRAFT":
+            if action == "delete":
+                db.session.delete(scheme)
+                db.session.commit()
+                flash("Draft scheme deleted.", "success")
+                return redirect(url_for("admin_grants"))
+
+            if action not in ("save", "open"):
+                flash("Invalid action for a DRAFT scheme.", "error")
+                return redirect(url_for("admin_grant_view", scheme_id=scheme_id))
+
+        # ---- shared: update fields (OPEN or DRAFT, for save/open) ----
+        dept_id = request.form.get("department_id")
+        if dept_id:
+            scheme.department_id = dept_id
+
         scheme.description = (request.form.get("description") or "").strip()
         scheme.eligibiliity = (request.form.get("eligibiliity") or "").strip()
         scheme.required_documents = (request.form.get("required_documents") or "").strip()
@@ -827,26 +883,22 @@ def admin_grant_view(scheme_id):
             flash("Max Budget and Project Duration Limit must be numbers.", "error")
             return redirect(url_for("admin_grant_view", scheme_id=scheme_id))
 
-        action = (request.form.get("action") or "save").lower()  # save / open / close / draft
+        # date validation
+        if scheme.close_date and scheme.open_date and scheme.close_date < scheme.open_date:
+            flash("Closing date must be after opening date.", "error")
+            return redirect(url_for("admin_grant_view", scheme_id=scheme_id))
 
-        if action == "draft":
-            scheme.scheme_status = "DRAFT"
-        elif action == "open":
-            if scheme.close_date < scheme.open_date:
-                flash("Closing date must be after opening date.", "error")
-                return redirect(url_for("admin_grant_view", scheme_id=scheme_id))
+        # DRAFT confirm -> OPEN
+        if st == "DRAFT" and action == "open":
             scheme.scheme_status = "OPEN"
-        elif action == "close":
-            scheme.scheme_status = "CLOSED"
 
         db.session.commit()
         flash("Scheme updated.", "success")
-        return redirect(url_for("admin_grants"))
+        return redirect(url_for("admin_grant_view", scheme_id=scheme_id))
 
     return render_template(
         "admin_grant_scheme_view.html",
         scheme=scheme,
-        department=department,
         departments=departments
     )
 
