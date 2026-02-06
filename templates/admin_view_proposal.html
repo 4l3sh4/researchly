@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>View Proposal</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/colors.css') }}">
+</head>
+<body style="font-family:Segoe UI, Arial, sans-serif; padding:24px;">
+
+  <h2>{{ proposal.project_title }}</h2>
+
+  <p><b>Department:</b> {{ dept.department_name if dept else "-" }}</p>
+  <p><b>Abstract:</b><br>{{ proposal.abstract }}</p>
+  <p><b>Methodology:</b><br>{{ proposal.methodology }}</p>
+  <p><b>Requested Budget:</b> RM {{ proposal.requested_budget }}</p>
+
+  <br>
+  <a href="javascript:history.back()">← Back</a>
+</body>
+</html>

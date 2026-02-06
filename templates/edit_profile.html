@@ -90,6 +90,17 @@
               </div>
             </div>
 
+            {% if prof.role == "REVIEWER" %}
+              <div class="section">
+                <h3 class="section-title">Reviewer Expertise</h3>
+
+                <label class="field-label">Expertise Tags</label>
+                <input class="input" type="text" name="expertise_tags"
+                  value="{{ prof.expertise_tags or '' }}"
+                  placeholder="e.g., AI, Data Science, Cybersecurity" />
+              </div>
+            {% endif %}
+
             <!-- Bank section (Researcher only) -->
             {% if prof.role == "RESEARCHER" %}
               <div class="section">

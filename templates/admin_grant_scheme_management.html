@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Grant Scheme Management</title>
+
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/admin_grant_scheme_management.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/colors.css') }}">
+</head>
+
+<body>
+  <!-- ✅ Top bar (same structure as admin_dashboard.html) -->
+  <header class="topbar">
+    <div class="left">
+      <button class="hamburger" type="button" aria-label="Menu">&#9776;</button>
+      <div class="brand">Researchly™</div>
+    </div>
+
+    <div class="icons">
+      <span class="icon bell" title="Notifications"></span>
+
+      <a href="{{ url_for('view_profile') }}" class="icon user" title="Profile">
+        {% if prof and prof.profile_picture %}
+          <img class="top-avatar"
+               src="{{ url_for('static', filename='uploads/' ~ prof.profile_picture) }}"
+               alt="Profile">
+        {% else %}
+          <span class="fallback-user">👤</span>
+        {% endif %}
+      </a>
+    </div>
+  </header>
+
+  <!-- ✅ Layout wrapper (same class names as admin dashboard pages) -->
+  <main class="layout">
+    <!-- ✅ Sidebar (same feel as other pages) -->
+    <aside class="sidebar">
+      <a class="side-link" href="{{ url_for('admin_dashboard') }}">Admin Dashboard</a>
+      <a class="side-link" href="{{ url_for('admin_users', status='PENDING') }}">User Management</a>
+      <a class="side-link active" href="{{ url_for('admin_grants', status='ALL', q=q) }}">Grant Scheme<br/>Management</a>
+
+      <a class="side-link" href="{{ url_for('admin_funding_list', dept='ALL') }}">Funding Allocation</a>
+      <a class="side-link" href="{{ url_for('admin_final_approval_list', dept='ALL') }}">Final Approval<br/>Decision</a>
+      <a class="side-link" href="{{ url_for('admin_assign_reviewers', dept='ALL') }}">Assign Reviewers</a>
+      <a class="side-link" href="#">Proposal List</a>
+
+      <div class="side-spacer"></div>
+      <a class="side-link logout" href="{{ url_for('logout') }}">Logout</a>
+    </aside>
+
+    <!-- Content area (keep your existing table/card layout) -->
+    <section class="content">
+      <div class="toolbar">
+        <a class="btn-create" href="{{ url_for('admin_grant_create') }}">＋ Create Grant Scheme</a>
+
+        <form class="search" method="GET" action="{{ url_for('admin_grants') }}">
+          <input type="hidden" name="status" value="{{ status }}">
+          <input type="text" name="q" value="{{ q }}" placeholder="Search">
+          <button type="submit">🔍</button>
+        </form>
+      </div>
+
+      <div class="card">
+        <div class="tabs">
+          <a class="tab {{ 'active' if status=='ALL' else '' }}" href="{{ url_for('admin_grants', status='ALL', q=q) }}">All</a>
+          <a class="tab {{ 'active' if status=='OPEN' else '' }}" href="{{ url_for('admin_grants', status='OPEN', q=q) }}">Open</a>
+          <a class="tab {{ 'active' if status=='CLOSED' else '' }}" href="{{ url_for('admin_grants', status='CLOSED', q=q) }}">Closed</a>
+          <a class="tab {{ 'active' if status=='DRAFT' else '' }}" href="{{ url_for('admin_grants', status='DRAFT', q=q) }}">Draft</a>
+        </div>
+
+        <table class="table">
+          <thead>
+            <tr>
+              <th>Department</th>
+              <th>Open Date</th>
+              <th>Close Date</th>
+              <th>Status</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+          {% for scheme, dept in rows %}
+            <tr>
+              <td>{{ dept.department_name if dept else '(No department linked)' }}</td>
+              <td>{{ scheme.open_date.strftime('%d/%m/%Y') }}</td>
+              <td>{{ scheme.close_date.strftime('%d/%m/%Y') }}</td>
+              <td>
+                <span class="badge {{ scheme.scheme_status|lower }}">{{ scheme.scheme_status|capitalize }}</span>
+              </td>
+              <td class="actions">
+                <a class="btn-view" href="{{ url_for('admin_grant_view', scheme_id=scheme.scheme_id) }}">View</a>
+              </td>
+            </tr>
+          {% else %}
+            <tr><td colspan="5" class="empty">No schemes found.</td></tr>
+          {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+</body>
+</html>

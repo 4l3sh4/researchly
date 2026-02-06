@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Assign Reviewers</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/admin_assign_reviewer_detail.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/colors.css') }}">
+</head>
+<body>
+
+<header class="topbar">
+  <div class="left">
+    <button class="hamburger" type="button" aria-label="Menu">&#9776;</button>
+    <div class="brand">Researchly™</div>
+  </div>
+
+  <div class="icons">
+    <span class="icon bell" title="Notifications"></span>
+    <a href="{{ url_for('view_profile') }}" class="icon user" title="Profile">
+      {% if prof and prof.profile_picture %}
+        <img class="top-avatar" src="{{ url_for('static', filename='uploads/' ~ prof.profile_picture) }}" alt="Profile">
+      {% else %}
+        <span class="fallback-user">👤</span>
+      {% endif %}
+    </a>
+  </div>
+</header>
+
+<main class="layout">
+  <aside class="sidebar">
+    <a class="side-link" href="{{ url_for('admin_dashboard') }}">Admin Dashboard</a>
+    <a class="side-link" href="{{ url_for('admin_users', status='PENDING') }}">User Management</a>
+    <a class="side-link" href="{{ url_for('admin_grants') }}">Grant Scheme<br/>Management</a>
+    <a class="side-link" href="{{ url_for('admin_funding_list', dept='ALL') }}">Funding Allocation</a>
+    <a class="side-link" href="{{ url_for('admin_final_approval_list', dept='ALL') }}">Final Approval<br/>Decision</a>
+    <a class="side-link active" href="{{ url_for('admin_assign_reviewers', dept='ALL') }}">Assign Reviewers</a>
+    <a class="side-link" href="#">Proposal List</a>
+
+    <div class="side-spacer"></div>
+    <a class="side-link logout" href="{{ url_for('logout') }}">Logout</a>
+  </aside>
+
+  <section class="content">
+    <div class="page-wrap">
+
+      <div class="heading">
+        <h2 class="page-title">
+          Proposal: <span class="title-accent">{{ proposal.project_title }}</span>
+        </h2>
+        <div class="meta">
+          <span class="meta-label">Expertise Needed:</span>
+          <span class="meta-value">{{ needed_str }}</span>
+        </div>
+      </div>
+
+      <form class="toolbar" method="GET" action="{{ url_for('admin_assign_reviewer_detail', proposal_id=proposal.proposal_id) }}">
+        <div class="search-wrap">
+          <span class="search-icon"></span>
+          <input class="search" type="text" name="q" value="{{ q }}" placeholder="Search by name/email">
+        </div>
+
+        <select class="filter" name="expertise">
+          {% for t in tags %}
+            <option value="{{ t }}" {{ 'selected' if expertise==t else '' }}>{{ t }}</option>
+          {% endfor %}
+        </select>
+
+        <button class="btn-go" type="submit">🔍</button>
+      </form>
+
+      <form method="POST">
+        <div class="card">
+          <table class="table">
+            <thead>
+              <tr>
+                <th>Reviewers</th>
+                <th class="col-exp">Expertise</th>
+                <th class="col-check"></th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for r in reviewers %}
+                <tr>
+                  <td class="reviewer-cell">
+                    <div class="avatar"></div>
+                    <div class="who">
+                      <div class="name">{{ r.user.full_name }}</div>
+                      <div class="email">{{ r.user.email }}</div>
+                    </div>
+                  </td>
+                  <td class="exp">
+                    {{ ", ".join(r.tags) }}
+                  </td>
+                  <td class="check">
+                    <input type="checkbox" name="reviewer_id" value="{{ r.reviewer.reviewer_id }}" {% if r.checked %}checked{% endif %}>
+                  </td>
+                </tr>
+              {% else %}
+                <tr><td class="empty" colspan="3">No reviewers found.</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+
+        <div class="bottom-bar">
+          <a class="btn-secondary" href="{{ url_for('admin_assign_reviewers', dept='ALL') }}">Back</a>
+          <button class="btn-primary" type="submit">Assign</button>
+        </div>
+      </form>
+
+    </div>
+  </section>
+</main>
+
+</body>
+</html>
