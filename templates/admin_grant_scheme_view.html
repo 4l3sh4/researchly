@@ -39,9 +39,9 @@
       <a class="side-link" href="{{ url_for('admin_users', status='PENDING') }}">User Management</a>
       <a class="side-link active" href="{{ url_for('admin_grants', status='ALL') }}">Grant Scheme<br/>Management</a>
 
-      <a class="side-link" href="#">Funding Allocation</a>
-      <a class="side-link" href="#">Final Approval<br/>Decision</a>
-      <a class="side-link" href="#">Assign Reviewers</a>
+      <a class="side-link" href="{{ url_for('admin_funding_list', dept='ALL') }}">Funding Allocation</a>
+      <a class="side-link" href="{{ url_for('admin_final_approval_list', dept='ALL') }}">Final Approval<br/>Decision</a>
+      <a class="side-link" href="{{ url_for('admin_assign_reviewers', dept='ALL') }}">Assign Reviewers</a>
       <a class="side-link" href="#">Proposal List</a>
 
       <div class="side-spacer"></div>

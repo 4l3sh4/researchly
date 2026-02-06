@@ -1,16 +1,16 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Funding Allocation</title>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Final Approval Decision</title>
 
-  <link rel="stylesheet" href="{{ url_for('static', filename='css/admin_funding_allocation.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/admin_final_approval_list.css') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/colors.css') }}">
 </head>
 
 <body>
-  <!-- Topbar (same structure as admin_dashboard.html) -->
+  <!-- Topbar -->
   <header class="topbar">
     <div class="left">
       <button class="hamburger" type="button" aria-label="Menu">&#9776;</button>
@@ -38,10 +38,12 @@
       <a class="side-link" href="{{ url_for('admin_dashboard') }}">Admin Dashboard</a>
       <a class="side-link" href="{{ url_for('admin_users', status='PENDING') }}">User Management</a>
       <a class="side-link" href="{{ url_for('admin_grants', status='ALL') }}">Grant Scheme<br/>Management</a>
+      <a class="side-link" href="{{ url_for('admin_funding_list', dept='ALL') }}">Funding Allocation</a>
 
-      <a class="side-link active" href="{{ url_for('admin_funding_list', dept='ALL', q=q) }}">Funding Allocation</a>
+      <a class="side-link active" href="{{ url_for('admin_final_approval_list', dept='ALL') }}">
+        Final Approval<br/>Decision
+      </a>
 
-      <a class="side-link" href="{{ url_for('admin_final_approval_list', dept='ALL') }}">Final Approval<br/>Decision</a>
       <a class="side-link" href="{{ url_for('admin_assign_reviewers', dept='ALL') }}">Assign Reviewers</a>
       <a class="side-link" href="#">Proposal List</a>
 
@@ -49,26 +51,25 @@
       <a class="side-link logout" href="{{ url_for('logout') }}">Logout</a>
     </aside>
 
+    <!-- Content -->
     <section class="content">
       <div class="page-wrap">
-        <h2 class="title">Pending Fund Allocation</h2>
-        <form class="toolbar" method="GET" action="{{ url_for('admin_funding_list') }}">
-          <div class="toolbar-left">
-            <input class="search" type="text" name="q" value="{{ q }}" placeholder="Search">
-          </div>
+        <h2 class="title">Pending Final Approval</h2>
 
-          <div class="toolbar-right">
-            <select class="filter" name="dept" onchange="this.form.submit()">
-              <option value="ALL" {{ 'selected' if dept=='ALL' else '' }}>All</option>
-              {% for d in departments %}
-                <option value="{{ d.department_id }}" {{ 'selected' if dept==d.department_id else '' }}>
-                  {{ d.department_name }}
-                </option>
-              {% endfor %}
-            </select>
+        <!-- Toolbar-->
+        <form class="toolbar" method="GET" action="{{ url_for('admin_final_approval_list') }}">
+          <input class="search" type="text" name="q" value="{{ q or '' }}" placeholder="Search">
 
-            <button class="btn-go" type="submit" aria-label="Search">🔍</button>
-          </div>
+          <select class="filter" name="dept">
+            <option value="ALL" {{ 'selected' if dept=='ALL' else '' }}>All</option>
+            {% for d in departments %}
+              <option value="{{ d.department_id }}" {{ 'selected' if dept==d.department_id else '' }}>
+                {{ d.department_name }}
+              </option>
+            {% endfor %}
+          </select>
+
+          <button class="btn-go" type="submit" aria-label="Search">🔍</button>
         </form>
 
         <div class="card">
@@ -82,12 +83,14 @@
             </thead>
 
             <tbody>
-              {% for proposal, dept in rows %}
+              {% for proposal, dept_obj in rows %}
                 <tr>
                   <td>{{ proposal.project_title }}</td>
-                  <td>{{ dept.department_name if dept else '-' }}</td>
+                  <td>{{ dept_obj.department_name if dept_obj else '-' }}</td>
                   <td class="actions">
-                    <a class="btn" href="{{ url_for('admin_funding_allocate', proposal_id=proposal.proposal_id) }}">Allocate</a>
+                    <a class="btn" href="{{ url_for('admin_final_approval_detail', proposal_id=proposal.proposal_id) }}">
+                      View
+                    </a>
                   </td>
                 </tr>
               {% else %}

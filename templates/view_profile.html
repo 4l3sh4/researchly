@@ -75,6 +75,26 @@
             <div class="label" style="margin-top:18px;">Email</div>
             <div class="value">{{ user.email }}</div>
 
+            {% if prof.role == "REVIEWER" %}
+              <div class="label" style="margin-top:18px;">Expertise</div>
+
+              {% set tags = (prof.expertise_tags or "").split(",") %}
+              <div class="value">
+                {% if prof.expertise_tags %}
+                  <div style="display:flex; flex-wrap:wrap; gap:8px; margin-top:6px;">
+                    {% for t in tags %}
+                      {% set clean = t.strip() %}
+                      {% if clean %}
+                        <span class="pill pill-exp">{{ clean }}</span>
+                      {% endif %}
+                    {% endfor %}
+                  </div>
+                {% else %}
+                  -
+                {% endif %}
+              </div>
+            {% endif %}
+
             {% if prof.role == 'RESEARCHER' %}
               <div class="bank-title">
                 <span class="bank-icon">Ⓢ</span> Bank Account Details
