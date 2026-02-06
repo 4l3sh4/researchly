@@ -110,6 +110,11 @@ a.icon {
   display: grid;
   grid-template-columns: 280px 1fr;
   min-height: calc(100vh - 64px);
+  transition: grid-template-columns 0.3s ease;
+}
+
+.layout.sidebar-collapsed {
+  grid-template-columns: 0 1fr;
 }
 
 /* Sidebar */
@@ -117,6 +122,14 @@ a.icon {
   background: linear-gradient(180deg, #0fa7a1, #6bd24f);
   padding: 14px 0;
   color: #fff;
+  transition: transform 0.3s ease, width 0.3s ease;
+  width: 280px;
+}
+
+.sidebar.collapsed {
+  transform: translateX(-100%);
+  width: 0;
+  overflow: hidden;
 }
 
 .side-link {
@@ -127,6 +140,7 @@ a.icon {
   font-weight: 700;
   font-size: 22px;
   line-height: 1.1;
+  white-space: nowrap;
 }
 
 .side-link:hover {
