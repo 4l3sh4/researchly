@@ -13,6 +13,17 @@ from sqlalchemy import func
 import uuid
 import os
 
+DISPLAY_STATUS_OPTIONS = [
+    "Pending Assignment",
+    "Pending Review",
+    "Pending Endorsement",
+    "Pending Approval",
+    "Pending Funding",
+    "Approved",
+    "Rejected",
+    "Funded",
+]
+
 app = Flask(__name__)
 
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///database.db'
@@ -362,6 +373,52 @@ def inject_profile():
     if current_user.is_authenticated:
         return {"prof": get_profile(current_user.id)}
     return {"prof": None}
+
+def compute_proposal_display_status(p: "Proposal") -> str:
+    pid = p.proposal_id
+
+    # 1) If proposal_status already stores an end-state, trust it
+    # (you already set FUNDED in funding confirm)
+    st = (p.proposal_status or "").upper().strip()
+    if st in {"FUNDED", "REJECTED"}:
+        return st.title()  # Funded / Rejected
+
+    # 2) Funding confirmed? (Project + FundingAllocation exists)
+    project = Project.query.filter_by(proposal_id=pid).first()
+    if project:
+        alloc = FundingAllocation.query.filter_by(project_id=project.project_id).first()
+        if alloc and (alloc.allocation_status or "").upper() == "CONFIRMED":
+            return "Funded"
+
+    # 3) Final decision exists?
+    final = FinalDecision.query.filter_by(proposal_id=pid).first()
+    if final:
+        if (final.decision or "").upper() == "APPROVED":
+            return "Approved"   # or "Pending Funding" if you want until funding confirmed
+        return "Rejected"
+
+    # 4) HoD endorsement exists?
+    hod = HODEndorsement.query.filter_by(proposal_id=pid).first()
+    if hod:
+        if (hod.decision or "").upper() == "ENDORSE":
+            return "Pending Approval"
+        return "Rejected"  # Not endorsed
+
+    # 5) Reviewer assignments exist?
+    assignments = ReviewersAssignment.query.filter_by(proposal_id=pid).all()
+    if not assignments:
+        return "Pending Assignment"
+
+    # 6) Reviews progress
+    reviews = Review.query.filter_by(proposal_id=pid).all()
+    if not reviews:
+        return "Pending Review"
+
+    # If you want: "Pending Endorsement" when all assigned reviews are done
+    if len(reviews) >= len(assignments):
+        return "Pending Endorsement"
+
+    return "Pending Review"
 
 @app.route("/")
 def home():
@@ -1279,6 +1336,7 @@ def admin_final_approval_detail(proposal_id):
             return redirect(url_for("admin_final_approval_detail", proposal_id=proposal_id))
 
         decision = "APPROVED" if action == "approve" else "REJECTED"
+        proposal.proposal_status = decision 
 
         if not existing_final:
             existing_final = FinalDecision(
@@ -1454,6 +1512,8 @@ def admin_assign_reviewer_detail(proposal_id):
                 assignment_status="ASSIGNED"
             ))
 
+        proposal.proposal_status = "PENDING_REVIEW"
+
         db.session.commit()
         flash("Reviewers assigned successfully.", "success")
         return redirect(url_for("admin_assign_reviewers"))
@@ -1468,6 +1528,42 @@ def admin_assign_reviewer_detail(proposal_id):
         q=rq,
         expertise=expertise_filter,
         prof=prof
+    )
+
+#-----------------
+# Proposal List
+#-----------------
+from sqlalchemy import func
+
+@app.route("/admin/proposal-list")
+@login_required
+@admin_required
+def admin_proposal_list():
+    q = (request.args.get("q") or "").strip()
+    status = (request.args.get("status") or "ALL").strip()  # KEEP as normal string (not .upper())
+
+    query = Proposal.query
+
+    if q:
+        like = f"%{q}%"
+        query = query.filter(Proposal.project_title.ilike(like))
+
+    proposals = query.order_by(Proposal.proposal_id.desc()).all()
+
+    # compute display status for each proposal
+    for p in proposals:
+        p.display_status = compute_proposal_display_status(p)
+
+    # filter by computed display_status (this matches what the user sees)
+    if status != "ALL":
+        proposals = [p for p in proposals if (p.display_status == status)]
+
+    return render_template(
+        "admin_proposal_list.html",
+        proposals=proposals,
+        q=q,
+        status=status,
+        status_options=DISPLAY_STATUS_OPTIONS
     )
 
 if __name__ == '__main__':

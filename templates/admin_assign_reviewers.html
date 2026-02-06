@@ -37,7 +37,7 @@
     <a class="side-link" href="{{ url_for('admin_funding_list', dept='ALL') }}">Funding Allocation</a>
     <a class="side-link" href="{{ url_for('admin_final_approval_list', dept='ALL') }}">Final Approval<br/>Decision</a>
     <a class="side-link active" href="{{ url_for('admin_assign_reviewers') }}">Assign Reviewers</a>
-    <a class="side-link" href="#">Proposal List</a>
+    <a class="side-link" href="{{ url_for('admin_proposal_list') }}">Proposal List</a>
 
     <div class="side-spacer"></div>
     <a class="side-link logout" href="{{ url_for('logout') }}">Logout</a>
