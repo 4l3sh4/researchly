@@ -7,7 +7,8 @@ from main import (
     User, UserProfile,
     Admin, HOD, Reviewer, Researcher,
     Department, GrantScheme, Proposal,
-    ReviewersAssignment, Review, HODEndorsement, FinalDecision
+    ReviewersAssignment, Review, HODEndorsement, FinalDecision,
+    Project, FundingAllocation
 )
 
 # -------------------------
@@ -19,40 +20,24 @@ def uid():
 def hash_pw(pw: str) -> str:
     return bcrypt.generate_password_hash(pw).decode("utf-8")
 
-def get_or_create_user_id(email, full_name, role, password_plain="demo", account_status="ACTIVE"):
-    """
-    Returns user_id only (avoids expired object issues).
-    Ensures UserProfile exists & matches role/status.
-    """
+def get_or_create_user(email, full_name, password_plain="demo"):
     u = User.query.filter_by(email=email).first()
     if not u:
         u = User(id=uid(), full_name=full_name, email=email, password=hash_pw(password_plain))
         db.session.add(u)
-        db.session.add(UserProfile(user_id=u.id, role=role, account_status=account_status))
         db.session.commit()
-        return u.id
+    return u
 
-    prof = UserProfile.query.filter_by(user_id=u.id).first()
+def upsert_profile(user_id, role, account_status):
+    prof = UserProfile.query.filter_by(user_id=user_id).first()
     if not prof:
-        db.session.add(UserProfile(user_id=u.id, role=role, account_status=account_status))
-        db.session.commit()
+        db.session.add(UserProfile(user_id=user_id, role=role, account_status=account_status))
     else:
-        changed = False
-        if prof.role != role:
-            prof.role = role
-            changed = True
-        if prof.account_status != account_status:
-            prof.account_status = account_status
-            changed = True
-        if changed:
-            db.session.commit()
-
-    return u.id
+        prof.role = role
+        prof.account_status = account_status
+    db.session.commit()
 
 def ensure_role_row(role: str, user_id: str):
-    """
-    Ensure role table row exists (Admin/HOD/Reviewer/Researcher) and return it.
-    """
     role = role.upper()
 
     if role == "ADMIN":
@@ -104,8 +89,8 @@ def get_or_create_department(dept_name: str, dept_desc: str, hod_id: str):
     db.session.commit()
     return dept
 
-def get_or_create_scheme_for_department(admin_id: str, dept_id: str, dept_name: str):
-    desc = f"Demo Grant Scheme ({dept_name})"
+def create_scheme(admin_id: str, dept: Department, status="OPEN"):
+    desc = f"Demo Grant Scheme ({dept.department_name}) - {status}"
     scheme = GrantScheme.query.filter_by(description=desc).first()
     if scheme:
         return scheme
@@ -113,87 +98,101 @@ def get_or_create_scheme_for_department(admin_id: str, dept_id: str, dept_name: 
     scheme = GrantScheme(
         scheme_id=uid(),
         admin_id=admin_id,
-        department_id=dept_id,
+        department_id=dept.department_id,
         description=desc,
         eligibiliity="MMU Staff / Researchers",
-        open_date=date.today() - timedelta(days=7),
-        close_date=date.today() + timedelta(days=30),
+        open_date=date.today() - timedelta(days=14),
+        close_date=date.today() + timedelta(days=30) if status == "OPEN" else date.today() - timedelta(days=1),
         max_budget=50000,
         project_duration_limit=12,
         required_documents="Proposal, CV, Budget",
         reporting_requirements="Monthly report, Final report",
-        scheme_status="OPEN",
+        scheme_status=status,
     )
     db.session.add(scheme)
     db.session.commit()
     return scheme
 
-def ensure_review_pipeline(proposal: Proposal, reviewers, budget: int, hod_id: str):
-    """Ensure: assignments + reviews + HOD endorsement exist."""
-    # 2 reviewers
-    for rv in reviewers[:2]:
-        if not ReviewersAssignment.query.filter_by(
-            proposal_id=proposal.proposal_id,
-            reviewer_id=rv.reviewer_id
-        ).first():
-            db.session.add(ReviewersAssignment(
-                assignment_id=uid(),
-                proposal_id=proposal.proposal_id,
-                reviewer_id=rv.reviewer_id,
-                assignment_status="ASSIGNED"
-            ))
+def create_proposal(scheme_id: str, researcher_id: str, title: str, budget: int):
+    proposal = Proposal.query.filter_by(project_title=title).first()
+    if proposal:
+        return proposal
 
-        if not Review.query.filter_by(
-            proposal_id=proposal.proposal_id,
-            reviewer_id=rv.reviewer_id
-        ).first():
-            db.session.add(Review(
-                review_id=uid(),
-                proposal_id=proposal.proposal_id,
-                reviewer_id=rv.reviewer_id,
-                review_date=datetime.now(timezone.utc),
-                recommendation="APPROVE" if budget <= 15000 else "REVISE",
-                feedback="Demo feedback for final approval testing."
-            ))
-
-    if not HODEndorsement.query.filter_by(proposal_id=proposal.proposal_id).first():
-        db.session.add(HODEndorsement(
-            hod_endorsement_id=uid(),
-            hod_id=hod_id,
-            proposal_id=proposal.proposal_id,
-            decision="ENDORSE",
-            remarks="Endorsed for demo final approval testing."
-        ))
-
+    proposal = Proposal(
+        proposal_id=uid(),
+        scheme_id=scheme_id,
+        researcher_id=researcher_id,
+        project_title=title,
+        abstract="Demo abstract for testing.",
+        methodology="Demo methodology section for testing.",
+        requested_budget=budget,
+        submission_date=datetime.now(timezone.utc),
+        proposal_status="SUBMITTED"
+    )
+    db.session.add(proposal)
     db.session.commit()
+    return proposal
 
-def clear_review_pipeline(proposal_id: str):
-    """
-    Make a proposal appear in "Pending Reviewer Assignments":
-    - delete assignments
-    - delete reviews
-    - delete hod endorsement
-    """
+def clear_workflow(proposal_id: str):
+    # Remove everything so it becomes "Pending Assignment"
     Review.query.filter_by(proposal_id=proposal_id).delete()
     ReviewersAssignment.query.filter_by(proposal_id=proposal_id).delete()
     HODEndorsement.query.filter_by(proposal_id=proposal_id).delete()
+    FinalDecision.query.filter_by(proposal_id=proposal_id).delete()
+
+    # Also remove funding/project if any
+    proj = Project.query.filter_by(proposal_id=proposal_id).first()
+    if proj:
+        FundingAllocation.query.filter_by(project_id=proj.project_id).delete()
+        db.session.delete(proj)
+
     db.session.commit()
 
-def set_final_decision(proposal_id: str, admin_id: str, decision):
-    """
-    decision:
-      - None => make it PENDING (delete FinalDecision if exists)
-      - "APPROVED"/"REJECTED" => ensure record exists
-    """
-    existing = FinalDecision.query.filter_by(proposal_id=proposal_id).first()
+def add_assignments_only(proposal_id: str, reviewers, count=2):
+    # Pending Review (assigned but no reviews)
+    for rv in reviewers[:count]:
+        if not ReviewersAssignment.query.filter_by(proposal_id=proposal_id, reviewer_id=rv.reviewer_id).first():
+            db.session.add(ReviewersAssignment(
+                assignment_id=uid(),
+                proposal_id=proposal_id,
+                reviewer_id=rv.reviewer_id,
+                assignment_status="ASSIGNED"
+            ))
+    db.session.commit()
 
-    if decision is None:
-        if existing:
-            db.session.delete(existing)
-            db.session.commit()
-        return
+def add_reviews_for_assignments(proposal_id: str, reviewers, count=2):
+    # Ensure assignments exist
+    add_assignments_only(proposal_id, reviewers, count=count)
 
-    if not existing:
+    # Add reviews => now can become "Pending Endorsement" (if no HOD endorsement)
+    for rv in reviewers[:count]:
+        if not Review.query.filter_by(proposal_id=proposal_id, reviewer_id=rv.reviewer_id).first():
+            db.session.add(Review(
+                review_id=uid(),
+                proposal_id=proposal_id,
+                reviewer_id=rv.reviewer_id,
+                review_date=datetime.now(timezone.utc),
+                recommendation="APPROVE",
+                feedback="Demo feedback."
+            ))
+    db.session.commit()
+
+def add_hod_endorsement(proposal_id: str, hod_id: str, decision="ENDORSE"):
+    # Pending Approval (endorsed but no FinalDecision)
+    if not HODEndorsement.query.filter_by(proposal_id=proposal_id).first():
+        db.session.add(HODEndorsement(
+            hod_endorsement_id=uid(),
+            hod_id=hod_id,
+            proposal_id=proposal_id,
+            decision=decision,
+            remarks="Demo HoD remarks."
+        ))
+    db.session.commit()
+
+def set_final_decision(proposal_id: str, admin_id: str, decision: str):
+    # Approved / Rejected (FinalDecision exists)
+    fd = FinalDecision.query.filter_by(proposal_id=proposal_id).first()
+    if not fd:
         db.session.add(FinalDecision(
             final_decision_id=uid(),
             proposal_id=proposal_id,
@@ -201,31 +200,78 @@ def set_final_decision(proposal_id: str, admin_id: str, decision):
             decision=decision
         ))
     else:
-        existing.decision = decision
+        fd.decision = decision
+    db.session.commit()
+
+def create_funding(proposal: Proposal, admin_id: str, status: str):
+    """
+    status: "DRAFT" or "CONFIRMED"
+    For CONFIRMED, we also set proposal.proposal_status="FUNDED" (matches your app logic).
+    """
+    proj = Project.query.filter_by(proposal_id=proposal.proposal_id).first()
+    if not proj:
+        proj = Project(
+            project_id=uid(),
+            proposal_id=proposal.proposal_id,
+            researcher_id=proposal.researcher_id,
+            scheme_id=proposal.scheme_id,
+            start_date=date.today(),
+            end_date=date.today() + timedelta(days=180),
+            project_status="ONGOING"  
+        )
+
+        db.session.add(proj)
+        db.session.commit()
+
+    alloc = FundingAllocation.query.filter_by(project_id=proj.project_id).first()
+    if not alloc:
+        alloc = FundingAllocation(
+            allocation_id=uid(),
+            admin_id=admin_id,
+            project_id=proj.project_id,
+            total_amount=proposal.requested_budget,
+            equipment_amount=int(proposal.requested_budget * 0.3),
+            materials_amount=int(proposal.requested_budget * 0.3),
+            travel_amount=int(proposal.requested_budget * 0.2),
+            other_amount=int(proposal.requested_budget * 0.2),
+            allocation_date=datetime.now(timezone.utc),
+            allocation_status=status
+        )
+        db.session.add(alloc)
+    else:
+        alloc.allocation_status = status
+
+    if status.upper() == "CONFIRMED":
+        proposal.proposal_status = "FUNDED"
 
     db.session.commit()
+
 
 # -------------------------
 # Seeder
 # -------------------------
 def run():
     with app.app_context():
+        # FULL RESET so all pages are consistent for testing
+        db.drop_all()
         db.create_all()
 
         # ----------------------------
-        # 1) Admin (login account)
+        # Admin account
         # ----------------------------
-        admin_user_id = get_or_create_user_id(
-            email="admin_demo@gmail.com",
-            full_name="Admin Demo",
-            role="ADMIN",
-            password_plain="1234",
-            account_status="ACTIVE"
-        )
-        admin = ensure_role_row("ADMIN", admin_user_id)
+        admin_user = get_or_create_user("admin_demo@gmail.com", "Admin Demo", "1234")
+        upsert_profile(admin_user.id, "ADMIN", "ACTIVE")
+        admin = ensure_role_row("ADMIN", admin_user.id)
 
         # ----------------------------
-        # 2) Departments + HODs
+        # Create some pending users (User Management testing)
+        # ----------------------------
+        for i in range(3):
+            u = get_or_create_user(f"pending_user{i+1}@gmail.com", f"Pending User {i+1}", "demo")
+            upsert_profile(u.id, "RESEARCHER", "PENDING")
+
+        # ----------------------------
+        # Departments + HODs
         # ----------------------------
         dept_specs = [
             ("Computer Science", "Demo CS Dept"),
@@ -237,139 +283,131 @@ def run():
 
         departments = []
         for dept_name, dept_desc in dept_specs:
-            hod_user_id = get_or_create_user_id(
-                email=f"hod_{dept_name.lower().replace(' ', '_')}@gmail.com",
-                full_name=f"HOD {dept_name}",
-                role="HOD",
-                password_plain="demo",
-                account_status="ACTIVE"
+            hod_user = get_or_create_user(
+                f"hod_{dept_name.lower().replace(' ', '_')}@gmail.com",
+                f"HOD {dept_name}",
+                "demo"
             )
-            hod = ensure_role_row("HOD", hod_user_id)
+            upsert_profile(hod_user.id, "HOD", "ACTIVE")
+            hod = ensure_role_row("HOD", hod_user.id)
+
             dept = get_or_create_department(dept_name, dept_desc, hod.hod_id)
             departments.append((dept, hod))
 
         # ----------------------------
-        # 3) Reviewers (shared pool)
+        # Reviewers (pool)
         # ----------------------------
         reviewers = []
         for i in range(4):
-            reviewer_user_id = get_or_create_user_id(
-                email=f"reviewer{i+1}@gmail.com",
-                full_name=f"Reviewer {i+1}",
-                role="REVIEWER",
-                password_plain="demo",
-                account_status="ACTIVE"
-            )
-            reviewers.append(ensure_role_row("REVIEWER", reviewer_user_id))
+            ru = get_or_create_user(f"reviewer{i+1}@gmail.com", f"Reviewer {i+1}", "demo")
+            upsert_profile(ru.id, "REVIEWER", "ACTIVE")
+            reviewers.append(ensure_role_row("REVIEWER", ru.id))
 
         # ----------------------------
-        # 4) Proposals per department
-        #
-        # tuple format:
-        # (title, budget, final_decision, needs_assignment)
-        #
-        # needs_assignment=True => NO assignments/reviews/endorsement
+        # Schemes (one OPEN + one CLOSED for 2 depts to test scheme page)
         # ----------------------------
-        title_bank = {
-            "Computer Science": [
-                ("AI Phishing Detection Using Email Metadata", 14000, None, False),
-                ("Smart Campus Energy Optimization Using IoT", 15000, None, False),
-                ("Reviewer Assignment Test - CS (No reviewers yet)", 12000, None, True),
+        schemes = {}
+        for dept, hod in departments:
+            schemes[(dept.department_name, "OPEN")] = create_scheme(admin.admin_id, dept, status="OPEN")
+        # extra closed schemes
+        for dept, hod in departments[:2]:
+            schemes[(dept.department_name, "CLOSED")] = create_scheme(admin.admin_id, dept, status="CLOSED")
 
-                ("Early Warning Flood Risk Prediction (Pilot)", 12000, "APPROVED", False),
-                ("Blockchain Certificate Verification (Large)", 28000, "REJECTED", False),
-            ],
-            "Engineering": [
-                ("Low-Cost Structural Health Monitoring Sensors", 13000, None, False),
-                ("Energy-Efficient HVAC Optimization in Buildings", 14500, None, False),
-                ("Reviewer Assignment Test - Eng (No reviewers yet)", 12000, None, True),
+        # ----------------------------
+        # Create proposals in ALL workflow states per some departments
+        # ----------------------------
+        # status -> what to create:
+        # Pending Assignment: nothing extra
+        # Pending Review: assignments only
+        # Pending Endorsement: assignments + reviews (no HOD endorsement)
+        # Pending Approval: endorsement exists (no FinalDecision)
+        # Approved: final decision approved (no funding)
+        # Funded Draft: approved + funding DRAFT
+        # Funded Confirmed: approved + funding CONFIRMED
+        # Rejected: final decision rejected
 
-                ("Bridge Vibration Analytics (Phase 1)", 12000, "APPROVED", False),
-                ("Autonomous Drone Inspection for Factories", 35000, "REJECTED", False),
-            ],
-            "Business": [
-                ("SME Cashflow Forecasting Using Explainable AI", 11000, None, False),
-                ("Retail Customer Churn Prediction Dashboard", 15000, None, False),
-                ("Reviewer Assignment Test - Biz (No reviewers yet)", 12000, None, True),
-
-                ("Digital Payment Fraud Screening (Prototype)", 12000, "APPROVED", False),
-                ("Blockchain Loyalty Rewards Marketplace", 26000, "REJECTED", False),
-            ],
-            "Management": [
-                ("University Grant Risk Analytics Dashboard", 9000, None, False),
-                ("Multi-Criteria Resource Allocation Optimizer", 14000, None, False),
-                ("Reviewer Assignment Test - Mgmt (No reviewers yet)", 12000, None, True),
-
-                ("Project Portfolio Tracking (Pilot)", 12000, "APPROVED", False),
-                ("Organizational Change Impact Study", 22000, "REJECTED", False),
-            ],
-            "Multimedia": [
-                ("Interactive AR Campus Navigation Guide", 15000, None, False),
-                ("Gamified Mental Health Support Micro-Learning", 12500, None, False),
-                ("Reviewer Assignment Test - MM (No reviewers yet)", 12000, None, True),
-
-                ("AR Onboarding for New Students (Pilot)", 12000, "APPROVED", False),
-                ("VR Emergency Response Training Suite", 40000, "REJECTED", False),
-            ],
-        }
+        demo_cases = [
+            ("Pending Assignment", 12000),
+            ("Pending Review", 14000),
+            ("Pending Endorsement", 15000),
+            ("Pending Approval", 16000),
+            ("Approved", 17000),
+            ("Funded Draft", 18000),
+            ("Funded Confirmed", 19000),
+            ("Rejected", 20000),
+        ]
 
         researcher_counter = 1
 
         for dept, hod in departments:
-            scheme = get_or_create_scheme_for_department(
-                admin_id=admin.admin_id,
-                dept_id=dept.department_id,
-                dept_name=dept.department_name
-            )
+            scheme = schemes[(dept.department_name, "OPEN")]
 
-            for (base_title, budget, decision, needs_assignment) in title_bank[dept.department_name]:
-                # unique title across departments
-                title = f"{base_title} ({dept.department_name})"
-
-                # Create researcher
-                email = f"researcher{researcher_counter}@gmail.com"
-                researcher_user_id = get_or_create_user_id(
-                    email=email,
-                    full_name=f"Researcher {researcher_counter}",
-                    role="RESEARCHER",
-                    password_plain="demo",
-                    account_status="ACTIVE"
+            for case_name, budget in demo_cases:
+                # Create a researcher for each proposal (simple, consistent)
+                r_user = get_or_create_user(
+                    f"researcher{researcher_counter}@gmail.com",
+                    f"Researcher {researcher_counter}",
+                    "demo"
                 )
+                upsert_profile(r_user.id, "RESEARCHER", "ACTIVE")
+                researcher = ensure_role_row("RESEARCHER", r_user.id)
                 researcher_counter += 1
-                researcher = ensure_role_row("RESEARCHER", researcher_user_id)
 
-                # Create proposal if not exists
-                proposal = Proposal.query.filter_by(project_title=title).first()
-                if not proposal:
-                    proposal = Proposal(
-                        proposal_id=uid(),
-                        scheme_id=scheme.scheme_id,
-                        researcher_id=researcher.researcher_id,
-                        project_title=title,
-                        abstract="Demo abstract for testing.",
-                        methodology="Demo methodology section for testing.",
-                        requested_budget=budget,
-                        submission_date=datetime.now(timezone.utc),
-                        proposal_status="SUBMITTED"
-                    )
-                    db.session.add(proposal)
-                    db.session.commit()
+                title = f"[{case_name}] Demo Proposal ({dept.department_name})"
 
-                # If this proposal is meant to test "Assign Reviewers",
-                # we ensure NO reviewer assignments exist.
-                if needs_assignment:
-                    clear_review_pipeline(proposal.proposal_id)
-                    set_final_decision(proposal.proposal_id, admin.admin_id, None)
-                else:
-                    # normal pipeline for final approval testing
-                    ensure_review_pipeline(proposal, reviewers, budget, hod.hod_id)
-                    set_final_decision(proposal.proposal_id, admin.admin_id, decision)
+                proposal = create_proposal(
+                    scheme_id=scheme.scheme_id,
+                    researcher_id=researcher.researcher_id,
+                    title=title,
+                    budget=budget
+                )
+
+                # Clear any workflow records (idempotent)
+                clear_workflow(proposal.proposal_id)
+
+                # Build workflow state
+                if case_name == "Pending Assignment":
+                    pass
+
+                elif case_name == "Pending Review":
+                    add_assignments_only(proposal.proposal_id, reviewers, count=2)
+
+                elif case_name == "Pending Endorsement":
+                    add_reviews_for_assignments(proposal.proposal_id, reviewers, count=2)
+                    # no HOD endorsement
+
+                elif case_name == "Pending Approval":
+                    add_reviews_for_assignments(proposal.proposal_id, reviewers, count=2)
+                    add_hod_endorsement(proposal.proposal_id, hod.hod_id, decision="ENDORSE")
+                    # no FinalDecision
+
+                elif case_name == "Approved":
+                    add_reviews_for_assignments(proposal.proposal_id, reviewers, count=2)
+                    add_hod_endorsement(proposal.proposal_id, hod.hod_id, decision="ENDORSE")
+                    set_final_decision(proposal.proposal_id, admin.admin_id, "APPROVED")
+                    # no funding
+
+                elif case_name == "Funded Draft":
+                    add_reviews_for_assignments(proposal.proposal_id, reviewers, count=2)
+                    add_hod_endorsement(proposal.proposal_id, hod.hod_id, decision="ENDORSE")
+                    set_final_decision(proposal.proposal_id, admin.admin_id, "APPROVED")
+                    create_funding(proposal, admin.admin_id, status="DRAFT")
+
+                elif case_name == "Funded Confirmed":
+                    add_reviews_for_assignments(proposal.proposal_id, reviewers, count=2)
+                    add_hod_endorsement(proposal.proposal_id, hod.hod_id, decision="ENDORSE")
+                    set_final_decision(proposal.proposal_id, admin.admin_id, "APPROVED")
+                    create_funding(proposal, admin.admin_id, status="CONFIRMED")
+
+                elif case_name == "Rejected":
+                    add_reviews_for_assignments(proposal.proposal_id, reviewers, count=2)
+                    add_hod_endorsement(proposal.proposal_id, hod.hod_id, decision="ENDORSE")
+                    set_final_decision(proposal.proposal_id, admin.admin_id, "REJECTED")
 
         print("✅ Demo data seeded successfully!")
         print("✅ Admin login: admin_demo@gmail.com / 1234")
-        print("✅ Final Approval page: shows proposals with decision=None")
-        print("✅ Assign Reviewers page: shows proposals with NO reviewer assignments")
-        print("   (look for titles containing 'Reviewer Assignment Test')")
+        print("✅ Created workflow states for Proposal List + Assign Reviewers + Final Approval + Funding Allocation.")
+        print("✅ Created PENDING users for User Management testing.")
 
 if __name__ == "__main__":
     run()

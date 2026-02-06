@@ -1083,13 +1083,29 @@ def admin_funding_list():
     # dropdown options
     departments = Department.query.order_by(Department.department_name.asc()).all()
 
-    # Base: only APPROVED proposals (so status column not needed)
+    # Base: only APPROVED proposals
     query = (
         db.session.query(Proposal, Department)
         .join(FinalDecision, FinalDecision.proposal_id == Proposal.proposal_id)
         .filter(db.func.upper(FinalDecision.decision) == "APPROVED")
         .join(GrantScheme, GrantScheme.scheme_id == Proposal.scheme_id)
         .join(Department, Department.department_id == GrantScheme.department_id)
+
+        # Join funding tables (so we can exclude confirmed)
+        .outerjoin(Project, Project.proposal_id == Proposal.proposal_id)
+        .outerjoin(FundingAllocation, FundingAllocation.project_id == Project.project_id)
+
+        # Show only proposals that are NOT confirmed funded yet
+        # - no allocation yet OR allocation is not CONFIRMED
+        .filter(
+            or_(
+                FundingAllocation.allocation_id.is_(None),
+                db.func.upper(FundingAllocation.allocation_status) != "CONFIRMED"
+            )
+        )
+
+        # If you set proposal_status="FUNDED" on confirm, exclude that too
+        .filter(db.func.upper(db.func.coalesce(Proposal.proposal_status, "")) != "FUNDED")
     )
 
     # department filter
@@ -1169,6 +1185,7 @@ def admin_funding_allocate(proposal_id):
             return redirect(url_for("admin_funding_allocate", proposal_id=proposal_id))
 
         if action == "confirm":
+            proposal.proposal_status = "FUNDED"
             # validate dates
             if not start_date or not end_date:
                 flash("Please fill in Start Date and End Date before confirming.", "error")
