@@ -48,6 +48,7 @@ class UserProfile(db.Model):
     emergency_contact_number = db.Column(db.String(15), nullable=True)
     profile_picture = db.Column(db.String(255), nullable=True)
     department_name = db.Column(db.String(80), nullable=True)
+    expertise_tags = db.Column(db.String(255), nullable=True)
 
     role = db.Column(db.String(20), nullable=False, default="UNASSIGNED")
     created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc), nullable=False)
@@ -285,6 +286,31 @@ class LoginForm(FlaskForm):
     password = PasswordField(validators=[InputRequired(), Length(min=4, max=50)], render_kw={"placeholder": "Password"})
     submit = SubmitField("Login")
 
+def profile_needs_setup(prof) -> bool:
+    """True if user must complete profile before accessing dashboard."""
+    if not prof:
+        return True
+
+    # Fields EVERYONE must fill (adjust as you like)
+    required = [
+        prof.contact_number,
+        prof.address,
+        prof.emergency_contact_name,
+        prof.emergency_contact_number,
+    ]
+    if any(not (v or "").strip() for v in required):
+        return True
+
+    # Non-admin should also fill department
+    if prof.role != "ADMIN" and not (prof.department_name or "").strip():
+        return True
+
+    # Reviewer should also fill expertise tags (if you use it)
+    if prof.role == "REVIEWER" and not (getattr(prof, "expertise_tags", "") or "").strip():
+        return True
+
+    return False
+
 def get_profile(user_id: str):
     return UserProfile.query.filter_by(user_id=user_id).first()
 
@@ -358,10 +384,16 @@ def home():
 #                 error_message = "Your account is not active yet. Please wait for admin approval."
 #             else:
 #                 login_user(user)
-#                 # optional: send admins to admin dashboard
+
+#                 # Force complete profile first (ALL roles)
+#                 if profile_needs_setup(prof):
+#                     flash("Please complete your profile before continuing.", "info")
+#                     return redirect(url_for("edit_profile"))
+
+#                 # then normal routing
 #                 if prof.role == "ADMIN":
 #                     return redirect(url_for("admin_users"))
-#                 return redirect(url_for('dashboard'))
+#                 return redirect(url_for("dashboard"))
 #         else:
 #             error_message = "Invalid email or password. Please try again."
 
@@ -394,10 +426,16 @@ def login():
                 error_message = "Your account is not active yet. Please wait for admin approval."
             else:
                 login_user(user)
-                # optional: send admins to admin dashboard
+                
+                # Force complete profile first (ALL roles)
+                if profile_needs_setup(prof):
+                    flash("Please complete your profile before continuing.", "info")
+                    return redirect(url_for("edit_profile"))
+
+                # then normal routing
                 if prof.role == "ADMIN":
                     return redirect(url_for("admin_users"))
-                return redirect(url_for('dashboard'))
+                return redirect(url_for("dashboard"))
         else:
             error_message = "Invalid email or password. Please try again."
 
@@ -506,6 +544,10 @@ def edit_profile():
                     bank.bank_name = bank_name  # update name if changed
 
                 researcher.bank_account_number = bank_acc
+
+        # Expertise: only for reviewer
+        if prof.role == "REVIEWER":
+            prof.expertise_tags = (request.form.get("expertise_tags") or "").strip()
 
         db.session.commit()
         flash("Profile updated successfully!", "success")
@@ -1283,24 +1325,11 @@ def proposal_expertise_needed(dept_name: str) -> list[str]:
     return mapping.get(dept_name or "", ["General"])
 
 def reviewer_expertise_tags(user: "User") -> list[str]:
-    """
-    Simple mapping (no DB changes).
-    You can change to read from a real table later.
-    """
-    name = (user.full_name or "").lower()
-
-    if "1" in user.email:
-        return ["AI", "Data Science"]
-    if "2" in user.email:
-        return ["Cybersecurity", "Analytics"]
-    if "3" in user.email:
-        return ["IoT", "Mechanical"]
-    if "4" in user.email:
-        return ["UI/UX", "AR/VR"]
-    # fallback based on name keywords
-    if "ai" in name:
-        return ["AI"]
-    return ["General"]
+    prof = UserProfile.query.filter_by(user_id=user.id).first()
+    raw = (prof.expertise_tags or "").strip() if prof else ""
+    if not raw:
+        return ["General"]
+    return [t.strip() for t in raw.split(",") if t.strip()]
 
 @app.route("/admin/assign-reviewers")
 @login_required
