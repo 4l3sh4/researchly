@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Reviewers - Researchly</title>
+
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/hod_reviewers.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/colors.css') }}">
+</head>
+
+<body>
+  <!-- Top bar -->
+  <header class="topbar">
+    <div class="left">
+      <button class="hamburger" type="button" aria-label="Menu">&#9776;</button>
+      <div class="brand">Researchly™</div>
+    </div>
+
+    <div class="icons">
+      <span class="icon bell" title="Notifications"></span>
+      <a href="{{ url_for('view_profile') }}" class="icon user" title="Profile">
+        {% if prof.profile_picture %}
+          <img class="top-avatar"
+            src="{{ url_for('static', filename='uploads/' ~ prof.profile_picture) }}"
+            alt="Profile">
+        {% else %}
+          <span class="fallback-user">👤</span>
+        {% endif %}
+      </a>
+    </div>
+  </header>
+
+  <main class="layout">
+    <!-- Sidebar -->
+    <aside class="sidebar">
+      <a class="side-link" href="{{ url_for('hod_dashboard') }}">HOD Dashboard</a>
+      <a class="side-link" href="{{ url_for('hod_department_overview') }}">Department<br/>Overview</a>
+      <a class="side-link" href="{{ url_for('hod_active_projects') }}">Active Projects</a>
+      <a class="side-link" href="{{ url_for('hod_review_proposals') }}">Review Proposals</a>
+      <a class="side-link active" href="{{ url_for('hod_reviewers') }}">Reviewers</a>
+      <a class="side-link" href="{{ url_for('hod_researchers') }}">Researchers</a>
+
+      <div class="side-spacer"></div>
+      <a class="side-link logout" href="{{ url_for('logout') }}">Logout</a>
+    </aside>
+
+    <!-- Content -->
+    <section class="content">
+      <div class="card">
+        <!-- Filter and Search Bar -->
+        <div class="controls-bar">
+          <div class="filter-dropdown">
+            <select id="filterSelect">
+              <option value="">Filter</option>
+              <option value="proposals">By Proposals</option>
+              <option value="name">By Name</option>
+              <option value="email">By Email</option>
+            </select>
+          </div>
+          <div class="search-box">
+            <svg class="search-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="11" cy="11" r="8"></circle>
+              <path d="m21 21-4.35-4.35"></path>
+            </svg>
+            <input type="text" id="searchInput" placeholder="Search">
+          </div>
+        </div>
+
+        <!-- Reviewers Table -->
+        <div class="table-container">
+          <table class="reviewers-table">
+            <thead>
+              <tr>
+                <th>Profile</th>
+                <th>Email</th>
+                <th>Total Proposals Reviewed</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>
+                  <div class="profile-cell">
+                    <div class="avatar">
+                      <img src="https://i.pravatar.cc/150?img=20" alt="Ari Aster">
+                    </div>
+                    <span class="name">Ari Aster</span>
+                  </div>
+                </td>
+                <td>ari.aster@mmu.edu.my</td>
+                <td>19</td>
+              </tr>
+              <tr>
+                <td>
+                  <div class="profile-cell">
+                    <div class="avatar">
+                      <img src="https://i.pravatar.cc/150?img=21" alt="Hank Green">
+                    </div>
+                    <span class="name">Hank Green</span>
+                  </div>
+                </td>
+                <td>hank.green@mmu.edu.my</td>
+                <td>20</td>
+              </tr>
+              <tr>
+                <td>
+                  <div class="profile-cell">
+                    <div class="avatar">
+                      <img src="https://i.pravatar.cc/150?img=22" alt="Bong Joon Ho">
+                    </div>
+                    <span class="name">Bong Joon Ho</span>
+                  </div>
+                </td>
+                <td>bong.joon.ho@mmu.edu.my</td>
+                <td>1</td>
+              </tr>
+              <tr>
+                <td>
+                  <div class="profile-cell">
+                    <div class="avatar">
+                      <img src="https://i.pravatar.cc/150?img=23" alt="Colin Farrell">
+                    </div>
+                    <span class="name">Colin Farrell</span>
+                  </div>
+                </td>
+                <td>colin@mmu.edu.my</td>
+                <td>5</td>
+              </tr>
+              <tr>
+                <td>
+                  <div class="profile-cell">
+                    <div class="avatar">
+                      <img src="https://i.pravatar.cc/150?img=24" alt="Stephen King">
+                    </div>
+                    <span class="name">Stephen King</span>
+                  </div>
+                </td>
+                <td>stephen@mmu.edu.my</td>
+                <td>7</td>
+              </tr>
+              <tr>
+                <td>
+                  <div class="profile-cell">
+                    <div class="avatar">
+                      <img src="https://i.pravatar.cc/150?img=25" alt="Sayaka Murata">
+                    </div>
+                    <span class="name">Sayaka Murata</span>
+                  </div>
+                </td>
+                <td>sayaka@mmu.edu.my</td>
+                <td>29</td>
+              </tr>
+              <tr>
+                <td>
+                  <div class="profile-cell">
+                    <div class="avatar">
+                      <img src="https://i.pravatar.cc/150?img=26" alt="George Orwell">
+                    </div>
+                    <span class="name">George Orwell</span>
+                  </div>
+                </td>
+                <td>george@mmu.edu.my</td>
+                <td>30</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+  </main>
+</body>
+</html>

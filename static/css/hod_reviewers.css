@@ -1,0 +1,316 @@
+* {
+  box-sizing: border-box;
+  font-family: "Segoe UI", Arial, sans-serif;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  background: #f7f7f7;
+}
+
+/* Topbar */
+.topbar {
+  height: 64px;
+  padding: 0 18px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: linear-gradient(90deg, var(--accent-2), var(--accent-1));
+  color: #fff;
+}
+
+.topbar .left {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.hamburger {
+  border: none;
+  background: transparent;
+  color: #fff;
+  font-size: 28px;
+  cursor: pointer;
+  padding: 6px 10px;
+  border-radius: 10px;
+}
+
+.hamburger:hover {
+  background: rgba(255,255,255,0.15);
+}
+
+.brand {
+  font-size: 30px;
+  font-weight: 800;
+  letter-spacing: 0.3px;
+}
+
+.icons {
+  display: flex;
+  gap: 14px;
+  align-items: center;
+}
+
+.icon {
+  width: 40px;
+  height: 40px;
+  display: inline-block;
+  position: relative;
+}
+
+.icon:hover {
+  cursor: pointer;
+}
+
+.icon.bell {
+  background-image: url('../img/white_bell.png');
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: center;
+}
+
+/* Make the profile icon a fixed circle and CLIP what's inside */
+.icon.user{
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  overflow: hidden;
+
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  background: #fff;
+  text-decoration: none;
+  flex: 0 0 40px; /* prevents flex stretching */
+}
+
+/* Force the image to stay inside the circle */
+.icon.user .top-avatar{
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+/* fallback icon centered */
+.icon.user .fallback-user{
+  font-size: 22px;
+  line-height: 1;
+}
+
+a.icon {
+  text-decoration: none;
+  color: inherit;
+}
+
+/* Layout */
+.layout {
+  display: grid;
+  grid-template-columns: 280px 1fr;
+  min-height: calc(100vh - 64px);
+}
+
+/* Sidebar */
+.sidebar {
+  background: linear-gradient(180deg, #0fa7a1, #6bd24f);
+  padding: 14px 0;
+  color: #fff;
+}
+
+.side-link {
+  display: block;
+  padding: 18px 22px;
+  color: #fff;
+  text-decoration: none;
+  font-weight: 700;
+  font-size: 22px;
+  line-height: 1.1;
+}
+
+.side-link:hover {
+  background: rgba(255,255,255,0.16);
+}
+
+.side-link.active {
+  background: rgba(0,0,0,0.12);
+}
+
+.side-spacer {
+  height: 40px;
+}
+
+.side-link.logout {
+  margin-top: 12px;
+}
+
+/* Content background */
+.content {
+  padding: 26px 24px 40px;
+  background: repeating-linear-gradient(
+    135deg,
+    rgba(0,0,0,0.03) 0,
+    rgba(0,0,0,0.03) 20px,
+    rgba(255,255,255,0.0) 20px,
+    rgba(255,255,255,0.0) 40px
+  );
+}
+
+.card {
+  max-width: 1200px;
+  margin: 0 auto;
+  background: #fff;
+  border-radius: 18px;
+  border: 1px solid rgba(0,0,0,0.08);
+  padding: 24px 24px 28px;
+}
+
+/* Controls Bar */
+.controls-bar {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.filter-dropdown select {
+  padding: 10px 16px;
+  border: 2px solid rgba(0,0,0,0.12);
+  border-radius: 10px;
+  background: #fff;
+  font-size: 15px;
+  font-weight: 600;
+  color: #1a1a1a;
+  cursor: pointer;
+  min-width: 120px;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg width='12' height='8' viewBox='0 0 12 8' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1L6 6L11 1' stroke='%231a1a1a' stroke-width='2' stroke-linecap='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  padding-right: 36px;
+}
+
+.filter-dropdown select:hover {
+  border-color: rgba(0,0,0,0.2);
+}
+
+.filter-dropdown select:focus {
+  outline: none;
+  border-color: var(--accent-2);
+}
+
+.search-box {
+  position: relative;
+  width: 280px;
+}
+
+.search-icon {
+  position: absolute;
+  left: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #7b7b7b;
+  pointer-events: none;
+}
+
+.search-box input {
+  width: 100%;
+  padding: 10px 16px 10px 42px;
+  border: 2px solid rgba(0,0,0,0.12);
+  border-radius: 10px;
+  font-size: 15px;
+  color: #1a1a1a;
+}
+
+.search-box input::placeholder {
+  color: #7b7b7b;
+}
+
+.search-box input:hover {
+  border-color: rgba(0,0,0,0.2);
+}
+
+.search-box input:focus {
+  outline: none;
+  border-color: var(--accent-2);
+}
+
+/* Table Container */
+.table-container {
+  overflow-x: auto;
+}
+
+.reviewers-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: #f5f5f5;
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.reviewers-table thead {
+  background: #e0e0e0;
+}
+
+.reviewers-table th {
+  padding: 16px 20px;
+  text-align: left;
+  font-weight: 700;
+  font-size: 16px;
+  color: #1a1a1a;
+}
+
+.reviewers-table tbody tr {
+  background: #fff;
+  border-bottom: 1px solid #e0e0e0;
+  transition: background 0.2s ease;
+}
+
+.reviewers-table tbody tr:hover {
+  background: #f9f9f9;
+}
+
+.reviewers-table tbody tr:last-child {
+  border-bottom: none;
+}
+
+.reviewers-table td {
+  padding: 16px 20px;
+  font-size: 15px;
+  color: #1a1a1a;
+}
+
+/* Profile Cell */
+.profile-cell {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.profile-cell .avatar {
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  overflow: hidden;
+  border: 2px solid #e0e0e0;
+  flex-shrink: 0;
+}
+
+.profile-cell .avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.profile-cell .name {
+  font-weight: 600;
+  color: #1a1a1a;
+}
+
+/* Third column (Total Proposals Reviewed) styling */
+.reviewers-table td:nth-child(3) {
+  font-weight: 700;
+  color: #1a1a1a;
+}

@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Review Proposals - Researchly</title>
+
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/hod_review_proposals.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/colors.css') }}">
+</head>
+
+<body>
+  <!-- Top bar -->
+  <header class="topbar">
+    <div class="left">
+      <button class="hamburger" type="button" aria-label="Menu">&#9776;</button>
+      <div class="brand">Researchly™</div>
+    </div>
+
+    <div class="icons">
+      <span class="icon bell" title="Notifications"></span>
+      <a href="{{ url_for('view_profile') }}" class="icon user" title="Profile">
+        {% if prof.profile_picture %}
+          <img class="top-avatar"
+            src="{{ url_for('static', filename='uploads/' ~ prof.profile_picture) }}"
+            alt="Profile">
+        {% else %}
+          <span class="fallback-user">👤</span>
+        {% endif %}
+      </a>
+    </div>
+  </header>
+
+  <main class="layout">
+    <!-- Sidebar -->
+    <aside class="sidebar">
+      <a class="side-link" href="{{ url_for('hod_dashboard') }}">HOD Dashboard</a>
+      <a class="side-link" href="{{ url_for('hod_department_overview') }}">Department<br/>Overview</a>
+      <a class="side-link" href="{{ url_for('hod_active_projects') }}">Active Projects</a>
+      <a class="side-link active" href="{{ url_for('hod_review_proposals') }}">Review Proposals</a>
+      <a class="side-link" href="{{ url_for('hod_reviewers') }}">Reviewers</a>
+      <a class="side-link" href="{{ url_for('hod_researchers') }}">Researchers</a>
+
+      <div class="side-spacer"></div>
+      <a class="side-link logout" href="{{ url_for('logout') }}">Logout</a>
+    </aside>
+
+    <!-- Content -->
+    <section class="content">
+      <div class="card">
+        <!-- Search and Filter Bar -->
+        <div class="controls-bar">
+          <div class="search-box">
+            <svg class="search-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="11" cy="11" r="8"></circle>
+              <path d="m21 21-4.35-4.35"></path>
+            </svg>
+            <input type="text" id="searchInput" placeholder="Search">
+          </div>
+          <div class="filter-dropdown">
+            <select id="filterSelect">
+              <option value="">Filter</option>
+              <option value="pending">Pending Review</option>
+              <option value="approved">Approved</option>
+              <option value="rejected">Rejected</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Proposals Section -->
+        <div class="proposals-section">
+          <h2>Review Proposals in the Engineering Department</h2>
+          
+          <div class="proposals-list">
+            <div class="proposal-item">
+              <span class="proposal-title">Automated Hybrid Smart Door Control System</span>
+              <button class="btn-view">View</button>
+            </div>
+
+            <div class="proposal-item">
+              <span class="proposal-title">Redesign of AC Electrical Motors</span>
+              <button class="btn-view">View</button>
+            </div>
+
+            <div class="proposal-item">
+              <span class="proposal-title">Solar Simulators' Trends Overview</span>
+              <button class="btn-view">View</button>
+            </div>
+
+            <div class="proposal-item">
+              <span class="proposal-title">Designing Efficient Water Management Systems for Urban Areas</span>
+              <button class="btn-view">View</button>
+            </div>
+
+            <div class="proposal-item">
+              <span class="proposal-title">Studying the Effects of Urbanization on Biodiversity</span>
+              <button class="btn-view">View</button>
+            </div>
+
+            <div class="proposal-item">
+              <span class="proposal-title">Structural Characteristics of Soilcrete Blocks</span>
+              <button class="btn-view">View</button>
+            </div>
+
+            <div class="proposal-item">
+              <span class="proposal-title">Development of Eco-Friendly Recycled Designer Plastic Tiles and Bricks</span>
+              <button class="btn-view">View</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+</body>
+</html>
