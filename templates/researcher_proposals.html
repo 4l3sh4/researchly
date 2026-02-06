@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Proposals</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/colors.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/researcher_dashboard.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/researcher_proposals.css') }}">
+</head>
+<body>
+
+<div class="topbar">
+    <div class="menu-icon">☰</div>
+    <div class="logo">Researchly™</div>
+    <div class="icons">
+        <div class="icon bell"></div>
+        <div class="icon user"></div>
+    </div>
+</div>
+
+<div class="container">
+    <div class="sidebar">
+        <h2>Researcher<br>Dashboard</h2>
+        <nav>
+            <a href="{{ url_for('researcher_dashboard') }}" class="nav-item">Dashboard</a>
+            <a href="{{ url_for('researcher_proposals') }}" class="nav-item active">Proposals</a>
+            <a href="{{ url_for('researcher_projects') }}" class="nav-item">Projects</a>
+            <a href="{{ url_for('logout') }}" class="nav-item">Logout</a>
+        </nav>
+    </div>
+
+    <div class="main-content">
+        <div class="proposals-header">
+            <div class="search-bar">
+                <input type="text" id="searchInput" placeholder="Search" class="search-input">
+            </div>
+            <select class="filter-dropdown">
+                <option>Filter</option>
+                <option>Pending Review</option>
+                <option>Under Review</option>
+                <option>Approved</option>
+                <option>Rejected</option>
+                <option>Return for revision</option>
+            </select>
+            <button class="create-btn">+ Create Proposal</button>
+        </div>
+
+        <div class="proposals-table-wrapper">
+            <table class="proposals-table">
+                <thead>
+                    <tr>
+                        <th>Proposal Name</th>
+                        <th>Proposal Details</th>
+                        <th>Status</th>
+                        <th>Feedbacks</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for proposal in proposals %}
+                    <tr>
+                        <td class="proposal-name">{{ proposal.title }}</td>
+                        <td class="proposal-details">
+                            <a href="{{ url_for('view_proposal', proposal_id=proposal.id) }}" class="btn-view">View</a>
+                        </td>
+                        <td class="proposal-status">
+                            <span class="status-badge status-{{ proposal.status.lower().replace(' ', '-') }}">
+                                {{ proposal.status }}
+                            </span>
+                        </td>
+                        <td class="proposal-feedback">
+                            <a href="{{ url_for('view_proposal_feedback', proposal_id=proposal.id) }}" class="btn-view">View</a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+</body>
+</html>

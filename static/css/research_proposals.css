@@ -1,0 +1,253 @@
+.proposals-header {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 28px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.search-bar {
+  flex: 1;
+  min-width: 200px;
+  position: relative;
+}
+
+.search-input {
+  width: 100%;
+  padding: 10px 16px;
+  border: 1px solid #d0d0d0;
+  border-radius: 4px;
+  font-size: 14px;
+  background-color: #fff;
+  color: #999;
+}
+
+.search-input::placeholder {
+  color: #999;
+}
+
+.search-input:focus {
+  outline: none;
+  border-color: var(--accent-2);
+  box-shadow: 0 0 0 2px rgba(0, 151, 178, 0.1);
+}
+
+.filter-dropdown {
+  padding: 10px 16px;
+  border: 1px solid #d0d0d0;
+  border-radius: 4px;
+  font-size: 14px;
+  background-color: #fff;
+  color: #333;
+  cursor: pointer;
+  min-width: 120px;
+}
+
+.filter-dropdown:focus {
+  outline: none;
+  border-color: var(--accent-2);
+}
+
+.create-btn {
+  padding: 10px 16px;
+  background: var(--accent-2);
+  color: #fff;
+  border: none;
+  border-radius: 4px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.2s ease;
+}
+
+.create-btn:hover {
+  background: #0084a0;
+  box-shadow: 0 2px 8px rgba(0, 151, 178, 0.3);
+}
+
+.proposals-table-wrapper {
+  background: #fff;
+  border-radius: 8px;
+  border: 1px solid #e0e0e0;
+  overflow: hidden;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.proposals-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+.proposals-table thead {
+  background-color: #f8f8f8;
+  border-bottom: 2px solid #e0e0e0;
+}
+
+.proposals-table th {
+  padding: 16px;
+  text-align: left;
+  font-weight: 600;
+  color: #333;
+  font-size: 13px;
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+.proposals-table tbody tr {
+  border-bottom: 1px solid #f0f0f0;
+  transition: background-color 0.2s ease;
+}
+
+.proposals-table tbody tr:hover {
+  background-color: #fafafa;
+}
+
+.proposals-table tbody tr:last-child {
+  border-bottom: none;
+}
+
+.proposals-table td {
+  padding: 16px;
+  vertical-align: middle;
+}
+
+.proposal-name {
+  color: #333;
+  font-weight: 500;
+  max-width: 250px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.proposal-details,
+.proposal-feedback {
+  text-align: center;
+}
+
+.btn-view {
+  display: inline-block;
+  padding: 6px 16px;
+  background: var(--accent-2);
+  color: #fff;
+  text-decoration: none;
+  border-radius: 4px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border: none;
+}
+
+.btn-view:hover {
+  background: #0084a0;
+  box-shadow: 0 2px 6px rgba(0, 151, 178, 0.3);
+}
+
+.proposal-status {
+  text-align: center;
+}
+
+.status-badge {
+  display: inline-block;
+  padding: 6px 12px;
+  border-radius: 4px;
+  font-size: 13px;
+  font-weight: 500;
+  min-width: 120px;
+  text-align: center;
+}
+
+.status-pending-review {
+  background-color: #fff4e6;
+  color: #e89c3f;
+}
+
+.status-under-review {
+  background-color: #e8f5f7;
+  color: var(--accent-2);
+}
+
+.status-approved {
+  background-color: #e8f5f7;
+  color: var(--accent-2);
+}
+
+.status-rejected {
+  background-color: #ffe8e8;
+  color: #d85c5c;
+}
+
+.status-return-for-revision {
+  background-color: #e8f5f7;
+  color: var(--accent-2);
+}
+
+.menu-icon {
+  display: none;
+  font-size: 24px;
+  cursor: pointer;
+  color: #fff;
+}
+
+@media (max-width: 1024px) {
+  .proposals-header {
+    flex-direction: column;
+  }
+
+  .search-bar {
+    width: 100%;
+    min-width: unset;
+  }
+
+  .filter-dropdown,
+  .create-btn {
+    width: 100%;
+  }
+
+  .proposal-name {
+    max-width: 150px;
+  }
+}
+
+@media (max-width: 768px) {
+  .proposals-header {
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .search-bar {
+    width: 100%;
+  }
+
+  .filter-dropdown,
+  .create-btn {
+    width: 100%;
+  }
+
+  .proposals-table {
+    font-size: 12px;
+  }
+
+  .proposals-table th,
+  .proposals-table td {
+    padding: 12px 8px;
+  }
+
+  .proposal-name {
+    max-width: 100px;
+  }
+
+  .btn-view {
+    padding: 4px 12px;
+    font-size: 12px;
+  }
+
+  .status-badge {
+    padding: 4px 8px;
+    font-size: 12px;
+    min-width: 100px;
+  }
+}
