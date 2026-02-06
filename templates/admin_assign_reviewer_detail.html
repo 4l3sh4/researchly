@@ -11,9 +11,7 @@
 
 <header class="topbar">
   <div class="left">
-    <button class="hamburger" type="button" aria-label="Menu">&#9776;</button>
-    <div class="brand">Researchly™</div>
-  </div>
+      <button class="hamburger" type="button" aria-label="Menu" id="hamburger">&#9776;</button>
 
   <div class="icons">
     <span class="icon bell" title="Notifications"></span>
@@ -27,8 +25,8 @@
   </div>
 </header>
 
-<main class="layout">
-  <aside class="sidebar">
+  <main class="layout" id="layout">
+  <aside class="sidebar" id="sidebar">
     <a class="side-link" href="{{ url_for('admin_dashboard') }}">Admin Dashboard</a>
     <a class="side-link" href="{{ url_for('admin_users', status='PENDING') }}">User Management</a>
     <a class="side-link" href="{{ url_for('admin_grants') }}">Grant Scheme<br/>Management</a>
@@ -113,5 +111,15 @@
   </section>
 </main>
 
+  <script>
+    const hamburger = document.getElementById('hamburger');
+    const sidebar = document.getElementById('sidebar');
+    const layout = document.getElementById('layout');
+
+    hamburger.addEventListener('click', () => {
+      sidebar.classList.toggle('collapsed');
+      layout.classList.toggle('sidebar-collapsed');
+    });
+  </script>
 </body>
 </html>

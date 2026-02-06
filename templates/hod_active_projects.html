@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Active Projects - Researchly</title>
+
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/hod_active_projects.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/colors.css') }}">
+</head>
+
+<body>
+  <!-- Top bar -->
+  <header class="topbar">
+    <div class="left">
+      <button class="hamburger" type="button" aria-label="Menu" id="hamburger">&#9776;</button>
+      <div class="brand">Researchly™</div>
+    </div>
+
+    <div class="icons">
+      <span class="icon bell" title="Notifications"></span>
+      <a href="{{ url_for('view_profile') }}" class="icon user" title="Profile">
+        {% if prof.profile_picture %}
+          <img class="top-avatar"
+            src="{{ url_for('static', filename='uploads/' ~ prof.profile_picture) }}"
+            alt="Profile">
+        {% else %}
+          <span class="fallback-user">👤</span>
+        {% endif %}
+      </a>
+    </div>
+  </header>
+
+  <main class="layout" id="layout">
+    <!-- Sidebar -->
+    <aside class="sidebar" id="sidebar">
+      <a class="side-link" href="{{ url_for('hod_dashboard') }}">HOD Dashboard</a>
+      <a class="side-link" href="{{ url_for('hod_department_overview') }}">Department<br/>Overview</a>
+      <a class="side-link active" href="{{ url_for('hod_active_projects') }}">Active Projects</a>
+      <a class="side-link" href="{{ url_for('hod_review_proposals') }}">Review Proposals</a>
+      <a class="side-link" href="{{ url_for('hod_reviewers') }}">Reviewers</a>
+      <a class="side-link" href="{{ url_for('hod_researchers') }}">Researchers</a>
+
+      <div class="side-spacer"></div>
+      <a class="side-link logout" href="{{ url_for('logout') }}">Logout</a>
+    </aside>
+
+    <!-- Content -->
+    <section class="content">
+      <div class="card">
+        <!-- Search and Filter Bar -->
+        <div class="controls-bar">
+          <div class="search-box">
+            <svg class="search-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="11" cy="11" r="8"></circle>
+              <path d="m21 21-4.35-4.35"></path>
+            </svg>
+            <input type="text" id="searchInput" placeholder="Search">
+          </div>
+          <div class="filter-dropdown">
+            <select id="filterSelect">
+              <option value="">Filter</option>
+              <option value="ongoing">Ongoing</option>
+              <option value="completed">Completed</option>
+              <option value="on-hold">On Hold</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Projects Section -->
+        <div class="projects-section">
+          <h2>Active Projects in the Engineering Department</h2>
+          
+          <div class="projects-list">
+            <div class="project-item">
+              <span class="project-title">Energy and Exergy Analysis of Boiler Systems for Optimal Efficiency</span>
+              <button class="btn-view">View</button>
+            </div>
+
+            <div class="project-item">
+              <span class="project-title">The Impact of Autonomous Vehicles on Existing Urban Infrastructure Resilience</span>
+              <button class="btn-view">View</button>
+            </div>
+
+            <div class="project-item">
+              <span class="project-title">Waste Paper as a Composition Additive for Plastering Mortar: A Strength Analysis</span>
+              <button class="btn-view">View</button>
+            </div>
+
+            <div class="project-item">
+              <span class="project-title">Design and Development of Floating Structure for Offshore Solar-Wind-Wave Energy Harvester</span>
+              <button class="btn-view">View</button>
+            </div>
+
+            <div class="project-item">
+              <span class="project-title">Intelligent Voice-Controlled Wheelchair</span>
+              <button class="btn-view has-notification">
+                View
+                <span class="notification-badge"></span>
+              </button>
+            </div>
+
+            <div class="project-item">
+              <span class="project-title">Use of Virtual Reality in Engineering Simulations</span>
+              <button class="btn-view">View</button>
+            </div>
+
+            <div class="project-item">
+              <span class="project-title">Use of 3D Printing in Construction and Manufacturing</span>
+              <button class="btn-view">View</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    const hamburger = document.getElementById('hamburger');
+    const sidebar = document.getElementById('sidebar');
+    const layout = document.getElementById('layout');
+
+    hamburger.addEventListener('click', () => {
+      sidebar.classList.toggle('collapsed');
+      layout.classList.toggle('sidebar-collapsed');
+    });
+  </script>
+</body>
+</html>

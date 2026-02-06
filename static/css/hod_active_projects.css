@@ -172,7 +172,7 @@ a.icon {
 }
 
 .card {
-  max-width: 1100px;
+  max-width: 1200px;
   margin: 0 auto;
   background: #fff;
   border-radius: 18px;
@@ -180,78 +180,151 @@ a.icon {
   padding: 24px 24px 28px;
 }
 
-.card h1 {
-  margin: 0 0 8px;
-  font-size: 30px;
+/* Controls Bar */
+.controls-bar {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 24px;
+}
+
+.search-box {
+  position: relative;
+  flex: 1;
+  max-width: 600px;
+}
+
+.search-icon {
+  position: absolute;
+  left: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #7b7b7b;
+  pointer-events: none;
+}
+
+.search-box input {
+  width: 100%;
+  padding: 12px 16px 12px 42px;
+  border: 2px solid rgba(0,0,0,0.12);
+  border-radius: 10px;
+  font-size: 15px;
   color: #1a1a1a;
 }
 
-.muted {
-  margin: 0 0 18px;
+.search-box input::placeholder {
   color: #7b7b7b;
 }
 
-.quick-grid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 14px;
-  margin-top: 16px;
+.search-box input:hover {
+  border-color: rgba(0,0,0,0.2);
 }
 
-.quick {
-  border: 2px solid rgba(0,0,0,0.08);
-  border-radius: 16px;
-  padding: 16px;
-  text-decoration: none;
-  color: inherit;
+.search-box input:focus {
+  outline: none;
+  border-color: var(--accent-2);
 }
 
-.quick:hover {
-  border-color: rgba(0,0,0,0.16);
-}
-
-.quick-title {
-  font-weight: 900;
-  color: var(--accent-2);
-  margin-bottom: 6px;
-  font-size: 18px;
-}
-
-.quick-desc {
-  color: #7b7b7b;
-  font-size: 14px;
-}
-
-.cta-row {
-  margin-top: 18px;
-  display: flex;
-  gap: 10px;
-}
-
-.btn {
-  display: inline-block;
-  padding: 10px 16px;
-  border-radius: 12px;
-  font-weight: 800;
-  text-decoration: none;
-  border: 2px solid transparent;
-}
-
-.btn.primary {
-  background: #0fa7a1;
-  color: #fff;
-}
-
-.btn.primary:hover {
-  filter: brightness(0.95);
-}
-
-.btn.ghost {
+.filter-dropdown select {
+  padding: 12px 16px;
+  border: 2px solid rgba(0,0,0,0.12);
+  border-radius: 10px;
   background: #fff;
-  color: #0fa7a1;
-  border-color: #0fa7a1;
+  font-size: 15px;
+  font-weight: 600;
+  color: #1a1a1a;
+  cursor: pointer;
+  min-width: 140px;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg width='12' height='8' viewBox='0 0 12 8' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1L6 6L11 1' stroke='%231a1a1a' stroke-width='2' stroke-linecap='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  padding-right: 36px;
 }
 
-.btn.ghost:hover {
-  background: rgba(15,167,161,0.08);
+.filter-dropdown select:hover {
+  border-color: rgba(0,0,0,0.2);
+}
+
+.filter-dropdown select:focus {
+  outline: none;
+  border-color: var(--accent-2);
+}
+
+/* Projects Section */
+.projects-section h2 {
+  font-size: 20px;
+  font-weight: 700;
+  color: #1a1a1a;
+  margin: 0 0 20px;
+}
+
+.projects-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.project-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px 24px;
+  background: #fff;
+  border-bottom: 1px solid rgba(0,0,0,0.08);
+  transition: background 0.2s ease;
+}
+
+.project-item:first-child {
+  border-top: 1px solid rgba(0,0,0,0.08);
+}
+
+.project-item:hover {
+  background: #f9f9f9;
+}
+
+.project-title {
+  font-size: 16px;
+  color: #1a1a1a;
+  font-weight: 500;
+  flex: 1;
+}
+
+.btn-view {
+  position: relative;
+  padding: 10px 24px;
+  background: var(--accent-2);
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.btn-view:hover {
+  background: #0d8a85;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(15,167,161,0.3);
+}
+
+.btn-view:active {
+  transform: translateY(0);
+}
+
+/* Notification Badge */
+.btn-view.has-notification {
+  position: relative;
+}
+
+.notification-badge {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  width: 12px;
+  height: 12px;
+  background: #ff3b3b;
+  border-radius: 50%;
+  border: 2px solid #fff;
 }

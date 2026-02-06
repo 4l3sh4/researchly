@@ -458,6 +458,10 @@ def dashboard():
     if prof.role == "ADMIN":
         return redirect(url_for("admin_dashboard"))
 
+    # HOD -> go to HOD dashboard
+    if prof.role == "HOD":
+        return redirect(url_for("hod_dashboard"))
+
     # Others -> normal dashboard (for now reuse the same template or create user_dashboard.html later)
     return render_template("dashboard.html")
 
@@ -1469,6 +1473,40 @@ def admin_assign_reviewer_detail(proposal_id):
         expertise=expertise_filter,
         prof=prof
     )
+
+#---------------------------------------------------------------------------------------------------------
+# HOD ROUTES
+#---------------------------------------------------------------------------------------------------------
+
+@app.route("/HOD/dashboard")
+@login_required
+def hod_dashboard():
+    return render_template("hod_dashboard.html")
+
+@app.route("/HOD/department-overview")
+@login_required
+def hod_department_overview():
+    return render_template("hod_department_overview.html")
+
+@app.route("/HOD/active-projects")
+@login_required
+def hod_active_projects():
+    return render_template("hod_active_projects.html")
+
+@app.route("/HOD/review-proposals")
+@login_required
+def hod_review_proposals():
+    return render_template("hod_review_proposals.html")
+
+@app.route("/HOD/reviewers")
+@login_required
+def hod_reviewers():
+    return render_template("hod_reviewers.html")
+
+@app.route("/HOD/researchers")
+@login_required
+def hod_researchers():
+    return render_template("hod_researchers.html")
 
 if __name__ == '__main__':
     with app.app_context():
