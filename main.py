@@ -1488,6 +1488,26 @@ def hod_dashboard():
 def hod_department_overview():
     return render_template("hod_department_overview.html")
 
+@app.route("/HOD/active-projects")
+@login_required
+def hod_active_projects():
+    return render_template("hod_active_projects.html")
+
+@app.route("/HOD/review-proposals")
+@login_required
+def hod_review_proposals():
+    return render_template("hod_review_proposals.html")
+
+@app.route("/HOD/reviewers")
+@login_required
+def hod_reviewers():
+    return render_template("hod_reviewers.html")
+
+@app.route("/HOD/researchers")
+@login_required
+def hod_researchers():
+    return render_template("hod_researchers.html")
+
 if __name__ == '__main__':
     with app.app_context():
         db.create_all()
