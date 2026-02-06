@@ -156,7 +156,10 @@ body {
 }
 
 .title{
-  color: #19a5a5;
+  margin: 20px 0 20px;
+  font-size: 28px;
+  font-weight: 900;
+  color: #1aa2a2;
 }
 
 .table{ width: 100%; border-collapse: collapse; }

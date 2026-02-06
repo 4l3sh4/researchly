@@ -376,7 +376,7 @@ def login():
     if form.validate_on_submit():
         user = User.query.filter_by(email=form.email.data).first()
 
-        # ✅ Option 1: accept BOTH bcrypt-hash passwords and plain-text demo passwords
+        # Accept BOTH bcrypt-hash passwords and plain-text demo passwords
         ok = False
         if user:
             try:
@@ -567,6 +567,9 @@ def admin_dashboard():
     deactivated_count = UserProfile.query.filter_by(account_status="DEACTIVATED").count()
     return render_template("admin_dashboard.html", pending_count=pending_count, active_count=active_count, deactivated_count=deactivated_count)
 
+#------------------
+# User Management
+#------------------
 @app.route("/admin/users")
 @login_required
 @admin_required
@@ -709,6 +712,9 @@ def admin_create_user():
     flash(f"User created successfully. Temporary password: {temp_password}", "success")
     return redirect(url_for("admin_users", status="ACTIVE"))
 
+#--------------------------
+# Grant Scheme Management
+#--------------------------
 from datetime import date
 
 @app.route("/admin/grants")
@@ -962,6 +968,9 @@ def admin_grant_view(scheme_id):
         departments=departments
     )
 
+#--------------------
+#Funding Allocation
+#--------------------
 from sqlalchemy import or_
 
 @app.route("/admin/funding")
@@ -1150,6 +1159,9 @@ def admin_view_proposal(proposal_id):
         prof=prof
     )
 
+#-------------------------
+#Final Approval Decision
+#-------------------------
 @app.route("/admin/final-approval")
 @login_required
 @admin_required
@@ -1238,9 +1250,6 @@ def admin_final_approval_detail(proposal_id):
             existing_final.decision = decision
             existing_final.decision_date = datetime.now(timezone.utc)
 
-        # optional: keep Proposal.proposal_status aligned (your choice)
-        # proposal.proposal_status = decision
-
         db.session.commit()
         flash(f"Final decision recorded: {decision}", "success")
         return redirect(url_for("admin_final_approval_list"))
@@ -1253,6 +1262,182 @@ def admin_final_approval_detail(proposal_id):
         reviewer_status=reviewer_status,
         hod_status=hod_status,
         final=existing_final,
+        prof=prof
+    )
+
+#-------------------
+# Assign Reviewers
+#-------------------
+def proposal_expertise_needed(dept_name: str) -> list[str]:
+    """
+    Simple mapping (no DB changes).
+    Adjust to whatever categories you want.
+    """
+    mapping = {
+        "Computer Science": ["AI", "Data Science", "Cybersecurity"],
+        "Engineering": ["IoT", "Mechanical", "Civil"],
+        "Business": ["Finance", "Marketing", "Analytics"],
+        "Management": ["Project Management", "Operations", "Strategy"],
+        "Multimedia": ["UI/UX", "AR/VR", "Game Design"],
+    }
+    return mapping.get(dept_name or "", ["General"])
+
+def reviewer_expertise_tags(user: "User") -> list[str]:
+    """
+    Simple mapping (no DB changes).
+    You can change to read from a real table later.
+    """
+    name = (user.full_name or "").lower()
+
+    if "1" in user.email:
+        return ["AI", "Data Science"]
+    if "2" in user.email:
+        return ["Cybersecurity", "Analytics"]
+    if "3" in user.email:
+        return ["IoT", "Mechanical"]
+    if "4" in user.email:
+        return ["UI/UX", "AR/VR"]
+    # fallback based on name keywords
+    if "ai" in name:
+        return ["AI"]
+    return ["General"]
+
+@app.route("/admin/assign-reviewers")
+@login_required
+@admin_required
+def admin_assign_reviewers():
+    q = (request.args.get("q") or "").strip()
+    dept_id = (request.args.get("dept") or "ALL").strip()
+    prof = get_profile(current_user.id)
+
+    departments = Department.query.order_by(Department.department_name.asc()).all()
+
+    # Proposals that have NO reviewer assignments yet
+    query = (
+        db.session.query(Proposal, Department)
+        .join(GrantScheme, GrantScheme.scheme_id == Proposal.scheme_id)
+        .join(Department, Department.department_id == GrantScheme.department_id)
+        .outerjoin(ReviewersAssignment, ReviewersAssignment.proposal_id == Proposal.proposal_id)
+        .filter(ReviewersAssignment.proposal_id.is_(None))
+    )
+
+    if dept_id != "ALL":
+        query = query.filter(Department.department_id == dept_id)
+
+    if q:
+        like = f"%{q}%"
+        query = query.filter(
+            (Proposal.project_title.ilike(like)) |
+            (Department.department_name.ilike(like))
+        )
+
+    rows = query.order_by(Proposal.submission_date.desc()).all()
+
+    return render_template(
+        "admin_assign_reviewers.html",
+        rows=rows,
+        q=q,
+        dept=dept_id,
+        departments=departments,
+        prof=prof
+    )
+
+@app.route("/admin/assign-reviewers/<proposal_id>", methods=["GET", "POST"])
+@login_required
+@admin_required
+def admin_assign_reviewer_detail(proposal_id):
+    prof = get_profile(current_user.id)
+    proposal = Proposal.query.get_or_404(proposal_id)
+
+    scheme = GrantScheme.query.get(proposal.scheme_id)
+    dept = Department.query.get(scheme.department_id) if scheme else None
+
+    # Expertise needed label
+    needed = proposal_expertise_needed(dept.department_name if dept else "")
+    needed_str = ", ".join(needed)
+
+    # Existing assignments for this proposal
+    existing = ReviewersAssignment.query.filter_by(proposal_id=proposal.proposal_id).all()
+    assigned_ids = {a.reviewer_id for a in existing}
+
+    # Reviewer list (User + Reviewer)
+    rq = (request.args.get("q") or "").strip()
+    expertise_filter = (request.args.get("expertise") or "ALL").strip()
+
+    reviewer_rows = (
+        db.session.query(Reviewer, User)
+        .join(User, User.id == Reviewer.user_id)
+        .all()
+    )
+
+    # Build display list with expertise tags
+    display = []
+    all_tags = set()
+    for rv, user in reviewer_rows:
+        tags = reviewer_expertise_tags(user)
+        for t in tags:
+            all_tags.add(t)
+        display.append({
+            "reviewer": rv,
+            "user": user,
+            "tags": tags,
+            "checked": (rv.reviewer_id in assigned_ids),
+        })
+
+    # Apply search
+    if rq:
+        rq_low = rq.lower()
+        display = [
+            x for x in display
+            if rq_low in (x["user"].full_name or "").lower()
+               or rq_low in (x["user"].email or "").lower()
+        ]
+
+    # Apply expertise filter
+    if expertise_filter != "ALL":
+        display = [x for x in display if expertise_filter in x["tags"]]
+
+    # Sort: checked first, then name
+    display.sort(key=lambda x: (0 if x["checked"] else 1, (x["user"].full_name or "").lower()))
+
+    tags_sorted = ["ALL"] + sorted(all_tags)
+
+    if request.method == "POST":
+        selected = request.form.getlist("reviewer_id")
+
+        # simple rules: choose 1-2 reviewers
+        if len(selected) < 1:
+            flash("Please select at least 1 reviewer.", "error")
+            return redirect(url_for("admin_assign_reviewer_detail", proposal_id=proposal_id))
+        if len(selected) > 2:
+            flash("Please select up to 2 reviewers only.", "error")
+            return redirect(url_for("admin_assign_reviewer_detail", proposal_id=proposal_id))
+
+        # Remove old assignments (so re-assigning is easy)
+        ReviewersAssignment.query.filter_by(proposal_id=proposal.proposal_id).delete()
+
+        # Create new assignments
+        for rid in selected:
+            db.session.add(ReviewersAssignment(
+                assignment_id=str(uuid.uuid4()),
+                proposal_id=proposal.proposal_id,
+                reviewer_id=rid,
+                assignment_status="ASSIGNED"
+            ))
+
+        db.session.commit()
+        flash("Reviewers assigned successfully.", "success")
+        return redirect(url_for("admin_assign_reviewers"))
+
+    return render_template(
+        "admin_assign_reviewer_detail.html",
+        proposal=proposal,
+        dept=dept,
+        needed_str=needed_str,
+        reviewers=display,
+        tags=tags_sorted,
+        q=rq,
+        expertise=expertise_filter,
         prof=prof
     )
 

@@ -132,7 +132,10 @@ def ensure_review_pipeline(proposal: Proposal, reviewers, budget: int, hod_id: s
     """Ensure: assignments + reviews + HOD endorsement exist."""
     # 2 reviewers
     for rv in reviewers[:2]:
-        if not ReviewersAssignment.query.filter_by(proposal_id=proposal.proposal_id, reviewer_id=rv.reviewer_id).first():
+        if not ReviewersAssignment.query.filter_by(
+            proposal_id=proposal.proposal_id,
+            reviewer_id=rv.reviewer_id
+        ).first():
             db.session.add(ReviewersAssignment(
                 assignment_id=uid(),
                 proposal_id=proposal.proposal_id,
@@ -140,7 +143,10 @@ def ensure_review_pipeline(proposal: Proposal, reviewers, budget: int, hod_id: s
                 assignment_status="ASSIGNED"
             ))
 
-        if not Review.query.filter_by(proposal_id=proposal.proposal_id, reviewer_id=rv.reviewer_id).first():
+        if not Review.query.filter_by(
+            proposal_id=proposal.proposal_id,
+            reviewer_id=rv.reviewer_id
+        ).first():
             db.session.add(Review(
                 review_id=uid(),
                 proposal_id=proposal.proposal_id,
@@ -161,7 +167,19 @@ def ensure_review_pipeline(proposal: Proposal, reviewers, budget: int, hod_id: s
 
     db.session.commit()
 
-def set_final_decision(proposal_id: str, admin_id: str, decision: str | None):
+def clear_review_pipeline(proposal_id: str):
+    """
+    Make a proposal appear in "Pending Reviewer Assignments":
+    - delete assignments
+    - delete reviews
+    - delete hod endorsement
+    """
+    Review.query.filter_by(proposal_id=proposal_id).delete()
+    ReviewersAssignment.query.filter_by(proposal_id=proposal_id).delete()
+    HODEndorsement.query.filter_by(proposal_id=proposal_id).delete()
+    db.session.commit()
+
+def set_final_decision(proposal_id: str, admin_id: str, decision):
     """
     decision:
       - None => make it PENDING (delete FinalDecision if exists)
@@ -170,13 +188,11 @@ def set_final_decision(proposal_id: str, admin_id: str, decision: str | None):
     existing = FinalDecision.query.filter_by(proposal_id=proposal_id).first()
 
     if decision is None:
-        # Pending -> remove decision if exists
         if existing:
             db.session.delete(existing)
             db.session.commit()
         return
 
-    # decided
     if not existing:
         db.session.add(FinalDecision(
             final_decision_id=uid(),
@@ -248,40 +264,52 @@ def run():
 
         # ----------------------------
         # 4) Proposals per department
-        #    - 2 PENDING (no FinalDecision) -> should show in Final Approval list
-        #    - 1 APPROVED (FinalDecision exists)
-        #    - 1 REJECTED (FinalDecision exists)
+        #
+        # tuple format:
+        # (title, budget, final_decision, needs_assignment)
+        #
+        # needs_assignment=True => NO assignments/reviews/endorsement
         # ----------------------------
         title_bank = {
             "Computer Science": [
-                ("AI Phishing Detection Using Email Metadata", 14000, None),              # PENDING
-                ("Smart Campus Energy Optimization Using IoT", 15000, None),              # PENDING
-                ("Early Warning Flood Risk Prediction (Pilot)", 12000, "APPROVED"),       # DECIDED
-                ("Blockchain Certificate Verification (Large)", 28000, "REJECTED"),      # DECIDED
+                ("AI Phishing Detection Using Email Metadata", 14000, None, False),
+                ("Smart Campus Energy Optimization Using IoT", 15000, None, False),
+                ("Reviewer Assignment Test - CS (No reviewers yet)", 12000, None, True),
+
+                ("Early Warning Flood Risk Prediction (Pilot)", 12000, "APPROVED", False),
+                ("Blockchain Certificate Verification (Large)", 28000, "REJECTED", False),
             ],
             "Engineering": [
-                ("Low-Cost Structural Health Monitoring Sensors", 13000, None),
-                ("Energy-Efficient HVAC Optimization in Buildings", 14500, None),
-                ("Bridge Vibration Analytics (Phase 1)", 12000, "APPROVED"),
-                ("Autonomous Drone Inspection for Factories", 35000, "REJECTED"),
+                ("Low-Cost Structural Health Monitoring Sensors", 13000, None, False),
+                ("Energy-Efficient HVAC Optimization in Buildings", 14500, None, False),
+                ("Reviewer Assignment Test - Eng (No reviewers yet)", 12000, None, True),
+
+                ("Bridge Vibration Analytics (Phase 1)", 12000, "APPROVED", False),
+                ("Autonomous Drone Inspection for Factories", 35000, "REJECTED", False),
             ],
             "Business": [
-                ("SME Cashflow Forecasting Using Explainable AI", 11000, None),
-                ("Retail Customer Churn Prediction Dashboard", 15000, None),
-                ("Digital Payment Fraud Screening (Prototype)", 12000, "APPROVED"),
-                ("Blockchain Loyalty Rewards Marketplace", 26000, "REJECTED"),
+                ("SME Cashflow Forecasting Using Explainable AI", 11000, None, False),
+                ("Retail Customer Churn Prediction Dashboard", 15000, None, False),
+                ("Reviewer Assignment Test - Biz (No reviewers yet)", 12000, None, True),
+
+                ("Digital Payment Fraud Screening (Prototype)", 12000, "APPROVED", False),
+                ("Blockchain Loyalty Rewards Marketplace", 26000, "REJECTED", False),
             ],
             "Management": [
-                ("University Grant Risk Analytics Dashboard", 9000, None),
-                ("Multi-Criteria Resource Allocation Optimizer", 14000, None),
-                ("Project Portfolio Tracking (Pilot)", 12000, "APPROVED"),
-                ("Organizational Change Impact Study", 22000, "REJECTED"),
+                ("University Grant Risk Analytics Dashboard", 9000, None, False),
+                ("Multi-Criteria Resource Allocation Optimizer", 14000, None, False),
+                ("Reviewer Assignment Test - Mgmt (No reviewers yet)", 12000, None, True),
+
+                ("Project Portfolio Tracking (Pilot)", 12000, "APPROVED", False),
+                ("Organizational Change Impact Study", 22000, "REJECTED", False),
             ],
             "Multimedia": [
-                ("Interactive AR Campus Navigation Guide", 15000, None),
-                ("Gamified Mental Health Support Micro-Learning", 12500, None),
-                ("AR Onboarding for New Students (Pilot)", 12000, "APPROVED"),
-                ("VR Emergency Response Training Suite", 40000, "REJECTED"),
+                ("Interactive AR Campus Navigation Guide", 15000, None, False),
+                ("Gamified Mental Health Support Micro-Learning", 12500, None, False),
+                ("Reviewer Assignment Test - MM (No reviewers yet)", 12000, None, True),
+
+                ("AR Onboarding for New Students (Pilot)", 12000, "APPROVED", False),
+                ("VR Emergency Response Training Suite", 40000, "REJECTED", False),
             ],
         }
 
@@ -294,8 +322,8 @@ def run():
                 dept_name=dept.department_name
             )
 
-            for (base_title, budget, decision) in title_bank[dept.department_name]:
-                # Make titles unique across departments (prevents “same thing” duplicates)
+            for (base_title, budget, decision, needs_assignment) in title_bank[dept.department_name]:
+                # unique title across departments
                 title = f"{base_title} ({dept.department_name})"
 
                 # Create researcher
@@ -318,8 +346,8 @@ def run():
                         scheme_id=scheme.scheme_id,
                         researcher_id=researcher.researcher_id,
                         project_title=title,
-                        abstract="Demo abstract for FINAL APPROVAL testing.",
-                        methodology="Demo methodology section for FINAL APPROVAL testing.",
+                        abstract="Demo abstract for testing.",
+                        methodology="Demo methodology section for testing.",
                         requested_budget=budget,
                         submission_date=datetime.now(timezone.utc),
                         proposal_status="SUBMITTED"
@@ -327,18 +355,21 @@ def run():
                     db.session.add(proposal)
                     db.session.commit()
 
-                # Ensure pipeline exists (reviews + endorsement)
-                ensure_review_pipeline(proposal, reviewers, budget, hod.hod_id)
+                # If this proposal is meant to test "Assign Reviewers",
+                # we ensure NO reviewer assignments exist.
+                if needs_assignment:
+                    clear_review_pipeline(proposal.proposal_id)
+                    set_final_decision(proposal.proposal_id, admin.admin_id, None)
+                else:
+                    # normal pipeline for final approval testing
+                    ensure_review_pipeline(proposal, reviewers, budget, hod.hod_id)
+                    set_final_decision(proposal.proposal_id, admin.admin_id, decision)
 
-                # Final decision setup:
-                # None => PENDING (remove FinalDecision if exists)
-                # "APPROVED"/"REJECTED" => ensure exists
-                set_final_decision(proposal.proposal_id, admin.admin_id, decision)
-
-        print("✅ Demo data seeded successfully for FINAL APPROVAL page!")
+        print("✅ Demo data seeded successfully!")
         print("✅ Admin login: admin_demo@gmail.com / 1234")
-        print("✅ Final Approval page should show PENDING proposals (no FinalDecision).")
-        print("✅ There are also APPROVED/REJECTED proposals for extra testing.")
+        print("✅ Final Approval page: shows proposals with decision=None")
+        print("✅ Assign Reviewers page: shows proposals with NO reviewer assignments")
+        print("   (look for titles containing 'Reviewer Assignment Test')")
 
 if __name__ == "__main__":
     run()
