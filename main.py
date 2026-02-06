@@ -368,17 +368,34 @@ def compute_reviewer_recommendation(proposal_id: str) -> str:
     other = len(reviews) - approve
     return "Recommended" if approve >= other else "Not Recommended"
 
+from flask import abort
+
+def get_or_404(model, pk):
+    obj = db.session.get(model, pk)
+    if not obj:
+        abort(404)
+    return obj
+
 @app.context_processor
 def inject_profile():
     if current_user.is_authenticated:
         return {"prof": get_profile(current_user.id)}
     return {"prof": None}
 
-def compute_proposal_display_status(p: "Proposal") -> str:
+from typing import Union
+
+def compute_proposal_display_status(p_or_id: Union["Proposal", str]) -> str:
+    # Accept either Proposal object or proposal_id string
+    if isinstance(p_or_id, str):
+        p = db.session.get(p_or_id)
+        if not p:
+            return "Unknown"
+    else:
+        p = p_or_id
+
     pid = p.proposal_id
 
     # 1) If proposal_status already stores an end-state, trust it
-    # (you already set FUNDED in funding confirm)
     st = (p.proposal_status or "").upper().strip()
     if st in {"FUNDED", "REJECTED"}:
         return st.title()  # Funded / Rejected
@@ -394,7 +411,7 @@ def compute_proposal_display_status(p: "Proposal") -> str:
     final = FinalDecision.query.filter_by(proposal_id=pid).first()
     if final:
         if (final.decision or "").upper() == "APPROVED":
-            return "Approved"   # or "Pending Funding" if you want until funding confirmed
+            return "Pending Funding"
         return "Rejected"
 
     # 4) HoD endorsement exists?
@@ -402,7 +419,7 @@ def compute_proposal_display_status(p: "Proposal") -> str:
     if hod:
         if (hod.decision or "").upper() == "ENDORSE":
             return "Pending Approval"
-        return "Rejected"  # Not endorsed
+        return "Rejected"
 
     # 5) Reviewer assignments exist?
     assignments = ReviewersAssignment.query.filter_by(proposal_id=pid).all()
@@ -414,7 +431,6 @@ def compute_proposal_display_status(p: "Proposal") -> str:
     if not reviews:
         return "Pending Review"
 
-    # If you want: "Pending Endorsement" when all assigned reviews are done
     if len(reviews) >= len(assignments):
         return "Pending Endorsement"
 
@@ -657,14 +673,118 @@ def register():
 # ADMIN ROUTES
 #---------------------------------------------------------------------------------------------------------
 
+from sqlalchemy import exists, and_, or_
+from datetime import datetime
+
 @app.route("/admin/dashboard")
 @login_required
 @admin_required
 def admin_dashboard():
-    pending_count = UserProfile.query.filter_by(account_status="PENDING").count()
-    active_count = UserProfile.query.filter_by(account_status="ACTIVE").count()
-    deactivated_count = UserProfile.query.filter_by(account_status="DEACTIVATED").count()
-    return render_template("admin_dashboard.html", pending_count=pending_count, active_count=active_count, deactivated_count=deactivated_count)
+    # --- user counts ---
+    pending_registrations = UserProfile.query.filter_by(account_status="PENDING").count()
+    active_users = UserProfile.query.filter_by(account_status="ACTIVE").count()
+    deactivated_users = UserProfile.query.filter_by(account_status="DEACTIVATED").count()
+
+    # --- proposal pipeline counts ---
+    proposals = Proposal.query.all()
+
+    pending_reviewer_assignment = 0
+    awaiting_hod_decision = 0
+    final_approval_needed = 0
+    awaiting_budget_allocation = 0
+    approved_proposals = 0
+
+    for p in proposals:
+        st = compute_proposal_display_status(p)
+
+        if st == "Pending Assignment":
+            pending_reviewer_assignment += 1
+        elif st == "Pending Endorsement":
+            awaiting_hod_decision += 1
+        elif st == "Pending Approval":
+            final_approval_needed += 1
+        elif st == "Approved":
+            approved_proposals += 1
+            # show on funding list until confirmed funded
+            if (p.proposal_status or "").upper() != "FUNDED":
+                awaiting_budget_allocation += 1
+
+    # --- grant schemes ---
+    active_grant_schemes = GrantScheme.query.filter_by(scheme_status="OPEN").count()
+
+    # --- Recent Activity ---
+    recent_activity = []
+
+    # 1) Reviewer assignments
+    latest_assignments = (
+        ReviewersAssignment.query
+        .order_by(ReviewersAssignment.assignment_id.desc())
+        .limit(5)
+        .all()
+    )
+
+    for a in latest_assignments:
+        prop = db.session.get(Proposal, a.proposal_id)              # ✅ correct
+        rev = db.session.get(Reviewer, a.reviewer_id)               # ✅ correct
+        user = db.session.get(User, rev.user_id) if rev else None   # ✅ correct
+        if prop and user:
+            recent_activity.append(f"Proposal '{prop.project_title}' assigned to {user.full_name}")
+
+    # 2) Final decisions
+    latest_decisions = (
+        FinalDecision.query
+        .order_by(FinalDecision.final_decision_id.desc())
+        .limit(5)
+        .all()
+    )
+
+    for d in latest_decisions:
+        prop = db.session.get(Proposal, d.proposal_id)              # ✅ correct
+        if prop:
+            recent_activity.append(f"Final decision: {d.decision.title()} for '{prop.project_title}'")
+
+    # 3) Funding allocations (FundingAllocation -> Project -> Proposal)
+    latest_alloc = (
+        FundingAllocation.query
+        .order_by(FundingAllocation.allocation_id.desc())
+        .limit(5)
+        .all()
+    )
+
+    for fa in latest_alloc:
+        project = db.session.get(Project, fa.project_id)            # ✅ correct
+        if not project:
+            continue
+
+        prop = db.session.get(Proposal, project.proposal_id)        # ✅ correct
+        if not prop:
+            continue
+
+        recent_activity.append(f"Budget allocation updated for '{prop.project_title}'")
+
+    recent_activity = recent_activity[:3]
+
+    return render_template(
+        "admin_dashboard.html",
+        prof=get_profile(current_user.id),
+
+        # tiles
+        pending_registrations=pending_registrations,
+        pending_reviewer_assignment=pending_reviewer_assignment,
+        awaiting_hod_decision=awaiting_hod_decision,
+        final_approval_needed=final_approval_needed,
+        awaiting_budget_allocation=awaiting_budget_allocation,
+        active_grant_schemes=active_grant_schemes,
+        approved_proposals=approved_proposals,
+
+        # list
+        recent_activity=recent_activity,
+
+        # keep old values (if other templates still use them)
+        pending_count=pending_registrations,
+        active_count=active_users,
+        deactivated_count=deactivated_users,
+    )
 
 #------------------
 # User Management
