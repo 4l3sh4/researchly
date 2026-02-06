@@ -10,6 +10,7 @@
 </head>
 
 <body>
+  <!-- Top bar -->
   <header class="topbar">
     <div class="left">
       <button class="hamburger" type="button" aria-label="Menu">&#9776;</button>
@@ -18,12 +19,11 @@
 
     <div class="icons">
       <span class="icon bell" title="Notifications"></span>
-
       <a href="{{ url_for('view_profile') }}" class="icon user" title="Profile">
-        {% if prof and prof.profile_picture %}
+        {% if prof.profile_picture %}
           <img class="top-avatar"
-               src="{{ url_for('static', filename='uploads/' ~ prof.profile_picture) }}"
-               alt="Profile">
+            src="{{ url_for('static', filename='uploads/' ~ prof.profile_picture) }}"
+            alt="Profile">
         {% else %}
           <span class="fallback-user">👤</span>
         {% endif %}
@@ -32,13 +32,13 @@
   </header>
 
   <main class="layout">
+    <!-- Sidebar -->
     <aside class="sidebar">
       <a class="side-link" href="{{ url_for('admin_dashboard') }}">Admin Dashboard</a>
-      <a class="side-link" href="{{ url_for('admin_users', status='PENDING') }}">User Management</a>
-      <a class="side-link" href="{{ url_for('admin_grants', status='ALL') }}">Grant Scheme<br/>Management</a>
-
+      <a class="side-link active" href="{{ url_for('admin_users', status=status) }}">User Management</a>
+      <a class="side-link" href="{{ url_for('admin_grants') }}">Grant Scheme<br/>Management</a>
       <a class="side-link" href="{{ url_for('admin_funding_list', dept='ALL') }}">Funding Allocation</a>
-      <a class="side-link" href="#">Final Approval<br/>Decision</a>
+      <a class="side-link" href="{{ url_for('admin_final_approval_list', dept='ALL') }}">Final Approval<br/>Decision</a>
       <a class="side-link" href="#">Assign Reviewers</a>
       <a class="side-link" href="#">Proposal List</a>
 

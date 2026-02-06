@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Final Approval</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/admin_final_approval_detail.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/colors.css') }}">
+</head>
+<body>
+
+  <!-- Top bar -->
+  <header class="topbar">
+    <div class="left">
+      <button class="hamburger" type="button" aria-label="Menu">&#9776;</button>
+      <div class="brand">Researchly™</div>
+    </div>
+
+    <div class="icons">
+      <span class="icon bell" title="Notifications"></span>
+      <a href="{{ url_for('view_profile') }}" class="icon user" title="Profile">
+        {% if prof.profile_picture %}
+          <img class="top-avatar"
+            src="{{ url_for('static', filename='uploads/' ~ prof.profile_picture) }}"
+            alt="Profile">
+        {% else %}
+          <span class="fallback-user">👤</span>
+        {% endif %}
+      </a>
+    </div>
+  </header>
+
+  <main class="layout">
+    <!-- Sidebar -->
+    <aside class="sidebar">
+      <a class="side-link" href="{{ url_for('admin_dashboard') }}">Admin Dashboard</a>
+      <a class="side-link" href="{{ url_for('admin_users', status=status) }}">User Management</a>
+      <a class="side-link" href="{{ url_for('admin_grants') }}">Grant Scheme<br/>Management</a>
+      <a class="side-link" href="{{ url_for('admin_funding_list', dept='ALL') }}">Funding Allocation</a>
+      <a class="side-link active" href="{{ url_for('admin_final_approval_list', dept='ALL') }}">Final Approval<br/>Decision</a>
+      <a class="side-link" href="#">Assign Reviewers</a>
+      <a class="side-link" href="#">Proposal List</a>
+
+      <div class="side-spacer"></div>
+      <a class="side-link logout" href="{{ url_for('logout') }}">Logout</a>
+    </aside>
+
+  <section class="content">
+    <div class="page-wrap">
+
+    <h2 class="page-title">Proposal: <span class="title-accent">{{ proposal.project_title }}</span></h2>
+
+    <div class="header-actions">
+      <a class="btn" href="{{ url_for('admin_view_proposal', proposal_id=proposal.proposal_id) }}">View Proposal</a>
+    </div>
+
+      <div class="card" style="margin-top:18px;">
+        <div class="row">
+          <div class="left-info">
+            <b>Reviewer:</b>
+            <span class="{{ 'good' if reviewer_status=='Recommended' else 'bad' if reviewer_status=='Not Recommended' else '' }}">
+              {{ reviewer_status }}
+            </span>
+          </div>
+          <a class="btn" href="{{ url_for('admin_view_proposal', proposal_id=proposal.proposal_id) }}">View Details</a>
+        </div>
+
+        <div class="row">
+          <div class="left-info">
+            <b>Head of Department:</b>
+            <span class="{{ 'good' if hod_status=='Endorsed' else 'bad' if hod_status=='Not Endorsed' else '' }}">
+              {{ hod_status }}
+            </span>
+          </div>
+          <a class="btn" href="{{ url_for('admin_view_proposal', proposal_id=proposal.proposal_id) }}">View Details</a>
+        </div>
+    </div>
+
+    <form method="POST" class="actions-bottom">
+      <button class="approve" name="action" value="approve" type="submit">Approve</button>
+      <button class="reject" name="action" value="reject" type="submit">Reject</button>
+    </form>
+
+    </div>
+  </section>
+</main>
+
+</body>
+</html>

@@ -9,6 +9,7 @@ from datetime import datetime, timezone
 from flask import request, abort, flash
 from functools import wraps
 from werkzeug.utils import secure_filename
+from sqlalchemy import func
 import uuid
 import os
 
@@ -320,6 +321,15 @@ def parse_date_yyyy_mm_dd(value: str):
         return None
     # HTML <input type="date"> sends YYYY-MM-DD
     return datetime.strptime(value, "%Y-%m-%d").date()
+
+def compute_reviewer_recommendation(proposal_id: str) -> str:
+    reviews = Review.query.filter_by(proposal_id=proposal_id).all()
+    if not reviews:
+        return "Pending"
+
+    approve = sum(1 for r in reviews if (r.recommendation or "").upper() == "APPROVE")
+    other = len(reviews) - approve
+    return "Recommended" if approve >= other else "Not Recommended"
 
 @app.context_processor
 def inject_profile():
@@ -1121,6 +1131,7 @@ def admin_funding_allocate(proposal_id):
 
 @app.route("/admin/proposals/<proposal_id>")
 @login_required
+@admin_required
 def admin_view_proposal(proposal_id):
     proposal = Proposal.query.get_or_404(proposal_id)
 
@@ -1136,6 +1147,112 @@ def admin_view_proposal(proposal_id):
         researcher=researcher,
         scheme=scheme,
         dept=dept,
+        prof=prof
+    )
+
+@app.route("/admin/final-approval")
+@login_required
+@admin_required
+def admin_final_approval_list():
+    q = (request.args.get("q") or "").strip()
+    dept_id = (request.args.get("dept") or "ALL").strip()
+    prof = get_profile(current_user.id)
+
+    departments = Department.query.order_by(Department.department_name.asc()).all()
+
+    # proposals that have NO final decision yet
+    query = (
+        db.session.query(Proposal, Department)
+        .join(GrantScheme, GrantScheme.scheme_id == Proposal.scheme_id)
+        .join(Department, Department.department_id == GrantScheme.department_id)
+        .outerjoin(FinalDecision, FinalDecision.proposal_id == Proposal.proposal_id)
+        .filter(FinalDecision.proposal_id.is_(None))
+    )
+
+    # optional: require HOD endorsement exists (so it's truly ready for final approval)
+    query = query.join(HODEndorsement, HODEndorsement.proposal_id == Proposal.proposal_id)
+
+    if dept_id != "ALL":
+        query = query.filter(Department.department_id == dept_id)
+
+    if q:
+        like = f"%{q}%"
+        query = query.filter(
+            (Proposal.project_title.ilike(like)) |
+            (Department.department_name.ilike(like))
+        )
+
+    rows = query.order_by(Proposal.submission_date.desc()).all()
+
+    return render_template(
+        "admin_final_approval_list.html",
+        rows=rows,
+        q=q,
+        dept=dept_id,
+        departments=departments,
+        prof=prof
+    )
+
+@app.route("/admin/final-approval/<proposal_id>", methods=["GET", "POST"])
+@login_required
+@admin_required
+def admin_final_approval_detail(proposal_id):
+    prof = get_profile(current_user.id)
+    admin = get_admin_by_user(current_user.id)
+    if not admin:
+        flash("Admin record not found.", "error")
+        return redirect(url_for("admin_dashboard"))
+
+    proposal = Proposal.query.get_or_404(proposal_id)
+    scheme = GrantScheme.query.get(proposal.scheme_id)
+    dept = Department.query.get(scheme.department_id) if scheme else None
+
+    # reviewer + hod status
+    reviewer_status = compute_reviewer_recommendation(proposal.proposal_id)
+
+    hod_endorse = HODEndorsement.query.filter_by(proposal_id=proposal.proposal_id).first()
+    hod_status = "Pending"
+    if hod_endorse:
+        hod_status = "Endorsed" if (hod_endorse.decision or "").upper() == "ENDORSE" else "Not Endorsed"
+
+    # if already decided, show it (and optionally block changes)
+    existing_final = FinalDecision.query.filter_by(proposal_id=proposal.proposal_id).first()
+
+    if request.method == "POST":
+        action = (request.form.get("action") or "").lower()
+        if action not in ("approve", "reject"):
+            flash("Invalid action.", "error")
+            return redirect(url_for("admin_final_approval_detail", proposal_id=proposal_id))
+
+        decision = "APPROVED" if action == "approve" else "REJECTED"
+
+        if not existing_final:
+            existing_final = FinalDecision(
+                proposal_id=proposal.proposal_id,
+                admin_id=admin.admin_id,
+                decision=decision
+            )
+            db.session.add(existing_final)
+        else:
+            existing_final.admin_id = admin.admin_id
+            existing_final.decision = decision
+            existing_final.decision_date = datetime.now(timezone.utc)
+
+        # optional: keep Proposal.proposal_status aligned (your choice)
+        # proposal.proposal_status = decision
+
+        db.session.commit()
+        flash(f"Final decision recorded: {decision}", "success")
+        return redirect(url_for("admin_final_approval_list"))
+
+    return render_template(
+        "admin_final_approval_detail.html",
+        proposal=proposal,
+        scheme=scheme,
+        dept=dept,
+        reviewer_status=reviewer_status,
+        hod_status=hod_status,
+        final=existing_final,
         prof=prof
     )
 
