@@ -86,9 +86,9 @@
             <div class="tile-num">{{ active_grant_schemes }}</div>
           </a>
 
-          <a class="tile" href="{{ url_for('admin_proposal_list') }}">
-            <div class="tile-title">Approved Proposals</div>
-            <div class="tile-num">{{ approved_proposals }}</div>
+          <a class="tile" href="{{ url_for('admin_proposal_list', status='Funded') }}">
+            <div class="tile-title">Funded Proposals</div>
+            <div class="tile-num">{{ funded_proposals }}</div>
           </a>
         </div>
 
