@@ -466,39 +466,6 @@ def compute_proposal_display_status(p_or_id: Union["Proposal", str]) -> str:
 def home():
     return redirect(url_for("register"))
 
-# @app.route('/login', methods=['GET', 'POST'])
-# def login():
-#     form = LoginForm()
-#     error_message = None
-
-#     if form.validate_on_submit():
-#         user = User.query.filter_by(email=form.email.data).first()
-
-#         if user and bcrypt.check_password_hash(user.password, form.password.data):
-#             prof = get_profile(user.id)
-
-#             if not prof:
-#                 error_message = "Profile not found. Please contact admin."
-#             elif prof.account_status != "ACTIVE":
-#                 error_message = "Your account is not active yet. Please wait for admin approval."
-#             else:
-#                 login_user(user)
-
-#                 # Force complete profile first (ALL roles)
-#                 if profile_needs_setup(prof):
-#                     flash("Please complete your profile before continuing.", "info")
-#                     return redirect(url_for("edit_profile"))
-
-#                 # then normal routing
-#                 if prof.role == "ADMIN":
-#                     return redirect(url_for("admin_users"))
-#                 return redirect(url_for("dashboard"))
-#         else:
-#             error_message = "Invalid email or password. Please try again."
-
-#     return render_template('login.html', form=form, error_message=error_message)
-
-# Temporary to allow seed_demo_data.py
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     form = LoginForm()
@@ -507,16 +474,7 @@ def login():
     if form.validate_on_submit():
         user = User.query.filter_by(email=form.email.data).first()
 
-        # Accept BOTH bcrypt-hash passwords and plain-text demo passwords
-        ok = False
-        if user:
-            try:
-                ok = bcrypt.check_password_hash(user.password, form.password.data)
-            except ValueError:
-                # stored password is not a bcrypt hash (e.g. "demo")
-                ok = (user.password == form.password.data)
-
-        if user and ok:
+        if user and bcrypt.check_password_hash(user.password, form.password.data):
             prof = get_profile(user.id)
 
             if not prof:
@@ -525,7 +483,7 @@ def login():
                 error_message = "Your account is not active yet. Please wait for admin approval."
             else:
                 login_user(user)
-                
+
                 # Force complete profile first (ALL roles)
                 if profile_needs_setup(prof):
                     flash("Please complete your profile before continuing.", "info")
