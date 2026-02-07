@@ -62,7 +62,7 @@
               {{ reviewer_status }}
             </span>
           </div>
-          <a class="btn" href="{{ url_for('admin_view_proposal', proposal_id=proposal.proposal_id) }}">View Details</a>
+          <a class="btn" href="{{ url_for('admin_view_recommendation', proposal_id=proposal.proposal_id) }}">View Details</a>
         </div>
 
         <div class="row">
@@ -72,7 +72,7 @@
               {{ hod_status }}
             </span>
           </div>
-          <a class="btn" href="{{ url_for('admin_view_proposal', proposal_id=proposal.proposal_id) }}">View Details</a>
+          <a class="btn" href="{{ url_for('admin_view_endorsement', proposal_id=proposal.proposal_id) }}">View Details</a>
         </div>
     </div>
 

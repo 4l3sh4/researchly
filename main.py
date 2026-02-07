@@ -1444,6 +1444,9 @@ def admin_funding_allocate(proposal_id):
         prof=prof
     )
 
+#----------------
+# View Buttons
+#----------------
 @app.route("/admin/proposals/<proposal_id>")
 @login_required
 @admin_required
@@ -1462,6 +1465,62 @@ def admin_view_proposal(proposal_id):
         researcher=researcher,
         scheme=scheme,
         dept=dept,
+        prof=prof
+    )
+
+@app.route("/admin/proposals/<proposal_id>/recommendation")
+@login_required
+@admin_required
+def admin_view_recommendation(proposal_id):
+    proposal = Proposal.query.get_or_404(proposal_id)
+
+    # All reviews for this proposal (what reviewers submitted)
+    reviews = (
+        Review.query
+        .filter_by(proposal_id=proposal_id)
+        .order_by(Review.review_date.desc())
+        .all()
+    )
+
+    # optional extra info for the header
+    researcher = Researcher.query.get(proposal.researcher_id)
+    scheme = GrantScheme.query.get(proposal.scheme_id)
+    dept = Department.query.get(scheme.department_id) if scheme else None
+
+    prof = get_profile(current_user.id)
+
+    return render_template(
+        "admin_view_recommendation.html",
+        proposal=proposal,
+        researcher=researcher,
+        scheme=scheme,
+        dept=dept,
+        reviews=reviews,
+        prof=prof
+    )
+
+
+@app.route("/admin/proposals/<proposal_id>/endorsement")
+@login_required
+@admin_required
+def admin_view_endorsement(proposal_id):
+    proposal = Proposal.query.get_or_404(proposal_id)
+
+    endorsement = HODEndorsement.query.filter_by(proposal_id=proposal_id).first()
+
+    researcher = Researcher.query.get(proposal.researcher_id)
+    scheme = GrantScheme.query.get(proposal.scheme_id)
+    dept = Department.query.get(scheme.department_id) if scheme else None
+
+    prof = get_profile(current_user.id)
+
+    return render_template(
+        "admin_view_endorsement.html",
+        proposal=proposal,
+        researcher=researcher,
+        scheme=scheme,
+        dept=dept,
+        endorsement=endorsement,
         prof=prof
     )
 
