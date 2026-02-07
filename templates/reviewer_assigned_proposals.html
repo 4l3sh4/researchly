@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Under Review - Researchly</title>
+  <title>Assigned Proposals - Researchly</title>
 
   <link rel="stylesheet" href="{{ url_for('static', filename='css/reviewer_dashboard.css') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/colors.css') }}">
@@ -19,7 +19,15 @@
     }
     .search input{
       border:none; outline:none; width:100%;
-      font-size:15px; background:transparent;
+      font-size:15px;
+    }
+    .filter{
+      width:220px;
+      border:1px solid rgba(0,0,0,0.12);
+      border-radius:12px;
+      padding:10px 12px;
+      background:#fff;
+      font-weight:800;
     }
 
     .table-wrap{
@@ -29,7 +37,6 @@
       overflow:hidden;
       background:#fff;
     }
-
     table{ width:100%; border-collapse:collapse; }
     thead th{
       text-align:left;
@@ -38,38 +45,31 @@
       background:#ececec;
       border-bottom:1px solid rgba(0,0,0,0.08);
     }
-
-    /* scroll area ONLY for rows */
-    .table-scroll{
-      max-height:520px;
-      overflow:auto;
-    }
-    .table-scroll::-webkit-scrollbar{ width:6px; }
-    .table-scroll::-webkit-scrollbar-thumb{
-      background: rgba(0,0,0,0.25);
-      border-radius: 6px;
-    }
-
     tbody td{
       padding:16px;
       border-bottom:1px solid rgba(0,0,0,0.08);
       vertical-align:middle;
     }
     tbody tr:last-child td{ border-bottom:none; }
-    .actions{ width:140px; text-align:right; }
 
-    .btn-eval{
+    /* keep teal like your screenshot */
+    .st-pending{ color:#0fa7a1; }
+    .st-accepted{ color:#0fa7a1; }
+    .st-declined{ color:#0fa7a1; }
+    .actions{ width:110px; text-align:right; }
+
+    .btn-view{
       display:inline-block;
-      padding:6px 10px;
+      padding:10px 16px;
       border-radius:10px;
       background:#0fa7a1;
       color:#fff;
-      font-weight:700;
+      font-weight:900;
       text-decoration:none;
-      white-space:nowrap;
     }
-    .btn-eval:hover{ filter:brightness(0.95); }
+    .btn-view:hover{ filter:brightness(0.95); }
 
+    /* nicer empty state */
     .empty{
       padding:18px;
       color:#7b7b7b;
@@ -106,8 +106,8 @@
   <main class="layout" id="layout">
     <aside class="sidebar" id="sidebar">
       <a class="side-link" href="{{ url_for('reviewer_dashboard') }}">Reviewer Dashboard</a>
-      <a class="side-link" href="{{ url_for('reviewer_assigned_proposals') }}">Pending Assignments</a>
-      <a class="side-link active" href="{{ url_for('reviewer_under_review') }}">Under Review</a>
+      <a class="side-link active" href="{{ url_for('reviewer_assigned_proposals') }}">Pending Assignments</a>
+      <a class="side-link" href="{{ url_for('reviewer_under_review') }}">Under Review</a>
       <a class="side-link" href="{{ url_for('reviewer_review_history') }}">Review History</a>
       <a class="side-link" href="{{ url_for('reviewer_guidelines') }}">Reviewer Guidelines</a>
       <div class="side-spacer"></div>
@@ -116,13 +116,20 @@
 
     <section class="content">
       <div class="card">
-        <h1 class="page-title">Under Review</h1>
+        <h1 class="page-title">Pending Assignments</h1>
 
         <div class="toolbar">
           <div class="search">
             <span style="opacity:.55;">🔍</span>
             <input id="searchInput" type="text" placeholder="Search proposals..." />
           </div>
+
+          <select id="filterSelect" class="filter">
+            <option value="ALL" selected>Filter: All</option>
+            <option value="Pending">Pending</option>
+            <option value="Accepted">Accepted</option>
+            <option value="Declined">Declined</option>
+          </select>
         </div>
 
         <div class="table-wrap">
@@ -130,7 +137,7 @@
             <thead>
               <tr>
                 <th>Assigned Proposals</th>
-                <th class="col-date">Assigned Date</th>
+                <th class="status">Status</th>
                 <th class="actions"></th>
               </tr>
             </thead>
@@ -139,34 +146,39 @@
           <div class="table-scroll">
             <table>
               <tbody id="tableBody">
-                {% if rows and rows|length > 0 %}
-                  {% for a, p in rows %}
-                  <tr class="row"
-                      data-title="{{ (p.project_title or '')|lower }}">
-                    <td style="font-weight:700;">{{ p.project_title }}</td>
+                {% for r in rows %}
+                <tr class="row"
+                    data-title="{{ r.title|lower }}"
+                    data-status="{{ r.status }}">
+                  <td style="font-weight:700;">{{ r.title }}</td>
 
-                    <td class="col-date">
-                      {{ a.assigned_date.strftime("%d %b %Y, %I:%M %p") if a.assigned_date else "-" }}
-                    </td>
+                  <td class="status
+                    {% if r.status == 'Pending' %}st-pending{% endif %}
+                    {% if r.status == 'Accepted' %}st-accepted{% endif %}
+                    {% if r.status == 'Declined' %}st-declined{% endif %}
+                  ">
+                    {{ r.status }}
+                  </td>
 
-                    <td class="actions">
-                        <a class="btn-eval" href="{{ url_for('reviewer_evaluate', proposal_id=p.proposal_id) }}">
-                        Evaluate
-                        </a>
-                    </td>
-                  </tr>
-                  {% endfor %}
-                {% endif %}
+                  <td class="actions">
+                    <a class="btn-view"
+                      href="{{ url_for('reviewer_assignment_view', proposal_id=r.id) }}">
+                      View
+                    </a>
+                  </td>
+                </tr>
+                {% endfor %}
               </tbody>
             </table>
 
-            {% if not rows or rows|length == 0 %}
-              <div class="empty">No proposals under review yet.</div>
-            {% endif %}
-
             <div id="emptyState" class="empty" style="display:none;">
-              No proposals match your search.
+              No proposals match your search/filter.
             </div>
+          </div>
+        </div>
+
+          <div id="emptyState" class="empty" style="display:none;">
+            No proposals match your search/filter.
           </div>
         </div>
 
@@ -185,30 +197,38 @@
       layout.classList.toggle('sidebar-collapsed');
     });
 
-    // client-side search
+    // search + filter
     const searchInput = document.getElementById('searchInput');
+    const filterSelect = document.getElementById('filterSelect');
     const rows = Array.from(document.querySelectorAll('tr.row'));
     const emptyState = document.getElementById('emptyState');
 
-    function applySearch(){
+    function applyFilters(){
       const q = (searchInput.value || "").trim().toLowerCase();
+      const f = filterSelect.value;
+
       let shown = 0;
 
       rows.forEach(tr => {
         const title = tr.dataset.title || "";
-        const show = !q || title.includes(q);
+        const status = tr.dataset.status || "";
+
+        const matchText = !q || title.includes(q);
+        const matchStatus = (f === "ALL") || (status === f);
+
+        const show = matchText && matchStatus;
         tr.style.display = show ? "" : "none";
         if (show) shown++;
       });
 
-      // only show this when there ARE rows in the page
-      if (rows.length > 0) {
-        emptyState.style.display = shown === 0 ? "block" : "none";
-      }
+      emptyState.style.display = shown === 0 ? "block" : "none";
     }
 
-    searchInput.addEventListener('input', applySearch);
-    applySearch();
+    searchInput.addEventListener('input', applyFilters);
+    filterSelect.addEventListener('change', applyFilters);
+
+    // init
+    applyFilters();
   </script>
 </body>
 </html>

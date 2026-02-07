@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Review History - Researchly</title>
+
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/reviewer_dashboard.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/colors.css') }}">
+
+  <style>
+    /* Match Pending Assignments look */
+    .page-title{
+      margin:0 0 14px;
+      color:#0fa7a1;
+      font-size:32px;
+      font-weight:1000;
+    }
+
+    .toolbar{
+      display:flex; gap:14px; align-items:center; margin-bottom:14px;
+    }
+    .search{
+      flex:1; display:flex; align-items:center; gap:10px;
+      border:1px solid rgba(0,0,0,0.12); border-radius:12px;
+      padding:10px 12px; background:#fff;
+    }
+    .search input{
+      border:none; outline:none; width:100%;
+      font-size:15px;
+      font-weight:600;
+      background:transparent;
+    }
+    .filter{
+      width:220px;
+      border:1px solid rgba(0,0,0,0.12);
+      border-radius:12px;
+      padding:10px 12px;
+      background:#fff;
+      font-weight:800;
+      font-size:15px;
+      outline:none;
+      cursor:pointer;
+    }
+
+    .table-wrap{
+      margin-top:10px;
+      border:1px solid rgba(0,0,0,0.10);
+      border-radius:14px;
+      overflow:hidden;
+      background:#fff;
+    }
+    table{ width:100%; border-collapse:collapse; }
+
+    thead th{
+      text-align:left;
+      font-size:18px;
+      padding:14px 16px;
+      background:#ececec;
+      border-bottom:1px solid rgba(0,0,0,0.08);
+    }
+
+    tbody td{
+      padding:16px;
+      border-bottom:1px solid rgba(0,0,0,0.08);
+      vertical-align:middle;
+      font-size:14px;
+    }
+    tbody tr:last-child td{ border-bottom:none; }
+
+    .col-rec{ width:200px; }
+    .col-date{ width:140px; }
+    .actions{ width:110px; text-align:right; }
+
+    .title{
+      font-weight:700;
+      font-size:14px;
+      color:#111;
+    }
+
+    .rec{
+      font-weight:900;
+      color:#0fa7a1;
+      font-size:14px;
+      white-space:nowrap;
+    }
+
+    .date{
+      font-weight:800;
+      color:#111;
+      font-size:14px;
+      white-space:nowrap;
+    }
+
+    .btn-view{
+      display:inline-block;
+      padding:10px 16px;
+      border-radius:10px;
+      background:#0fa7a1;
+      color:#fff;
+      font-weight:900;
+      text-decoration:none;
+    }
+    .btn-view:hover{ filter:brightness(0.95); }
+
+    /* Scroll area like your screenshot */
+    .table-scroll{
+      max-height:520px;
+      overflow:auto;
+    }
+    .table-scroll::-webkit-scrollbar{ width:10px; }
+    .table-scroll::-webkit-scrollbar-thumb{
+      background: rgba(0,0,0,0.25);
+      border-radius: 10px;
+    }
+    .table-scroll::-webkit-scrollbar-track{ background: rgba(0,0,0,0.06); }
+
+    .empty{
+      padding:18px;
+      color:#7b7b7b;
+      font-weight:700;
+    }
+
+    @media (max-width: 980px){
+      .toolbar{ flex-direction:column; align-items:stretch; }
+      .filter{ width:100%; }
+      .actions{ text-align:left; }
+      .col-rec, .col-date, .actions{ width:auto; }
+      .rec, .date{ white-space:normal; }
+    }
+  </style>
+</head>
+
+<body>
+  <header class="topbar">
+    <div class="left">
+      <button class="hamburger" type="button" id="hamburger">&#9776;</button>
+      <div class="brand">Researchly™</div>
+    </div>
+
+    <div class="icons">
+      <span class="icon bell" title="Notifications"></span>
+      <a href="{{ url_for('view_profile') }}" class="icon user" title="Profile">
+        {% if prof and prof.profile_picture %}
+          <img class="top-avatar" src="{{ url_for('static', filename='uploads/' ~ prof.profile_picture) }}" alt="Profile">
+        {% else %}
+          <span class="fallback-user">👤</span>
+        {% endif %}
+      </a>
+    </div>
+  </header>
+
+  <main class="layout" id="layout">
+    <aside class="sidebar" id="sidebar">
+      <a class="side-link" href="{{ url_for('reviewer_dashboard') }}">Reviewer Dashboard</a>
+      <a class="side-link" href="{{ url_for('reviewer_assigned_proposals') }}">Pending Assignments</a>
+      <a class="side-link" href="{{ url_for('reviewer_under_review') }}">Under Review</a>
+      <a class="side-link active" href="{{ url_for('reviewer_review_history') }}">Review History</a>
+      <a class="side-link" href="{{ url_for('reviewer_guidelines') }}">Reviewer Guidelines</a>
+      <div class="side-spacer"></div>
+      <a class="side-link logout" href="{{ url_for('logout') }}">Logout</a>
+    </aside>
+
+    <section class="content">
+      <div class="card">
+        <h1 class="page-title">Review History</h1>
+
+        <!-- toolbar -->
+        <div class="toolbar">
+          <div class="search">
+            <span style="opacity:.55;">🔍</span>
+            <input id="searchInput" type="text" placeholder="Search proposals..." />
+          </div>
+
+          <select id="filterSelect" class="filter">
+            <option value="ALL" selected>Filter: All</option>
+            <option value="RECOMMENDED">Recommended</option>
+            <option value="REVISION_REQUIRED">Revision required</option>
+            <option value="REJECTED">Rejected</option>
+          </select>
+        </div>
+
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Past Proposals</th>
+                <th class="col-rec">Recommendation</th>
+                <th class="col-date">Date</th>
+                <th class="actions"></th>
+              </tr>
+            </thead>
+          </table>
+
+          <div class="table-scroll">
+            <table>
+              <tbody id="tableBody">
+                {% for row in rows %}
+                  {# normalize dict/object #}
+                  {% set title = row.project_title if row.project_title is defined else row['project_title'] %}
+                  {% set rec_raw = row.recommendation if row.recommendation is defined else row['recommendation'] %}
+                  {% set pid = row.proposal_id if row.proposal_id is defined else row['proposal_id'] %}
+                  {% set dt = row.review_date if row.review_date is defined else row.get('review_date') %}
+
+                  <tr class="row"
+                      data-title="{{ (title or '')|lower }}"
+                      data-rec="{{ (rec_raw or '')|upper }}">
+                    <td class="title">{{ title }}</td>
+
+                    <td class="rec col-rec">
+                      {% if rec_raw == "REVISION_REQUIRED" %}
+                        Revision required
+                      {% elif rec_raw == "RECOMMENDED" %}
+                        Recommended
+                      {% elif rec_raw == "REJECTED" %}
+                        Rejected
+                      {% else %}
+                        {{ rec_raw }}
+                      {% endif %}
+                    </td>
+
+                    <td class="date col-date">
+                      {% if dt %}
+                        {{ dt.strftime("%d/%m/%Y") }}
+                      {% else %}
+                        -
+                      {% endif %}
+                    </td>
+
+                    <td class="actions">
+                      <a class="btn-view" href="{{ url_for('reviewer_history_view', proposal_id=pid) }}">View</a>
+                    </td>
+                  </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+
+            <div id="emptyState" class="empty" style="display:none;">
+              No proposals match your search/filter.
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </section>
+  </main>
+
+  <script>
+    // sidebar toggle
+    const hamburger = document.getElementById('hamburger');
+    const sidebar = document.getElementById('sidebar');
+    const layout = document.getElementById('layout');
+
+    hamburger?.addEventListener('click', () => {
+      sidebar.classList.toggle('collapsed');
+      layout.classList.toggle('sidebar-collapsed');
+    });
+
+    // search + filter
+    const searchInput = document.getElementById('searchInput');
+    const filterSelect = document.getElementById('filterSelect');
+    const rows = Array.from(document.querySelectorAll('tr.row'));
+    const emptyState = document.getElementById('emptyState');
+
+    function applyFilters(){
+      const q = (searchInput.value || "").trim().toLowerCase();
+      const f = (filterSelect.value || "ALL").toUpperCase();
+
+      let shown = 0;
+
+      rows.forEach(tr => {
+        const title = tr.dataset.title || "";
+        const rec = (tr.dataset.rec || "").toUpperCase();
+
+        const matchText = !q || title.includes(q);
+        const matchRec = (f === "ALL") || (rec === f);
+
+        const show = matchText && matchRec;
+        tr.style.display = show ? "" : "none";
+        if (show) shown++;
+      });
+
+      emptyState.style.display = shown === 0 ? "block" : "none";
+    }
+
+    searchInput?.addEventListener('input', applyFilters);
+    filterSelect?.addEventListener('change', applyFilters);
+
+    // init
+    applyFilters();
+  </script>
+</body>
+</html>
