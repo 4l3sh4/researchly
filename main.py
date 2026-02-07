@@ -2197,51 +2197,24 @@ def reviewer_assignment_view(proposal_id):
 
     return render_template("reviewer_assignment_view.html", proposal=view_model)
 
-
 @app.route("/reviewer/under-review")
 @login_required
 @reviewer_required
 def reviewer_under_review():
     rv = get_reviewer_by_user(current_user.id)
 
-    rows = (db.session.query(ReviewersAssignment, Proposal)
+    rows = (
+        db.session.query(ReviewersAssignment, Proposal)
         .join(Proposal, Proposal.proposal_id == ReviewersAssignment.proposal_id)
         .filter(
             ReviewersAssignment.reviewer_id == rv.reviewer_id,
             ReviewersAssignment.assignment_status == "ACCEPTED"
         )
         .order_by(ReviewersAssignment.assigned_date.desc())
-        .all())
+        .all()
+    )
 
     return render_template("reviewer_under_review.html", rows=rows)
-
-
-@app.route("/reviewer/history")
-@login_required
-@reviewer_required
-def reviewer_review_history():
-    rv = get_reviewer_by_user(current_user.id)
-
-    rows = (db.session.query(Review, Proposal)
-        .join(Proposal, Proposal.proposal_id == Review.proposal_id)
-        .filter(Review.reviewer_id == rv.reviewer_id)
-        .order_by(Review.review_date.desc())
-        .all())
-
-    return render_template("reviewer_history.html", rows=rows)
-
-
-@app.route("/reviewer/history/<review_id>")
-@login_required
-@reviewer_required
-def reviewer_review_view(review_id):
-    rv = get_reviewer_by_user(current_user.id)
-    review = Review.query.get_or_404(review_id)
-    if review.reviewer_id != rv.reviewer_id:
-        abort(403)
-    proposal = Proposal.query.get_or_404(review.proposal_id)
-    return render_template("reviewer_review_view.html", review=review, proposal=proposal)
-
 
 @app.route("/reviewer/guidelines")
 @login_required
@@ -2255,48 +2228,108 @@ def reviewer_guidelines():
 @reviewer_required
 def reviewer_evaluate(proposal_id):
     rv = get_reviewer_by_user(current_user.id)
+
     proposal = Proposal.query.get_or_404(proposal_id)
 
-    a = ReviewersAssignment.query.filter_by(
-        proposal_id=proposal.proposal_id,
-        reviewer_id=rv.reviewer_id,
-        assignment_status="ACCEPTED"
-    ).first()
-    if not a:
-        abort(403)
+    # ensure reviewer is assigned
+    assignment = ReviewersAssignment.query.filter_by(
+        proposal_id=proposal_id,
+        reviewer_id=rv.reviewer_id
+    ).first_or_404()
 
     existing = Review.query.filter_by(
-        proposal_id=proposal.proposal_id,
+        proposal_id=proposal_id,
         reviewer_id=rv.reviewer_id
     ).first()
 
+    submitted = existing is not None
+    evaluated_at = existing.review_date.strftime("%d %b %Y, %I:%M %p") if existing else None
+
     if request.method == "POST":
         feedback = (request.form.get("feedback") or "").strip()
-        recommendation = (request.form.get("recommendation") or "").strip()
+        recommendation = (request.form.get("recommendation") or "").upper()
 
-        if not feedback or recommendation not in {"RECOMMENDED", "REVISION_REQUIRED", "REJECTED"}:
-            flash("Fill feedback and choose a recommendation.", "error")
-            return redirect(url_for("reviewer_evaluate", proposal_id=proposal_id))
+        if not feedback:
+            flash("Feedback cannot be empty.", "error")
+            return redirect(request.url)
+
+        if recommendation not in {"RECOMMENDED", "REVISION_REQUIRED", "REJECTED"}:
+            flash("Invalid recommendation.", "error")
+            return redirect(request.url)
 
         if existing:
-            existing.feedback = feedback
-            existing.recommendation = recommendation
-            existing.review_date = datetime.now(timezone.utc)
-        else:
-            db.session.add(Review(
-                proposal_id=proposal.proposal_id,
-                reviewer_id=rv.reviewer_id,
-                feedback=feedback,
-                recommendation=recommendation,
-                review_date=datetime.now(timezone.utc),
-            ))
+            flash("This review has already been submitted.", "error")
+            return redirect(request.url)
 
-        a.assignment_status = "COMPLETED"
+        review = Review(
+            proposal_id=proposal_id,
+            reviewer_id=rv.reviewer_id,
+            feedback=feedback,
+            recommendation=recommendation,
+            review_date=datetime.now(timezone.utc)
+        )
+        db.session.add(review)
         db.session.commit()
-        flash("Review submitted.", "success")
-        return redirect(url_for("reviewer_review_history"))
 
-    return render_template("reviewer_evaluate.html", proposal=proposal, existing=existing)
+        flash("Review submitted successfully.", "success")
+        return redirect(url_for("reviewer_under_review"))
+
+    return render_template(
+        "reviewer_evaluation.html",
+        proposal=proposal,
+        existing=existing,
+        submitted=submitted,
+        evaluated_at=evaluated_at
+    )
+
+@app.route("/reviewer/history")
+@login_required
+@reviewer_required
+def reviewer_review_history():
+    rv = get_reviewer_by_user(current_user.id)
+
+    rows = (
+        db.session.query(
+            Proposal.proposal_id,
+            Proposal.project_title,
+            Review.recommendation,
+            Review.review_date
+        )
+        .join(Review, Review.proposal_id == Proposal.proposal_id)
+        .filter(Review.reviewer_id == rv.reviewer_id)
+        .order_by(Review.review_date.desc())
+        .all()
+    )
+
+    return render_template("reviewer_history.html", rows=rows)
+
+@app.route("/reviewer/history/view/<proposal_id>")
+@login_required
+@reviewer_required
+def reviewer_history_view(proposal_id):
+    rv = get_reviewer_by_user(current_user.id)
+
+    proposal = Proposal.query.get_or_404(proposal_id)
+
+    review = Review.query.filter_by(
+        proposal_id=proposal_id,
+        reviewer_id=rv.reviewer_id
+    ).first_or_404()
+
+    status_map = {
+        "RECOMMENDED": "Recommended",
+        "REVISION_REQUIRED": "Revision Required",
+        "REJECTED": "Rejected",
+    }
+
+    display_status = status_map.get(review.recommendation, "Unknown")
+
+    return render_template(
+        "reviewer_history_view.html",
+        proposal=proposal,
+        review=review,
+        display_status=display_status,
+    )
 
 if __name__ == '__main__':
     with app.app_context():
