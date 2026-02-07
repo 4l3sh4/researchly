@@ -233,3 +233,70 @@ body {
   .kpi-row{ grid-template-columns: 1fr; }
   .kpi-label{ max-width: 100%; }
 }
+
+.page-title{
+  margin: 0 0 8px;
+  font-size: 30px;
+  color: #1a1a1a;
+}
+
+.guidelines{ margin-top: 18px; }
+
+.guide{
+  border: 1px solid rgba(0,0,0,0.10);
+  border-radius: 14px;
+  margin-bottom: 12px;
+  overflow: hidden;
+  background: #fff;
+}
+
+.guide-title{
+  cursor: pointer;
+  padding: 16px 18px;
+  font-weight: 900;
+  font-size: 20px;
+  list-style: none;
+}
+
+.guide-title::-webkit-details-marker{ display:none; }
+
+.guide-body{
+  padding: 0 18px 18px;
+  border-top: 1px solid rgba(0,0,0,0.08);
+}
+
+.guide-text{ color: #333; margin: 14px 0 0; }
+
+.guide-list{
+  margin: 12px 0 0;
+  padding-left: 18px;
+  color: #222;
+}
+
+.guide-list li{ margin: 8px 0; }
+
+/* --- Guidelines arrow --- */
+
+.guide-title{
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  cursor: pointer;
+  user-select: none;
+}
+
+.guide-title .arrow{
+  font-size: 35px;
+  transition: transform 0.25s ease;
+  color: #0fa7a1; /* matches theme */
+}
+
+/* Rotate arrow when open */
+details[open] .guide-title .arrow{
+  transform: rotate(90deg);
+}
+
+/* Remove default triangle completely */
+.guide-title::-webkit-details-marker{
+  display: none;
+}
