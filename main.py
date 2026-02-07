@@ -133,6 +133,7 @@ class Proposal(db.Model):
     abstract = db.Column(db.String(500), nullable=False)
     methodology = db.Column(db.String(500), nullable=False)
     requested_budget = db.Column(db.Integer, nullable=False)
+    expertise_needed = db.Column(db.String(500), nullable=True)
     submission_date = db.Column(db.DateTime, nullable=False)
     proposal_status = db.Column(db.String(15), nullable=False)
 
@@ -348,9 +349,11 @@ def login():
                 error_message = "Your account is not active yet. Please wait for admin approval."
             else:
                 login_user(user)
-                # optional: send admins to admin dashboard
+                # Route based on role
                 if prof.role == "ADMIN":
                     return redirect(url_for("admin_users"))
+                elif prof.role == "RESEARCHER":
+                    return redirect(url_for("researcher_dashboard"))
                 return redirect(url_for('dashboard'))
         else:
             error_message = "Invalid email or password. Please try again."
@@ -511,6 +514,132 @@ def register():
 #---------------------------------------------------------------------------------------------------------
 # ADMIN ROUTES
 #---------------------------------------------------------------------------------------------------------
+
+#---------------------------------------------------------------------------------------------------------
+# RESEARCHER ROUTES
+#---------------------------------------------------------------------------------------------------------
+
+@app.route("/researcher/dashboard")
+@login_required
+def researcher_dashboard():
+    prof = get_profile(current_user.id)
+    if not prof or prof.role != "RESEARCHER":
+        flash("Access denied. Researcher role required.", "error")
+        return redirect(url_for("dashboard"))
+    
+    researcher = get_researcher(current_user.id)
+    if not researcher:
+        flash("Researcher profile not found.", "error")
+        return redirect(url_for("dashboard"))
+    
+    return render_template("researcher_dashboard.html", user=current_user, prof=prof, researcher=researcher)
+
+@app.route("/researcher/proposals")
+@login_required
+def researcher_proposals():
+    prof = get_profile(current_user.id)
+    if not prof or prof.role != "RESEARCHER":
+        flash("Access denied. Researcher role required.", "error")
+        return redirect(url_for("dashboard"))
+    
+    researcher = get_researcher(current_user.id)
+    if not researcher:
+        flash("Researcher profile not found.", "error")
+        return redirect(url_for("dashboard"))
+    
+    proposals = Proposal.query.filter_by(researcher_id=researcher.researcher_id).all()
+    return render_template("researcher_proposals.html", user=current_user, prof=prof, proposals=proposals)
+
+
+@app.route("/researcher/proposals/create", methods=["GET", "POST"])
+@login_required
+def create_proposal():
+    prof = get_profile(current_user.id)
+    if not prof or prof.role != "RESEARCHER":
+        flash("Access denied. Researcher role required.", "error")
+        return redirect(url_for("dashboard"))
+
+    researcher = get_researcher(current_user.id)
+    if not researcher:
+        flash("Researcher profile not found.", "error")
+        return redirect(url_for("dashboard"))
+
+    schemes = GrantScheme.query.all()
+
+    if request.method == "POST":
+        title = (request.form.get("project_title") or "").strip()
+        abstract = (request.form.get("abstract") or "").strip()
+        methodology = (request.form.get("methodology") or "").strip()
+        requested_budget = request.form.get("requested_budget") or 0
+        expertise_needed = (request.form.get("expertise_needed") or "").strip()
+
+        if not title or not abstract or not methodology:
+            flash("Please fill in the required fields.", "error")
+            return render_template("create_proposal.html", user=current_user, prof=prof, schemes=schemes)
+
+        new = Proposal(
+            project_title=title,
+            abstract=abstract,
+            methodology=methodology,
+            requested_budget=int(requested_budget),
+            expertise_needed=expertise_needed,
+            submission_date=datetime.now(timezone.utc),
+            proposal_status="Pending Review",
+            researcher_id=researcher.researcher_id
+        )
+        db.session.add(new)
+        db.session.commit()
+        flash("Proposal submitted successfully.", "success")
+        return redirect(url_for("researcher_proposals"))
+
+    return render_template("create_proposal.html", user=current_user, prof=prof, schemes=schemes)
+
+
+@app.route("/researcher/proposals/<proposal_id>")
+@login_required
+def view_proposal(proposal_id):
+    prof = get_profile(current_user.id)
+    if not prof or prof.role != "RESEARCHER":
+        flash("Access denied.", "error")
+        return redirect(url_for("dashboard"))
+
+    proposal = Proposal.query.get(proposal_id)
+    if not proposal:
+        abort(404)
+
+    return render_template("view_proposal.html", user=current_user, prof=prof, proposal=proposal)
+
+
+@app.route("/researcher/proposals/<proposal_id>/feedback")
+@login_required
+def view_proposal_feedback(proposal_id):
+    prof = get_profile(current_user.id)
+    if not prof or prof.role != "RESEARCHER":
+        flash("Access denied.", "error")
+        return redirect(url_for("dashboard"))
+
+    proposal = Proposal.query.get(proposal_id)
+    if not proposal:
+        abort(404)
+
+    reviews = Review.query.filter_by(proposal_id=proposal_id).all()
+    return render_template("view_proposal_feedback.html", user=current_user, prof=prof, proposal=proposal, reviews=reviews)
+
+@app.route("/researcher/projects")
+@login_required
+def researcher_projects():
+    prof = get_profile(current_user.id)
+    if not prof or prof.role != "RESEARCHER":
+        flash("Access denied. Researcher role required.", "error")
+        return redirect(url_for("dashboard"))
+    
+    researcher = get_researcher(current_user.id)
+    if not researcher:
+        flash("Researcher profile not found.", "error")
+        return redirect(url_for("dashboard"))
+    
+    projects = Project.query.filter_by(researcher_id=researcher.researcher_id).all()
+    return render_template("researcher_projects.html", user=current_user, prof=prof, projects=projects)
 
 @app.route("/admin/dashboard")
 @login_required
