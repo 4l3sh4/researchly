@@ -760,18 +760,18 @@ def create_proposal():
 
         if not title or not abstract or not methodology:
             flash("Please fill in the required fields.", "error")
-            return render_template("create_proposal.html", user=current_user, prof=prof, schemes=schemes)
+            return render_template("create_proposal.html", user=current_user, prof=prof, rows=rows)
 
         scheme_id = (request.form.get("scheme_id") or "").strip()
 
         if not scheme_id:
             flash("Please select a grant scheme.", "error")
-            return render_template("create_proposal.html", user=current_user, prof=prof, schemes=schemes)
+            return render_template("create_proposal.html", user=current_user, prof=prof, rows=rows)
 
         scheme = GrantScheme.query.get(scheme_id)
         if not scheme:
             flash("Invalid grant scheme selected.", "error")
-            return render_template("create_proposal.html", user=current_user, prof=prof, schemes=schemes)
+            return render_template("create_proposal.html", user=current_user, prof=prof, rows=rows)
 
         new = Proposal(
             scheme_id=scheme_id,
