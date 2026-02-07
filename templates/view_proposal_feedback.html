@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Proposal Feedback - Researchly</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/colors.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/researcher_dashboard.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/researcher_proposals.css') }}">
+</head>
+<body>
+<header class="topbar">
+  <div class="left">
+    <button class="hamburger" type="button">&#9776;</button>
+    <div class="brand">Researchly™</div>
+  </div>
+  <div class="icons">
+    <span class="icon bell"></span>
+    <a href="{{ url_for('view_profile') }}" class="icon user">
+      {% if prof.profile_picture %}
+        <img class="top-avatar" src="{{ url_for('static', filename='uploads/' ~ prof.profile_picture) }}" alt="Profile">
+      {% else %}
+        <span class="fallback-user">👤</span>
+      {% endif %}
+    </a>
+  </div>
+</header>
+
+<main class="layout">
+  <aside class="sidebar">
+    <a class="side-link" href="{{ url_for('researcher_dashboard') }}">Dashboard</a>
+    <a class="side-link active" href="{{ url_for('researcher_proposals') }}">Proposals</a>
+    <a class="side-link" href="{{ url_for('researcher_projects') }}">Projects</a>
+    <div class="side-spacer"></div>
+    <a class="side-link logout" href="{{ url_for('logout') }}">Logout</a>
+  </aside>
+
+  <section class="content">
+    <div class="card">
+      <h1>Feedback for: {{ proposal.project_title }}</h1>
+      <p class="muted">Proposal status: {{ proposal.proposal_status }}</p>
+
+      {% if reviews %}
+        <ul class="activity-list">
+          {% for r in reviews %}
+            <li>
+              <strong>{{ r.recommendation }}</strong> — {{ r.feedback }}
+              <div style="font-size:12px;color:#888">By reviewer {{ r.reviewer_id }} on {{ r.review_date }}</div>
+            </li>
+          {% endfor %}
+        </ul>
+      {% else %}
+        <p>No feedback available yet.</p>
+      {% endif %}
+
+      <div class="cta-row">
+        <a class="btn ghost" href="{{ url_for('view_proposal', proposal_id=proposal.proposal_id) }}">Back</a>
+      </div>
+    </div>
+  </section>
+</main>
+</body>
+</html>

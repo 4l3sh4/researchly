@@ -70,23 +70,20 @@ body {
   background-position: center;
 }
 
-/* Make the profile icon a fixed circle and CLIP what's inside */
+/* Profile icon circle + clipping */
 .icon.user{
   width: 40px;
   height: 40px;
   border-radius: 50%;
   overflow: hidden;
-
   display: inline-flex;
   align-items: center;
   justify-content: center;
-
   background: #fff;
   text-decoration: none;
-  flex: 0 0 40px; /* prevents flex stretching */
+  flex: 0 0 40px;
 }
 
-/* Force the image to stay inside the circle */
 .icon.user .top-avatar{
   width: 100%;
   height: 100%;
@@ -94,7 +91,6 @@ body {
   display: block;
 }
 
-/* fallback icon centered */
 .icon.user .fallback-user{
   font-size: 22px;
   line-height: 1;
@@ -171,87 +167,113 @@ a.icon {
   );
 }
 
-.card {
-  max-width: 1100px;
+.page-wrap{
+  max-width: 1200px;
   margin: 0 auto;
-  background: #fff;
-  border-radius: 18px;
-  border: 1px solid rgba(0,0,0,0.08);
-  padding: 24px 24px 28px;
 }
 
-.card h1 {
-  margin: 0 0 8px;
-  font-size: 30px;
+/* =========================
+   TILES
+   ========================= */
+
+/* Row 1 (4 columns) and Row 2 (3 columns) */
+.tiles-grid{
+  display: grid;
+  gap: 16px;
+  margin-bottom: 18px;
+}
+
+.tiles-grid.top{
+  grid-template-columns: repeat(4, 1fr);
+}
+
+.tiles-grid.bottom{
+  grid-template-columns: repeat(3, 1fr);
+}
+
+/* Tile card */
+.tile{
+  background: #fff;
+  border-radius: 14px;
+  border: 1px solid rgba(0,0,0,0.14);
+  padding: 16px 16px;
+  text-decoration: none;
+  color: inherit;
+
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+
+  min-height: 86px;
+}
+
+.tile:hover{
+  border-color: rgba(0,0,0,0.22);
+}
+
+.tile-title{
+  font-weight: 800;
+  font-size: 20px;
+  line-height: 1.15;
   color: #1a1a1a;
 }
 
-.muted {
-  margin: 0 0 18px;
-  color: #7b7b7b;
-}
-
-.quick-grid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 14px;
-  margin-top: 16px;
-}
-
-.quick {
-  border: 2px solid rgba(0,0,0,0.08);
-  border-radius: 16px;
-  padding: 16px;
-  text-decoration: none;
-  color: inherit;
-}
-
-.quick:hover {
-  border-color: rgba(0,0,0,0.16);
-}
-
-.quick-title {
+.tile-num{
   font-weight: 900;
-  color: var(--accent-2);
-  margin-bottom: 6px;
-  font-size: 18px;
-}
-
-.quick-desc {
-  color: #7b7b7b;
-  font-size: 14px;
-}
-
-.cta-row {
-  margin-top: 18px;
-  display: flex;
-  gap: 10px;
-}
-
-.btn {
-  display: inline-block;
-  padding: 10px 16px;
-  border-radius: 12px;
-  font-weight: 800;
-  text-decoration: none;
-  border: 2px solid transparent;
-}
-
-.btn.primary {
-  background: #0fa7a1;
-  color: #fff;
-}
-
-.btn.primary:hover {
-  filter: brightness(0.95);
-}
-
-.btn.ghost {
-  background: #fff;
+  font-size: 44px;
   color: #0fa7a1;
-  border-color: #0fa7a1;
+  padding-left: 12px;
 }
 
-.btn.ghost:hover {
-  background: rgba(15,167,161,0.08);
+/* =========================
+   RECENT ACTIVITY
+   ========================= */
+.activity-card{
+  background: #fff;
+  border-radius: 14px;
+  border: 1px solid rgba(0,0,0,0.14);
+  overflow: hidden;
+}
+
+.activity-head{
+  padding: 16px 18px;
+  font-weight: 900;
+  font-size: 28px;
+  color: #1a1a1a;
+  border-bottom: 1px solid rgba(0,0,0,0.12);
+}
+
+.activity-list{
+  list-style: disc;
+  padding: 18px 28px 20px;
+  margin: 0;
+}
+
+.activity-list li{
+  padding: 10px 0;
+  font-size: 18px;
+  border-bottom: 1px solid rgba(0,0,0,0.08);
+}
+
+.activity-list li:last-child{
+  border-bottom: none;
+}
+
+.muted-li{
+  color: #7b7b7b;
+}
+
+/* =========================
+   RESPONSIVE
+   ========================= */
+@media (max-width: 1100px){
+  .tiles-grid.top{ grid-template-columns: repeat(2, 1fr); }
+  .tiles-grid.bottom{ grid-template-columns: repeat(2, 1fr); }
+}
+
+@media (max-width: 700px){
+  .layout{ grid-template-columns: 1fr; }
+  .sidebar{ display: none; }
+  .tiles-grid.top{ grid-template-columns: 1fr; }
+  .tiles-grid.bottom{ grid-template-columns: 1fr; }
 }

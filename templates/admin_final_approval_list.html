@@ -45,7 +45,7 @@
       </a>
 
       <a class="side-link" href="{{ url_for('admin_assign_reviewers', dept='ALL') }}">Assign Reviewers</a>
-      <a class="side-link" href="#">Proposal List</a>
+      <a class="side-link" href="{{ url_for('admin_proposal_list') }}">Proposal List</a>
 
       <div class="side-spacer"></div>
       <a class="side-link logout" href="{{ url_for('logout') }}">Logout</a>

@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Admin Dashboard - Researchly</title>
+  <title>Admin Dashboard</title>
 
   <link rel="stylesheet" href="{{ url_for('static', filename='css/admin_dashboard.css') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/colors.css') }}">
@@ -20,10 +20,10 @@
     <div class="icons">
       <span class="icon bell" title="Notifications"></span>
       <a href="{{ url_for('view_profile') }}" class="icon user" title="Profile">
-        {% if prof.profile_picture %}
+        {% if prof and prof.profile_picture %}
           <img class="top-avatar"
-            src="{{ url_for('static', filename='uploads/' ~ prof.profile_picture) }}"
-            alt="Profile">
+               src="{{ url_for('static', filename='uploads/' ~ prof.profile_picture) }}"
+               alt="Profile">
         {% else %}
           <span class="fallback-user">👤</span>
         {% endif %}
@@ -40,7 +40,7 @@
       <a class="side-link" href="{{ url_for('admin_funding_list', dept='ALL') }}">Funding Allocation</a>
       <a class="side-link" href="{{ url_for('admin_final_approval_list', dept='ALL') }}">Final Approval<br/>Decision</a>
       <a class="side-link" href="{{ url_for('admin_assign_reviewers', dept='ALL') }}">Assign Reviewers</a>
-      <a class="side-link" href="#">Proposal List</a>
+      <a class="side-link" href="{{ url_for('admin_proposal_list') }}">Proposal List</a>
 
       <div class="side-spacer"></div>
       <a class="side-link logout" href="{{ url_for('logout') }}">Logout</a>
@@ -48,33 +48,65 @@
 
     <!-- Content -->
     <section class="content">
-      <div class="card">
-        <h1>Admin Dashboard</h1>
-        <p class="muted">
-          Manage registrations, users, approvals, reviewer assignments, and funding workflows from here.
-        </p>
+      <div class="page-wrap">
 
-        <div class="quick-grid">
-          <a class="quick" href="{{ url_for('admin_users', status='PENDING') }}">
-            <div class="quick-title">Pending Registrations</div>
-            <div class="quick-desc">Approve and assign roles</div>
+        <!-- Row 1: 4 tiles -->
+        <div class="tiles-grid top">
+          <a class="tile" href="{{ url_for('admin_users', status='PENDING') }}">
+            <div class="tile-title">Pending<br>Registrations</div>
+            <div class="tile-num">{{ pending_registrations }}</div>
           </a>
 
-          <a class="quick" href="{{ url_for('admin_users', status='ACTIVE') }}">
-            <div class="quick-title">Active Users</div>
-            <div class="quick-desc">Update roles / deactivate access</div>
+          <a class="tile" href="{{ url_for('admin_assign_reviewers', dept='ALL') }}">
+            <div class="tile-title">Pending Reviewer<br>Assignment</div>
+            <div class="tile-num">{{ pending_reviewer_assignment }}</div>
           </a>
 
-          <a class="quick" href="{{ url_for('admin_users', status='DEACTIVATED') }}">
-            <div class="quick-title">Deactivated Users</div>
-            <div class="quick-desc">Restore or remove accounts</div>
+          <!-- If you don't have a page for this yet, keep href="#" -->
+          <a class="tile" href="#">
+            <div class="tile-title">Awaiting HoD<br>Decision</div>
+            <div class="tile-num">{{ awaiting_hod_decision }}</div>
+          </a>
+
+          <a class="tile" href="{{ url_for('admin_final_approval_list', dept='ALL') }}">
+            <div class="tile-title">Final Approval<br>Needed</div>
+            <div class="tile-num">{{ final_approval_needed }}</div>
           </a>
         </div>
 
-        <div class="cta-row">
-          <a class="btn primary" href="{{ url_for('admin_users', status='PENDING') }}">Go to User Management</a>
-          <a class="btn ghost" href="#">Grant Scheme Management</a>
+        <!-- Row 2: 3 tiles in ONE row -->
+        <div class="tiles-grid bottom">
+          <a class="tile" href="{{ url_for('admin_funding_list', dept='ALL') }}">
+            <div class="tile-title">Awaiting Budget<br>Allocation</div>
+            <div class="tile-num">{{ awaiting_budget_allocation }}</div>
+          </a>
+
+          <a class="tile" href="{{ url_for('admin_grants') }}">
+            <div class="tile-title">Active Grant Schemes</div>
+            <div class="tile-num">{{ active_grant_schemes }}</div>
+          </a>
+
+          <a class="tile" href="{{ url_for('admin_proposal_list', status='Funded') }}">
+            <div class="tile-title">Funded Proposals</div>
+            <div class="tile-num">{{ funded_proposals }}</div>
+          </a>
         </div>
+
+        <!-- Recent Activity -->
+        <div class="activity-card">
+          <div class="activity-head">Recent Activity</div>
+
+          <ul class="activity-list">
+            {% if recent_activity and recent_activity|length > 0 %}
+              {% for item in recent_activity %}
+                <li>{{ item }}</li>
+              {% endfor %}
+            {% else %}
+              <li class="muted-li">No recent activity yet.</li>
+            {% endif %}
+          </ul>
+        </div>
+
       </div>
     </section>
   </main>

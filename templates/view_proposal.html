@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>View Proposal - Researchly</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/colors.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/researcher_dashboard.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/researcher_proposals.css') }}">
+  <style>
+    .proposal-detail {
+      max-width: 900px;
+      margin: 0 auto;
+    }
+
+    .proposal-header {
+      margin-bottom: 28px;
+    }
+
+    .proposal-title {
+      font-size: 28px;
+      font-weight: 900;
+      color: var(--accent-2);
+      margin: 0 0 8px;
+    }
+
+    .proposal-meta {
+      color: #7b7b7b;
+      font-size: 14px;
+    }
+
+    .section {
+      margin-bottom: 28px;
+    }
+
+    .section-title {
+      font-size: 16px;
+      font-weight: 800;
+      color: #333;
+      margin-bottom: 10px;
+    }
+
+    .section-content {
+      color: #555;
+      line-height: 1.6;
+      font-size: 14px;
+    }
+
+    .expertise-box {
+      background: #f9f9f9;
+      border-left: 3px solid var(--accent-2);
+      padding: 8px 12px;
+      border-radius: 6px;
+      margin-top: 8px;
+      max-width: 640px;
+    }
+
+    .expertise-item {
+      display: inline-block;
+      background: #e8f5f7;
+      color: var(--accent-2);
+      padding: 4px 8px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 700;
+      margin: 3px 6px 3px 0;
+    }
+  </style>
+</head>
+<body>
+<header class="topbar">
+  <div class="left">
+    <button class="hamburger" type="button">&#9776;</button>
+    <div class="brand">Researchly™</div>
+  </div>
+  <div class="icons">
+    <span class="icon bell"></span>
+    <a href="{{ url_for('view_profile') }}" class="icon user">
+      {% if prof.profile_picture %}
+        <img class="top-avatar" src="{{ url_for('static', filename='uploads/' ~ prof.profile_picture) }}" alt="Profile">
+      {% else %}
+        <span class="fallback-user">👤</span>
+      {% endif %}
+    </a>
+  </div>
+</header>
+
+<main class="layout">
+  <aside class="sidebar">
+    <a class="side-link" href="{{ url_for('researcher_dashboard') }}">Dashboard</a>
+    <a class="side-link active" href="{{ url_for('researcher_proposals') }}">Proposals</a>
+    <a class="side-link" href="{{ url_for('researcher_projects') }}">Projects</a>
+    <div class="side-spacer"></div>
+    <a class="side-link logout" href="{{ url_for('logout') }}">Logout</a>
+  </aside>
+
+  <section class="content">
+    <div class="card proposal-detail">
+      <div class="proposal-header">
+        <h1 class="proposal-title">{{ proposal.project_title }}</h1>
+        <p class="proposal-meta">
+          Submitted: {{ proposal.submission_date.strftime('%B %d, %Y') }} — 
+          <span style="display:inline-block;background:#e8f5f7;color:var(--accent-2);padding:4px 8px;border-radius:4px;">
+            {{ proposal.proposal_status }}
+          </span>
+        </p>
+      </div>
+
+      {% if proposal.expertise_needed %}
+      <div class="section">
+        <div class="section-title">Expertise Needed</div>
+        <div class="expertise-box">
+          {% set skills = proposal.expertise_needed.split(',') %}
+          {% for skill in skills %}
+            <span class="expertise-item">{{ skill.strip() }}</span>
+          {% endfor %}
+        </div>
+      </div>
+      {% endif %}
+
+      <div class="section">
+        <div class="section-title">Abstract</div>
+        <div class="section-content">{{ proposal.abstract }}</div>
+      </div>
+
+      <div class="section">
+        <div class="section-title">Methodology</div>
+        <div class="section-content">{{ proposal.methodology }}</div>
+      </div>
+
+      <div class="section">
+        <div class="section-title">Requested Budget</div>
+        <div class="section-content">${{ "{:,}".format(proposal.requested_budget) }}</div>
+      </div>
+
+      <div class="cta-row">
+        <a class="btn ghost" href="{{ url_for('researcher_proposals') }}">Back</a>
+        <a class="btn primary" href="{{ url_for('view_proposal_feedback', proposal_id=proposal.proposal_id) }}">View Feedback</a>
+      </div>
+    </div>
+  </section>
+</main>
+</body>
+</html>
