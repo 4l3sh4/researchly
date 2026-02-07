@@ -1576,19 +1576,64 @@ def reviewer_dashboard():
 @app.route("/reviewer/assignments")
 @login_required
 @reviewer_required
-def reviewer_pending_assignments():
+def reviewer_assigned_proposals():
     rv = get_reviewer_by_user(current_user.id)
 
-    rows = (db.session.query(ReviewersAssignment, Proposal)
+    q = (request.args.get("q") or "").strip()
+    status = (request.args.get("status") or "ALL").upper()
+
+    query = (
+        db.session.query(ReviewersAssignment, Proposal)
+        .join(Proposal, Proposal.proposal_id == ReviewersAssignment.proposal_id)
+        .filter(ReviewersAssignment.reviewer_id == rv.reviewer_id)
+    )
+
+    if status != "ALL":
+        query = query.filter(db.func.upper(ReviewersAssignment.assignment_status) == status)
+
+    if q:
+        like = f"%{q}%"
+        query = query.filter(Proposal.project_title.ilike(like))
+
+    rows = query.order_by(ReviewersAssignment.assigned_date.desc()).all()
+
+    return render_template("reviewer_assigned_proposals.html", rows=rows, q=q, status=status)
+
+
+
+@app.route("/reviewer/assignments/view/<proposal_id>")
+@login_required
+@reviewer_required
+def reviewer_assignment_view(proposal_id):
+    rv = get_reviewer_by_user(current_user.id)
+
+    # ensure this proposal is actually assigned to this reviewer
+    row = (
+        db.session.query(ReviewersAssignment, Proposal)
         .join(Proposal, Proposal.proposal_id == ReviewersAssignment.proposal_id)
         .filter(
             ReviewersAssignment.reviewer_id == rv.reviewer_id,
-            ReviewersAssignment.assignment_status == "ASSIGNED"
+            Proposal.proposal_id == proposal_id
         )
-        .order_by(ReviewersAssignment.assigned_date.desc())
-        .all())
+        .first()
+    )
 
-    return render_template("reviewer_pending_assignments.html", rows=rows)
+    if not row:
+        abort(404)
+
+    assignment, proposal = row
+
+    # format for your template (you used proposal.title/status)
+    view_model = {
+        "id": proposal.proposal_id,
+        "title": proposal.project_title,
+        "status": assignment.assignment_status.title(),  # ASSIGNED -> Assigned
+        "abstract": proposal.abstract,
+        "methodology": proposal.methodology,
+        "assignment_status": assignment.assignment_status,  # raw
+    }
+
+    return render_template("reviewer_assignment_view.html", proposal=view_model)
 
 
 @app.route("/reviewer/under-review")
