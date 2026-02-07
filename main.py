@@ -731,9 +731,24 @@ def admin_dashboard():
             final_approval_needed += 1
         elif st == "Funded":
             funded_proposals += 1
-            # show on funding list until confirmed funded
-            if (p.proposal_status or "").upper() != "FUNDED":
-                awaiting_budget_allocation += 1
+
+    pending_funding_q = (
+        db.session.query(Proposal.proposal_id)
+        .join(FinalDecision, FinalDecision.proposal_id == Proposal.proposal_id)
+        .filter(db.func.upper(FinalDecision.decision) == "APPROVED")
+        .join(GrantScheme, GrantScheme.scheme_id == Proposal.scheme_id)
+        .outerjoin(Project, Project.proposal_id == Proposal.proposal_id)
+        .outerjoin(FundingAllocation, FundingAllocation.project_id == Project.project_id)
+        .filter(
+            or_(
+                FundingAllocation.allocation_id.is_(None),
+                db.func.upper(FundingAllocation.allocation_status) != "CONFIRMED"
+            )
+        )
+        .filter(db.func.upper(db.func.coalesce(Proposal.proposal_status, "")) != "FUNDED")
+    )
+
+    awaiting_budget_allocation = pending_funding_q.count()
 
     # --- grant schemes ---
     active_grant_schemes = GrantScheme.query.filter_by(scheme_status="OPEN").count()
@@ -1269,6 +1284,7 @@ def admin_funding_list():
     q = (request.args.get("q") or "").strip()
     dept_id = (request.args.get("dept") or "").strip()   # department_id
     prof = get_profile(current_user.id)
+    tab = (request.args.get("tab") or "ALL").upper()   # ALL / NO_ALLOC / DRAFT
 
     # dropdown options
     departments = Department.query.order_by(Department.department_name.asc()).all()
@@ -1298,6 +1314,15 @@ def admin_funding_list():
         .filter(db.func.upper(db.func.coalesce(Proposal.proposal_status, "")) != "FUNDED")
     )
 
+    if tab == "NO_ALLOC":
+        query = query.filter(FundingAllocation.allocation_id.is_(None))
+
+    elif tab == "DRAFT":
+        query = query.filter(
+            FundingAllocation.allocation_id.is_not(None),
+            db.func.upper(FundingAllocation.allocation_status) == "DRAFT"
+        )    
+
     # department filter
     if dept_id and dept_id != "ALL":
         query = query.filter(Department.department_id == dept_id)
@@ -1317,6 +1342,7 @@ def admin_funding_list():
         rows=rows,
         q=q,
         dept=dept_id or "ALL",
+        tab=tab,
         departments=departments,
         prof=prof
     )

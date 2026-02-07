@@ -39,7 +39,10 @@
       <a class="side-link" href="{{ url_for('admin_users', status='PENDING') }}">User Management</a>
       <a class="side-link" href="{{ url_for('admin_grants', status='ALL') }}">Grant Scheme<br/>Management</a>
 
-      <a class="side-link active" href="{{ url_for('admin_funding_list', dept='ALL', q=q) }}">Funding Allocation</a>
+      <a class="side-link active"
+          href="{{ url_for('admin_funding_list', dept='ALL', q=q, tab=tab or 'ALL') }}">
+        Funding Allocation
+      </a>
 
       <a class="side-link" href="{{ url_for('admin_final_approval_list', dept='ALL') }}">Final Approval<br/>Decision</a>
       <a class="side-link" href="{{ url_for('admin_assign_reviewers', dept='ALL') }}">Assign Reviewers</a>
@@ -52,7 +55,10 @@
     <section class="content">
       <div class="page-wrap">
         <h2 class="title">Pending Fund Allocation</h2>
+
         <form class="toolbar" method="GET" action="{{ url_for('admin_funding_list') }}">
+          <input type="hidden" name="tab" value="{{ tab or 'ALL' }}">
+
           <div class="toolbar-left">
             <input class="search" type="text" name="q" value="{{ q }}" placeholder="Search">
           </div>
@@ -70,6 +76,24 @@
             <button class="btn-go" type="submit" aria-label="Search">🔍</button>
           </div>
         </form>
+
+        <!-- Tabs -->
+        <div class="tabs">
+          <a class="tab {{ 'active' if tab=='ALL' else '' }}"
+              href="{{ url_for('admin_funding_list', dept=dept, q=q, tab='ALL') }}">
+            All{% if all_count is defined %} ({{ all_count }}){% endif %}
+          </a>
+
+          <a class="tab {{ 'active' if tab=='NO_ALLOC' else '' }}"
+              href="{{ url_for('admin_funding_list', dept=dept, q=q, tab='NO_ALLOC') }}">
+            No Allocation{% if no_alloc_count is defined %} ({{ no_alloc_count }}){% endif %}
+          </a>
+
+          <a class="tab {{ 'active' if tab=='DRAFT' else '' }}"
+              href="{{ url_for('admin_funding_list', dept=dept, q=q, tab='DRAFT') }}">
+            Draft Allocation{% if draft_count is defined %} ({{ draft_count }}){% endif %}
+          </a>
+        </div>
 
         <div class="card">
           <table class="table">
