@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Reviewer Dashboard - Researchly</title>
+
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/reviewer_dashboard.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/colors.css') }}">
+</head>
+
+<body>
+  <!-- Top bar -->
+  <header class="topbar">
+    <div class="left">
+      <button class="hamburger" type="button" aria-label="Menu" id="hamburger">&#9776;</button>
+      <div class="brand">Researchly™</div>
+    </div>
+
+    <div class="icons">
+      <span class="icon bell" title="Notifications"></span>
+
+      <a href="{{ url_for('view_profile') }}" class="icon user" title="Profile">
+        {% if prof and prof.profile_picture %}
+          <img class="top-avatar"
+               src="{{ url_for('static', filename='uploads/' ~ prof.profile_picture) }}"
+               alt="Profile">
+        {% else %}
+          <span class="fallback-user">👤</span>
+        {% endif %}
+      </a>
+    </div>
+  </header>
+
+  <main class="layout" id="layout">
+    <!-- Sidebar -->
+    <aside class="sidebar" id="sidebar">
+      <a class="side-link active" href="{{ url_for('reviewer_dashboard') }}">Reviewer Dashboard</a>
+      <a class="side-link" href="{{ url_for('reviewer_pending_assignments') }}">Pending Assignments</a>
+      <a class="side-link" href="{{ url_for('reviewer_under_review') }}">Under Review</a>
+      <a class="side-link" href="{{ url_for('reviewer_review_history') }}">Review History</a>
+      <a class="side-link" href="{{ url_for('reviewer_guidelines') }}">Reviewer Guidelines</a>
+
+      <div class="side-spacer"></div>
+      <a class="side-link logout" href="{{ url_for('logout') }}">Logout</a>
+    </aside>
+
+    <!-- Content -->
+    <section class="content">
+      <div class="card">
+        <div class="kpi-row">
+          <div class="kpi">
+            <div class="kpi-label">Pending Assignments</div>
+            <div class="kpi-num">{{ pending }}</div>
+          </div>
+
+          <div class="kpi">
+            <div class="kpi-label">Under Review</div>
+            <div class="kpi-num">{{ under_review }}</div>
+          </div>
+
+          <div class="kpi">
+            <div class="kpi-label">Reviews Completed</div>
+            <div class="kpi-num">{{ completed }}</div>
+          </div>
+        </div>
+
+        <div class="activity-card">
+          <div class="activity-title">Recent Activity</div>
+
+          {# If no activity at all #}
+          {% if (not recent_assignments or recent_assignments|length == 0) and (not recent_reviews or recent_reviews|length == 0) %}
+            <div class="activity-item">
+              <span class="dot"></span>
+              <span>No activity yet. Accept an assignment or submit a review.</span>
+            </div>
+          {% else %}
+
+            {# Assignment activity #}
+            {% for a in recent_assignments %}
+              <div class="activity-item">
+                <span class="dot"></span>
+                <span>
+                  {% set st = (a.assignment_status or '')|upper %}
+                  {% if st == 'ASSIGNED' %}
+                    New proposal assigned to you.
+                  {% elif st == 'ACCEPTED' %}
+                    You accepted an assignment.
+                  {% elif st == 'DECLINED' %}
+                    You declined an assignment.
+                  {% elif st == 'COMPLETED' %}
+                    Assignment marked completed.
+                  {% else %}
+                    Assignment updated ({{ a.assignment_status }}).
+                  {% endif %}
+
+                  <span class="muted">
+                    ({{ a.assigned_date.strftime('%d/%m/%Y') if a.assigned_date else '' }})
+                  </span>
+                </span>
+              </div>
+            {% endfor %}
+
+            {# Review activity #}
+            {% for r in recent_reviews %}
+              <div class="activity-item">
+                <span class="dot"></span>
+                <span>
+                  Review submitted:
+                  <strong>{{ r.recommendation.replace('_', ' ').title() if r.recommendation else 'Submitted' }}</strong>
+                  <span class="muted">
+                    ({{ r.review_date.strftime('%d/%m/%Y') if r.review_date else '' }})
+                  </span>
+                </span>
+              </div>
+            {% endfor %}
+
+          {% endif %}
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    const hamburger = document.getElementById('hamburger');
+    const sidebar = document.getElementById('sidebar');
+    const layout = document.getElementById('layout');
+
+    hamburger.addEventListener('click', () => {
+      sidebar.classList.toggle('collapsed');
+      layout.classList.toggle('sidebar-collapsed');
+    });
+  </script>
+</body>
+</html>
