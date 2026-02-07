@@ -722,7 +722,12 @@ def create_proposal():
         flash("Researcher profile not found.", "error")
         return redirect(url_for("dashboard"))
 
-    schemes = GrantScheme.query.all()
+    rows = (
+        db.session.query(GrantScheme, Department)
+        .outerjoin(Department, GrantScheme.department_id == Department.department_id)
+        .order_by(Department.department_name.asc())
+        .all()
+    )
 
     if request.method == "POST":
         title = (request.form.get("project_title") or "").strip()
@@ -735,7 +740,19 @@ def create_proposal():
             flash("Please fill in the required fields.", "error")
             return render_template("create_proposal.html", user=current_user, prof=prof, schemes=schemes)
 
+        scheme_id = (request.form.get("scheme_id") or "").strip()
+
+        if not scheme_id:
+            flash("Please select a grant scheme.", "error")
+            return render_template("create_proposal.html", user=current_user, prof=prof, schemes=schemes)
+
+        scheme = GrantScheme.query.get(scheme_id)
+        if not scheme:
+            flash("Invalid grant scheme selected.", "error")
+            return render_template("create_proposal.html", user=current_user, prof=prof, schemes=schemes)
+
         new = Proposal(
+            scheme_id=scheme_id,
             project_title=title,
             abstract=abstract,
             methodology=methodology,
@@ -750,7 +767,7 @@ def create_proposal():
         flash("Proposal submitted successfully.", "success")
         return redirect(url_for("researcher_proposals"))
 
-    return render_template("create_proposal.html", user=current_user, prof=prof, schemes=schemes)
+    return render_template("create_proposal.html", user=current_user, prof=prof, rows=rows)
 
 
 @app.route("/researcher/proposals/<proposal_id>")
@@ -1397,7 +1414,7 @@ def admin_grant_view(scheme_id):
         return redirect(url_for("admin_grant_view", scheme_id=scheme_id))
 
     return render_template(
-        "admin_grant_scheme_view.html",
+        "admin_view_grant_scheme.html",
         scheme=scheme,
         departments=departments
     )

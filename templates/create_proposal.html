@@ -4,8 +4,8 @@
   <meta charset="UTF-8">
   <title>Create Proposal - Researchly</title>
   <link rel="stylesheet" href="{{ url_for('static', filename='css/colors.css') }}">
-  <link rel="stylesheet" href="{{ url_for('static', filename='css/researcher_dashboard.css') }}">
-  <link rel="stylesheet" href="{{ url_for('static', filename='css/researcher_proposals.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/research_dashboard.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/research_proposals.css') }}">
   <style>
     .proposal-form {
       max-width: 900px;
@@ -137,10 +137,13 @@
         <!-- Grant Scheme -->
         <div class="form-group">
           <label class="form-label">Grant Scheme</label>
-          <select name="scheme_id" class="form-control">
-            <option value="">Select a grant scheme...</option>
-            {% for scheme in schemes %}
-              <option value="{{ scheme.scheme_id }}">{{ scheme.scheme_id }}</option>
+          <select name="scheme_id" class="form-control form-select" required>
+            <option value="">Select Grant Scheme</option>
+
+            {% for scheme, dept in rows %}
+              <option value="{{ scheme.scheme_id }}">
+                {{ dept.department_name if dept else 'Unknown Department' }}
+              </option>
             {% endfor %}
           </select>
         </div>
