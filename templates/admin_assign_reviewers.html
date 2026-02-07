@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Assign Reviewers</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/admin_assign_reviewers.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/colors.css') }}">
+</head>
+<body>
+
+<header class="topbar">
+  <div class="left">
+      <button class="hamburger" type="button" aria-label="Menu" id="hamburger">&#9776;</button>
+      <div class="brand">Researchly™</div>
+    </div>
+
+  <div class="icons">
+    <span class="icon bell" title="Notifications"></span>
+    <a href="{{ url_for('view_profile') }}" class="icon user" title="Profile">
+      {% if prof and prof.profile_picture %}
+        <img class="top-avatar"
+             src="{{ url_for('static', filename='uploads/' ~ prof.profile_picture) }}"
+             alt="Profile">
+      {% else %}
+        <span class="fallback-user">👤</span>
+      {% endif %}
+    </a>
+  </div>
+</header>
+
+  <main class="layout" id="layout">
+  <aside class="sidebar" id="sidebar">
+    <a class="side-link" href="{{ url_for('admin_dashboard') }}">Admin Dashboard</a>
+    <a class="side-link" href="{{ url_for('admin_users', status='PENDING') }}">User Management</a>
+    <a class="side-link" href="{{ url_for('admin_grants') }}">Grant Scheme<br/>Management</a>
+    <a class="side-link" href="{{ url_for('admin_funding_list', dept='ALL') }}">Funding Allocation</a>
+    <a class="side-link" href="{{ url_for('admin_final_approval_list', dept='ALL') }}">Final Approval<br/>Decision</a>
+    <a class="side-link active" href="{{ url_for('admin_assign_reviewers') }}">Assign Reviewers</a>
+    <a class="side-link" href="{{ url_for('admin_proposal_list') }}">Proposal List</a>
+
+    <div class="side-spacer"></div>
+    <a class="side-link logout" href="{{ url_for('logout') }}">Logout</a>
+  </aside>
+
+  <section class="content">
+    <div class="page-wrap">
+
+      <h2 class="page-title">Pending Reviewer Assignments</h2>
+
+      <form class="toolbar" method="GET" action="{{ url_for('admin_assign_reviewers') }}">
+        <div class="search-wrap">
+          <span class="search-icon"></span>
+          <input class="search" type="text" name="q" value="{{ q }}" placeholder="Search">
+        </div>
+
+        <select class="filter" name="dept">
+          <option value="ALL" {{ 'selected' if dept=='ALL' else '' }}>All</option>
+          {% for d in departments %}
+            <option value="{{ d.department_id }}" {{ 'selected' if dept==d.department_id else '' }}>
+              {{ d.department_name }}
+            </option>
+          {% endfor %}
+        </select>
+
+        <button class="btn-go" type="submit" title="Search">🔍</button>
+      </form>
+
+      <div class="card">
+        <table class="table">
+          <thead>
+            <tr>
+              <th>Project Title</th>
+              <th class="col-dept">Department</th>
+              <th class="col-action"></th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for proposal, d in rows %}
+              <tr>
+                <td>{{ proposal.project_title }}</td>
+                <td class="dept">{{ d.department_name }}</td>
+                <td class="actions">
+                  <a class="btn" href="{{ url_for('admin_assign_reviewer_detail', proposal_id=proposal.proposal_id) }}">View</a>
+                </td>
+              </tr>
+            {% else %}
+              <tr><td class="empty" colspan="3">No proposals found.</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+
+    </div>
+  </section>
+</main>
+
+  <script>
+    const hamburger = document.getElementById('hamburger');
+    const sidebar = document.getElementById('sidebar');
+    const layout = document.getElementById('layout');
+
+    hamburger.addEventListener('click', () => {
+      sidebar.classList.toggle('collapsed');
+      layout.classList.toggle('sidebar-collapsed');
+    });
+  </script>
+</body>
+</html>

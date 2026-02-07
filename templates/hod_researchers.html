@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Researchers - Researchly</title>
+
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/hod_researchers.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/colors.css') }}">
+</head>
+
+<body>
+  <!-- Top bar -->
+  <header class="topbar">
+    <div class="left">
+      <button class="hamburger" type="button" aria-label="Menu" id="hamburger">&#9776;</button>
+      <div class="brand">Researchly™</div>
+    </div>
+
+    <div class="icons">
+      <span class="icon bell" title="Notifications"></span>
+      <a href="{{ url_for('view_profile') }}" class="icon user" title="Profile">
+        {% if prof.profile_picture %}
+          <img class="top-avatar"
+            src="{{ url_for('static', filename='uploads/' ~ prof.profile_picture) }}"
+            alt="Profile">
+        {% else %}
+          <span class="fallback-user">👤</span>
+        {% endif %}
+      </a>
+    </div>
+  </header>
+
+  <main class="layout" id="layout">
+    <!-- Sidebar -->
+    <aside class="sidebar" id="sidebar">
+      <a class="side-link" href="{{ url_for('hod_dashboard') }}">HOD Dashboard</a>
+      <a class="side-link" href="{{ url_for('hod_department_overview') }}">Department<br/>Overview</a>
+      <a class="side-link" href="{{ url_for('hod_active_projects') }}">Active Projects</a>
+      <a class="side-link" href="{{ url_for('hod_review_proposals') }}">Review Proposals</a>
+      <a class="side-link" href="{{ url_for('hod_reviewers') }}">Reviewers</a>
+      <a class="side-link active" href="{{ url_for('hod_researchers') }}">Researchers</a>
+
+      <div class="side-spacer"></div>
+      <a class="side-link logout" href="{{ url_for('logout') }}">Logout</a>
+    </aside>
+
+    <!-- Content -->
+    <section class="content">
+      <div class="card">
+        <!-- Filter and Search Bar -->
+        <div class="controls-bar">
+          <div class="filter-dropdown">
+            <select id="filterSelect">
+              <option value="">Filter</option>
+              <option value="projects">By Projects</option>
+              <option value="name">By Name</option>
+              <option value="email">By Email</option>
+            </select>
+          </div>
+          <div class="search-box">
+            <svg class="search-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="11" cy="11" r="8"></circle>
+              <path d="m21 21-4.35-4.35"></path>
+            </svg>
+            <input type="text" id="searchInput" placeholder="Search">
+          </div>
+        </div>
+
+        <!-- Researchers Table -->
+        <div class="table-container">
+          <table class="researchers-table">
+            <thead>
+              <tr>
+                <th>Profile</th>
+                <th>Email</th>
+                <th>Total Projects</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>
+                  <div class="profile-cell">
+                    <div class="avatar">
+                      <img src="https://i.pravatar.cc/150?img=10" alt="Lauren Faust">
+                    </div>
+                    <span class="name">Lauren Faust</span>
+                  </div>
+                </td>
+                <td>lauren@mmu.edu.my</td>
+                <td>3</td>
+              </tr>
+              <tr>
+                <td>
+                  <div class="profile-cell">
+                    <div class="avatar">
+                      <img src="https://i.pravatar.cc/150?img=11" alt="Craig McCracken">
+                    </div>
+                    <span class="name">Craig McCracken</span>
+                  </div>
+                </td>
+                <td>craig@mmu.edu.my</td>
+                <td>2</td>
+              </tr>
+              <tr>
+                <td>
+                  <div class="profile-cell">
+                    <div class="avatar">
+                      <img src="https://i.pravatar.cc/150?img=12" alt="Reggie Fils-Aimé">
+                    </div>
+                    <span class="name">Reggie Fils-Aimé</span>
+                  </div>
+                </td>
+                <td>reggie@mmu.edu.my</td>
+                <td>1</td>
+              </tr>
+              <tr>
+                <td>
+                  <div class="profile-cell">
+                    <div class="avatar">
+                      <img src="https://i.pravatar.cc/150?img=13" alt="Keiichiro Toyama">
+                    </div>
+                    <span class="name">Keiichiro Toyama</span>
+                  </div>
+                </td>
+                <td>keiichiro@mmu.edu.my</td>
+                <td>5</td>
+              </tr>
+              <tr>
+                <td>
+                  <div class="profile-cell">
+                    <div class="avatar">
+                      <img src="https://i.pravatar.cc/150?img=14" alt="Wan Hazmer">
+                    </div>
+                    <span class="name">Wan Hazmer</span>
+                  </div>
+                </td>
+                <td>wan.hazmer@mmu.edu.my</td>
+                <td>4</td>
+              </tr>
+              <tr>
+                <td>
+                  <div class="profile-cell">
+                    <div class="avatar">
+                      <img src="https://i.pravatar.cc/150?img=15" alt="Damien McCarthy">
+                    </div>
+                    <span class="name">Damien McCarthy</span>
+                  </div>
+                </td>
+                <td>damien@mmu.edu.my</td>
+                <td>5</td>
+              </tr>
+              <tr>
+                <td>
+                  <div class="profile-cell">
+                    <div class="avatar">
+                      <img src="https://i.pravatar.cc/150?img=16" alt="Inio Asano">
+                    </div>
+                    <span class="name">Inio Asano</span>
+                  </div>
+                </td>
+                <td>inio.asano@mmu.edu.my</td>
+                <td>1</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    const hamburger = document.getElementById('hamburger');
+    const sidebar = document.getElementById('sidebar');
+    const layout = document.getElementById('layout');
+
+    hamburger.addEventListener('click', () => {
+      sidebar.classList.toggle('collapsed');
+      layout.classList.toggle('sidebar-collapsed');
+    });
+  </script>
+</body>
+</html>

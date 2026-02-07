@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>HOD Dashboard - Researchly</title>
+
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/hod_dashboard.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/colors.css') }}">
+</head>
+
+<body>
+  <!-- Top bar -->
+  <header class="topbar">
+    <div class="left">
+      <button class="hamburger" type="button" aria-label="Menu" id="hamburger">&#9776;</button>
+      <div class="brand">Researchly™</div>
+    </div>
+
+    <div class="icons">
+      <span class="icon bell" title="Notifications"></span>
+      <a href="{{ url_for('view_profile') }}" class="icon user" title="Profile">
+        {% if prof.profile_picture %}
+          <img class="top-avatar"
+            src="{{ url_for('static', filename='uploads/' ~ prof.profile_picture) }}"
+            alt="Profile">
+        {% else %}
+          <span class="fallback-user">👤</span>
+        {% endif %}
+      </a>
+    </div>
+  </header>
+
+  <main class="layout" id="layout">
+    <!-- Sidebar -->
+    <aside class="sidebar" id="sidebar">
+      <a class="side-link active" href="{{ url_for('hod_dashboard') }}">HOD Dashboard</a>
+      <a class="side-link" href="{{ url_for('hod_department_overview') }}">Department<br/>Overview</a>
+      <a class="side-link" href="{{ url_for('hod_active_projects') }}">Active Projects</a>
+      <a class="side-link" href="{{ url_for('hod_review_proposals') }}">Review Proposals</a>
+      <a class="side-link" href="{{ url_for('hod_reviewers') }}">Reviewers</a>
+      <a class="side-link" href="{{ url_for('hod_researchers') }}">Researchers</a>
+
+      <div class="side-spacer"></div>
+      <a class="side-link logout" href="{{ url_for('logout') }}">Logout</a>
+    </aside>
+
+    <!-- Content -->
+    <section class="content">
+      <div class="card">
+        <h1>HOD Dashboard</h1>
+
+        <div class="stats-grid">
+          <div class="stat-card">
+            <div class="stat-title">Active Projects</div>
+            <div class="stat-number">7</div>
+          </div>
+
+          <div class="stat-card">
+            <div class="stat-title">Review Proposals</div>
+            <div class="stat-number">8</div>
+          </div>
+
+          <div class="stat-card">
+            <div class="stat-title">Reviewers</div>
+            <div class="stat-number">9</div>
+          </div>
+
+          <div class="stat-card">
+            <div class="stat-title">Researchers</div>
+            <div class="stat-number">30</div>
+          </div>
+        </div>
+
+        <div class="activity-section">
+          <h2>Recent Activity</h2>
+          <ul class="activity-list">
+            <li>Proposal X needs to be reviewed</li>
+            <li>Project M has a new progress report</li>
+            <li>Proposal C needs to be reviewed</li>
+            <li>A new researcher has been assigned to the Engineering department</li>
+            <li>A new reviewer has been assigned to the Engineering department</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    const hamburger = document.getElementById('hamburger');
+    const sidebar = document.getElementById('sidebar');
+    const layout = document.getElementById('layout');
+
+    hamburger.addEventListener('click', () => {
+      sidebar.classList.toggle('collapsed');
+      layout.classList.toggle('sidebar-collapsed');
+    });
+  </script>
+</body>
+</html>

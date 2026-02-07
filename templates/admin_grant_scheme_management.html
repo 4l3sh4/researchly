@@ -13,7 +13,7 @@
   <!-- ✅ Top bar (same structure as admin_dashboard.html) -->
   <header class="topbar">
     <div class="left">
-      <button class="hamburger" type="button" aria-label="Menu">&#9776;</button>
+      <button class="hamburger" type="button" aria-label="Menu" id="hamburger">&#9776;</button>
       <div class="brand">Researchly™</div>
     </div>
 
@@ -33,17 +33,17 @@
   </header>
 
   <!-- ✅ Layout wrapper (same class names as admin dashboard pages) -->
-  <main class="layout">
+  <main class="layout" id="layout">
     <!-- ✅ Sidebar (same feel as other pages) -->
-    <aside class="sidebar">
+    <aside class="sidebar" id="sidebar">
       <a class="side-link" href="{{ url_for('admin_dashboard') }}">Admin Dashboard</a>
       <a class="side-link" href="{{ url_for('admin_users', status='PENDING') }}">User Management</a>
       <a class="side-link active" href="{{ url_for('admin_grants', status='ALL', q=q) }}">Grant Scheme<br/>Management</a>
 
-      <a class="side-link" href="#">Funding Allocation</a>
-      <a class="side-link" href="#">Final Approval<br/>Decision</a>
-      <a class="side-link" href="#">Assign Reviewers</a>
-      <a class="side-link" href="#">Proposal List</a>
+      <a class="side-link" href="{{ url_for('admin_funding_list', dept='ALL') }}">Funding Allocation</a>
+      <a class="side-link" href="{{ url_for('admin_final_approval_list', dept='ALL') }}">Final Approval<br/>Decision</a>
+      <a class="side-link" href="{{ url_for('admin_assign_reviewers', dept='ALL') }}">Assign Reviewers</a>
+      <a class="side-link" href="{{ url_for('admin_proposal_list') }}">Proposal List</a>
 
       <div class="side-spacer"></div>
       <a class="side-link logout" href="{{ url_for('logout') }}">Logout</a>
@@ -100,5 +100,16 @@
       </div>
     </section>
   </main>
+
+  <script>
+    const hamburger = document.getElementById('hamburger');
+    const sidebar = document.getElementById('sidebar');
+    const layout = document.getElementById('layout');
+
+    hamburger.addEventListener('click', () => {
+      sidebar.classList.toggle('collapsed');
+      layout.classList.toggle('sidebar-collapsed');
+    });
+  </script>
 </body>
 </html>

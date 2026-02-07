@@ -16,7 +16,6 @@ body {
   background: linear-gradient(90deg, var(--accent-2), var(--accent-1));
   color: #fff;
 }
-
 .topbar .left { display: flex; align-items: center; gap: 14px; }
 
 .hamburger {
@@ -33,16 +32,15 @@ body {
 .brand { font-size: 30px; font-weight: 800; letter-spacing: 0.3px; }
 
 .icons { display: flex; gap: 14px; align-items: center; }
-
 .icon { width: 40px; height: 40px; display: inline-block; position: relative; }
-.icon.bell {
+
+.icon.bell{
   background-image: url('../img/white_bell.png');
   background-size: contain;
   background-repeat: no-repeat;
   background-position: center;
 }
 
-/* profile circle with clipping */
 .icon.user{
   width: 40px;
   height: 40px;
@@ -55,7 +53,6 @@ body {
   text-decoration: none;
   flex: 0 0 40px;
 }
-
 .icon.user .top-avatar{
   width: 100%;
   height: 100%;
@@ -64,7 +61,7 @@ body {
 }
 .icon.user .fallback-user{ font-size: 22px; line-height: 1; }
 
-/* LAYOUT + SIDEBAR (same as dashboard) */
+/* LAYOUT + SIDEBAR */
 .layout {
   display: grid;
   grid-template-columns: 280px 1fr;
@@ -102,13 +99,12 @@ body {
 }
 .side-link:hover { background: rgba(255,255,255,0.16); }
 .side-link.active { background: rgba(0,0,0,0.12); }
-
 .side-spacer { height: 40px; }
 .side-link.logout { margin-top: 12px; }
 
-/* content background (same as dashboard) */
+/* CONTENT */
 .content {
-  padding: 26px 24px 40px;
+  padding: 5px 24px 40px;
   background: repeating-linear-gradient(
     135deg,
     rgba(0,0,0,0.03) 0,
@@ -118,137 +114,148 @@ body {
   );
 }
 
-/* PAGE WRAP to avoid "huge empty space" feel */
-.page-wrap{
-  max-width: 1100px;
-  margin: 0 auto;
-}
+/* toolbar sizing + alignment */
+.page-wrap { max-width: 1400px; margin: 0 auto; } /* wider page so long titles fit */
 
-/* YOUR FORM STYLES */
-.title{
-  margin: 12px 0 18px;
-  font-size: 32px;
-  color: #1aa7a8;
-  font-weight: 900;
-}
-
-.form{
-  background:#fff;
-  border-radius:12px;
-  border:1px solid #e2e2e2;
-  padding: 20px 22px;
-}
-
-/* label + field */
-.row{
-  display:grid;
-  grid-template-columns: 240px 1fr;
-  gap:16px;
+.toolbar{
+  display:flex;
   align-items:center;
-  margin: 12px 0;
+  justify-content:space-between;
+  gap:18px;
+  margin: 10px 0 18px;
 }
-.row label{ font-weight:800; color:#2b2b2b; }
 
-.row input{
-  height: 42px;
-  padding: 0 12px;
-  border: 1px solid #bfbfbf;
+.toolbar-left{ flex: 1; }
+
+.toolbar-right{
+  display:flex;
+  align-items:center;
+  gap:10px;
+}
+
+/* ✅ these match your HTML: <input class="search"> <select class="filter"> <button class="btn-go"> */
+.search{
+  height: 44px;
+  width: 100%;
+  max-width: 760px;          /* longer search bar */
+  padding: 0 14px;
+  border: 1px solid #cfcfcf;
   border-radius: 8px;
-  outline: none;
-  background:#fff;
-}
-
-.row > div,
-.row input,
-.row select{
-  width: 100%;
-}
-
-
-/* Application Period (2 date inputs) */
-.date-range{
-  display:flex;
-  align-items:center;
-  gap:10px;
-}
-.date-range input{
-  width: 100%;
-}
-.dash{
-  font-weight: 900;
-  color: #666;
-}
-
-/* buttons */
-.buttons{
-  display:flex;
-  justify-content:flex-end;
-  gap:10px;
-  margin-top: 18px;
-}
-.btn{
-  border:none;
-  border-radius:10px;
-  padding:10px 16px;
-  font-weight:900;
-  cursor:pointer;
-}
-.btn.primary{ background:#20b15a; color:#fff; }
-.btn.secondary{ background:#19a5a5; color:#fff; }
-
-/* responsive */
-@media (max-width: 950px){
-  .layout{ grid-template-columns: 1fr; }
-  .sidebar{ display:none; } /* optional */
-  .row{ grid-template-columns: 1fr; }
-  .date-range{ flex-direction: column; align-items: stretch; }
-  .dash{ display:none; }
-}
-
-.hint{
-  display:block;
-  margin-top:6px;
-  color:#7b7b7b;
-  font-size:12px;
-}
-
-/* =========================
-   FLASH MESSAGES (matches dashboard theme)
-   ========================= */
-.flash-wrap{
-  max-width: 1100px;
-  margin: 0 auto 14px;
-  display: grid;
-  gap: 10px;
-}
-
-.flash{
-  border-radius: 14px;
-  padding: 12px 14px;
-  font-weight: 800;
-  border: 1px solid rgba(0,0,0,0.08);
   background: #fff;
+}
+
+.filter{
+  height: 44px;
+  min-width: 220px;          /* nicer width */
+  padding: 0 12px;
+  border: 1px solid #cfcfcf;
+  border-radius: 8px;
+  background: #fff;
+}
+
+.btn-go{
+  height: 44px;
+  width: 48px;
+  border: 1px solid #cfcfcf;
+  border-radius: 8px;
+  background: #fff;
+  cursor: pointer;
+}
+
+.card{
+  background: #fff;
+  border-radius: 18px;
+  border: 1px solid rgba(0,0,0,0.08);
+  overflow: hidden;
+}
+
+.title{
+  margin: 20px 0 20px;
+  font-size: 28px;
+  font-weight: 900;
+  color: #1aa2a2;
+}
+
+/* Tabs */
+.tabs{
+  display: flex;
+  gap: 10px;
+  margin: -6px 0 14px;  /* snug under title */
+  flex-wrap: wrap;
+}
+
+.tab{
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  height: 40px;
+  padding: 0 14px;
+
+  border-radius: 999px;
+  border: 1px solid rgba(0,0,0,0.18);
+  background: #fff;
+
+  text-decoration: none;
+  font-weight: 900;
   color: #1a1a1a;
-  box-shadow: 0 6px 18px rgba(0,0,0,0.06);
+
+  transition: background 0.15s ease, border-color 0.15s ease;
 }
 
-/* categories from flash("msg", "success"/"error"/"info"/"warning") */
-.flash.success{
-  border-left: 8px solid #20b15a;
-  background: rgba(32, 177, 90, 0.10);
+.tab:hover{
+  border-color: rgba(0,0,0,0.28);
+  background: rgba(15,167,161,0.08);
 }
 
-.flash.error{
-  border-left: 8px solid #c03434;
-  background: rgba(192, 52, 52, 0.10);
+.tab.active{
+  background: #19a5a5;
+  border-color: #19a5a5;
+  color: #fff;
 }
 
-.flash.info{
-  border-left: 8px solid #0fa7a1;
-  background: rgba(15, 167, 161, 0.10);
+.table{ width: 100%; border-collapse: collapse; }
+.table thead th{
+  text-align: left;
+  padding: 14px 16px;
+  font-weight: 900;
+}
+.table tbody td{
+  padding: 16px;
+  border-top: 1px solid #eee;
 }
 
-.flash.warning{
-  border-left: 8px solid #f0ad4e;
-  background: rgba(240, 173, 78, 0.14);
+.table tbody td:first-child{
+  width: 70%;
 }
+
+.table thead th{
+  text-align: left;
+  padding: 14px 16px;
+  background: #efefef;
+  font-weight: 900;
+}
+
+.actions{ text-align: right; }
+
+.btn{
+  display: inline-block;
+  background: #19a5a5;
+  color: #fff;
+  text-decoration: none;
+  font-weight: 900;
+  padding: 8px 14px;
+  border-radius: 8px;
+}
+
+.pill{
+  display: inline-block;
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: #eef2ff;
+  color: #3a4bd6;
+  font-weight: 900;
+}
+
+.empty{ text-align: center; color: #777; padding: 24px 0; }
+
