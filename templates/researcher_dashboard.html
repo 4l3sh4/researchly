@@ -1,69 +1,96 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <title>Researcher Dashboard</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/colors.css') }}">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/researcher_dashboard.css') }}">
+  <meta charset="UTF-8">
+  <title>Researcher Dashboard - Researchly</title>
+
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/colors.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/researcher_dashboard.css') }}">
 </head>
+
 <body>
 
-<div class="topbar">
-    <div class="logo">Researchly™</div>
-    <div class="icons">
-        <div class="icon bell"></div>
-        <div class="icon user"></div>
-    </div>
-</div>
+<!-- Topbar -->
+<header class="topbar">
+  <div class="left">
+    <button class="hamburger" type="button" aria-label="Menu">&#9776;</button>
+    <div class="brand">Researchly™</div>
+  </div>
 
-<div class="container">
-    <div class="sidebar">
-        <h2>Researcher<br>Dashboard</h2>
-        <nav>
-            <a href="{{ url_for('researcher_dashboard') }}" class="nav-item active">Dashboard</a>
-            <a href="{{ url_for('researcher_proposals') }}" class="nav-item">Proposals</a>
-            <a href="{{ url_for('researcher_projects') }}" class="nav-item">Projects</a>
-            <a href="{{ url_for('logout') }}" class="nav-item">Logout</a>
-        </nav>
-    </div>
+  <div class="icons">
+    <span class="icon bell" title="Notifications"></span>
+    <a href="{{ url_for('view_profile') }}" class="icon user" title="Profile">
+      {% if prof.profile_picture %}
+        <img class="top-avatar"
+             src="{{ url_for('static', filename='uploads/' ~ prof.profile_picture) }}"
+             alt="Profile">
+      {% else %}
+        <span class="fallback-user">👤</span>
+      {% endif %}
+    </a>
+  </div>
+</header>
 
-    <div class="main-content">
-        <div class="stats-grid">
-            <div class="stat-card">
-                <h3>Proposals Submitted</h3>
-                <p class="stat-number">{{ total_proposals }}</p>
-            </div>
+<main class="layout">
 
-            <div class="stat-card">
-                <h3>Under Review</h3>
-                <p class="stat-number">{{ under_review }}</p>
-            </div>
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <a class="side-link active" href="{{ url_for('researcher_dashboard') }}">Researcher Dashboard</a>
+    <a class="side-link" href="{{ url_for('researcher_proposals') }}">Proposals</a>
+    <a class="side-link" href="{{ url_for('researcher_projects') }}">Projects</a>
 
-            <div class="stat-card">
-                <h3>Revision Required</h3>
-                <p class="stat-number">{{ revision_required }}</p>
-            </div>
+    <div class="side-spacer"></div>
+    <a class="side-link logout" href="{{ url_for('logout') }}">Logout</a>
+  </aside>
 
-            <div class="stat-card">
-                <h3>Active Projects</h3>
-                <p class="stat-number">{{ active_projects }}</p>
-            </div>
+  <!-- Content -->
+  <section class="content">
+    <div class="card">
+      <h1>Researcher Dashboard</h1>
+      <p class="muted">
+        Track your proposals, review status, and active research projects.
+      </p>
+
+      <!-- Stats -->
+      <div class="stats-grid">
+        <div class="stat">
+          <div class="stat-title">Proposals Submitted</div>
+          <div class="stat-number">{{ total_proposals }}</div>
         </div>
 
-        <div class="recent-activity">
-            <h2>Recent Activity</h2>
-            <ul class="activity-list">
-                {% if recent_activities %}
-                    {% for activity in recent_activities %}
-                        <li>{{ activity }}</li>
-                    {% endfor %}
-                {% else %}
-                    <li>No recent activities</li>
-                {% endif %}
-            </ul>
+        <div class="stat">
+          <div class="stat-title">Under Review</div>
+          <div class="stat-number">{{ under_review }}</div>
         </div>
-    </div>
-</div>
 
+        <div class="stat">
+          <div class="stat-title">Revision Required</div>
+          <div class="stat-number">{{ revision_required }}</div>
+        </div>
+
+        <div class="stat">
+          <div class="stat-title">Active Projects</div>
+          <div class="stat-number">{{ active_projects }}</div>
+        </div>
+      </div>
+
+      <!-- Recent activity (replaces quick actions) -->
+      <div class="activity-card">
+        <h3>Recent Activity</h3>
+        <ul class="activity-list">
+          {% if recent_activity %}
+            {% for item in recent_activity %}
+              <li>{{ item }}</li>
+            {% endfor %}
+          {% else %}
+            <li>No recent activity</li>
+          {% endif %}
+        </ul>
+      </div>
+
+    </div>
+  </section>
+
+</main>
 </body>
 </html>
