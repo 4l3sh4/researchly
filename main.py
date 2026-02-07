@@ -563,6 +563,7 @@ def edit_profile():
         else:
             prof.department_name = None
 
+        import time
         # profile picture upload
         file = request.files.get("profile_picture")
         if file and file.filename:
@@ -574,6 +575,13 @@ def edit_profile():
             filename = secure_filename(f"{current_user.id}.{ext}")  # stable name per user
             save_path = os.path.join(app.config["UPLOAD_FOLDER"], filename)
             file.save(save_path)
+
+            old = prof.profile_picture
+            if old:
+                old_path = os.path.join(app.config["UPLOAD_FOLDER"], old)
+                if os.path.exists(old_path):
+                    os.remove(old_path)
+
             prof.profile_picture = filename
 
         # bank details: only for researchers
@@ -946,6 +954,35 @@ def admin_create_user():
 
     flash(f"User created successfully. Temporary password: {temp_password}", "success")
     return redirect(url_for("admin_users", status="ACTIVE"))
+
+@app.route("/admin/users/<user_id>/profile")
+@login_required
+@admin_required
+def admin_view_user_profile(user_id):
+    user = User.query.get_or_404(user_id)
+
+    # clicked user's profile
+    target_prof = UserProfile.query.filter_by(user_id=user_id).first()
+
+    # role tables (optional — only if exists)
+    admin_row = Admin.query.filter_by(user_id=user_id).first()
+    hod_row = HOD.query.filter_by(user_id=user_id).first()
+    reviewer_row = Reviewer.query.filter_by(user_id=user_id).first()
+    researcher_row = Researcher.query.filter_by(user_id=user_id).first()
+
+    # admin's own profile (for topbar avatar)
+    prof = get_profile(current_user.id)
+
+    return render_template(
+        "admin_view_user_profile.html",
+        user=user,
+        target_prof=target_prof,
+        admin_row=admin_row,
+        hod_row=hod_row,
+        reviewer_row=reviewer_row,
+        researcher_row=researcher_row,
+        prof=prof
+    )
 
 #--------------------------
 # Grant Scheme Management
@@ -1550,8 +1587,10 @@ def admin_final_approval_list():
         .filter(FinalDecision.proposal_id.is_(None))
     )
 
-    # optional: require HOD endorsement exists (so it's truly ready for final approval)
+    # HOD endorsement exists
     query = query.join(HODEndorsement, HODEndorsement.proposal_id == Proposal.proposal_id)
+    # Only endorsed by HoD
+    query = query.filter(db.func.upper(HODEndorsement.decision) == "ENDORSE")
 
     if dept_id != "ALL":
         query = query.filter(Department.department_id == dept_id)
@@ -1564,6 +1603,8 @@ def admin_final_approval_list():
         )
 
     rows = query.order_by(Proposal.submission_date.desc()).all()
+    # Only include proposals that reviewers recommended
+    rows = [(p, d) for (p, d) in rows if compute_reviewer_recommendation(p.proposal_id) == "Recommended"]
 
     return render_template(
         "admin_final_approval_list.html",
@@ -1595,6 +1636,10 @@ def admin_final_approval_detail(proposal_id):
     hod_status = "Pending"
     if hod_endorse:
         hod_status = "Endorsed" if (hod_endorse.decision or "").upper() == "ENDORSE" else "Not Endorsed"
+
+    if reviewer_status != "Recommended" or hod_status != "Endorsed":
+        flash("This proposal is not ready for final approval (must be Recommended + Endorsed).", "error")
+        return redirect(url_for("admin_final_approval_list"))
 
     # if already decided, show it (and optionally block changes)
     existing_final = FinalDecision.query.filter_by(proposal_id=proposal.proposal_id).first()
@@ -1742,11 +1787,16 @@ def admin_assign_reviewer_detail(proposal_id):
         tags = reviewer_expertise_tags(user)
         for t in tags:
             all_tags.add(t)
+
+        reviewer_prof = get_profile(user.id)   # <--- add this
+        pic = reviewer_prof.profile_picture if reviewer_prof else None  # <--- add this
+
         display.append({
             "reviewer": rv,
             "user": user,
             "tags": tags,
             "checked": (rv.reviewer_id in assigned_ids),
+            "profile_picture": pic,            # <--- add this
         })
 
     # Apply search

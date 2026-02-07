@@ -11,13 +11,18 @@
 
 <header class="topbar">
   <div class="left">
-      <button class="hamburger" type="button" aria-label="Menu" id="hamburger">&#9776;</button>
+    <button class="hamburger" type="button" aria-label="Menu" id="hamburger">&#9776;</button>
+    <div class="brand">Researchly™</div>
+  </div>
 
   <div class="icons">
     <span class="icon bell" title="Notifications"></span>
+
     <a href="{{ url_for('view_profile') }}" class="icon user" title="Profile">
       {% if prof and prof.profile_picture %}
-        <img class="top-avatar" src="{{ url_for('static', filename='uploads/' ~ prof.profile_picture) }}" alt="Profile">
+        <img class="top-avatar"
+             src="{{ url_for('static', filename='uploads/' ~ prof.profile_picture) }}"
+             alt="Profile">
       {% else %}
         <span class="fallback-user">👤</span>
       {% endif %}
@@ -81,7 +86,13 @@
               {% for r in reviewers %}
                 <tr>
                   <td class="reviewer-cell">
-                    <div class="avatar"></div>
+                    <div class="avatar">
+                      {% if r.profile_picture %}
+                        <img src="{{ url_for('static', filename='uploads/' ~ r.profile_picture) }}" alt="avatar">
+                      {% else %}
+                        <span class="avatar-fallback">👤</span>
+                      {% endif %}
+                    </div>
                     <div class="who">
                       <div class="name">{{ r.user.full_name }}</div>
                       <div class="email">{{ r.user.email }}</div>

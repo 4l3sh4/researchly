@@ -93,7 +93,12 @@
 
             {% for u, p in rows %}
               <tr>
-                <td>{{ u.full_name }}</td>
+                <td>
+                  <a href="{{ url_for('admin_view_user_profile', user_id=u.id) }}"
+                    style="font-weight:500; color:#137a78; text-decoration:none;">
+                    {{ u.full_name }}
+                  </a>
+                </td>
                 <td>{{ u.email }}</td>
 
                 <td>
