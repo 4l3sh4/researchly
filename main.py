@@ -9,7 +9,7 @@ from datetime import datetime, timezone
 from flask import request, abort, flash
 from functools import wraps
 from werkzeug.utils import secure_filename
-from sqlalchemy import exists, and_, or_, func
+from sqlalchemy import exists, and_, or_, func, text
 import uuid
 import os
 
@@ -439,6 +439,16 @@ def get_or_404(model, pk):
     if not obj:
         abort(404)
     return obj
+
+def ensure_user_profile_schema():
+    # Lightweight migration for legacy SQLite DBs missing newer columns.
+    with db.engine.connect() as conn:
+        cols = conn.execute(text("PRAGMA table_info(user_profile)")).fetchall()
+        if not cols:
+            return
+        col_names = {row[1] for row in cols}
+        if "expertise_tags" not in col_names:
+            conn.execute(text("ALTER TABLE user_profile ADD COLUMN expertise_tags VARCHAR(255)"))
 
 @app.context_processor
 def inject_profile():
@@ -3063,4 +3073,5 @@ def reviewer_history_view(proposal_id):
 if __name__ == '__main__':
     with app.app_context():
         db.create_all()
+        ensure_user_profile_schema()
     app.run(debug=True)
