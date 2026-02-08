@@ -49,9 +49,9 @@
           <option value="draft">Draft</option>
           <option value="pending-review">Pending Review</option>
           <option value="under-review">Under Review</option>
+          <option value="revision-required">Revision Required</option>
           <option value="approved">Approved</option>
           <option value="rejected">Rejected</option>
-          <option value="return-for-revision">Return for Revision</option>
         </select>
 
         <a href="{{ url_for('create_proposal') }}" class="create-btn">
@@ -94,8 +94,13 @@
               </td>
 
               <td>
-                <a href="{{ url_for('view_proposal_feedback', proposal_id=proposal.proposal_id) }}"
-                   class="btn-view">View</a>
+                {% set status_value = (proposal.proposal_status or '')|lower %}
+                {% if status_value in ['pending review', 'under review'] %}
+                  <span class="muted">Not Reviewed Yet</span>
+                {% else %}
+                  <a href="{{ url_for('view_proposal_feedback', proposal_id=proposal.proposal_id) }}"
+                     class="btn-view">View Feedback</a>
+                {% endif %}
               </td>
             </tr>
             {% endfor %}

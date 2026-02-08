@@ -111,7 +111,7 @@
 
 .status-under-review,
 .status-approved,
-.status-return-for-revision {
+.status-revision-required {
   background: #e8f5f7;
   color: var(--accent-2);
 }
