@@ -1051,7 +1051,12 @@ def edit_proposal(proposal_id):
         flash("Only draft or revision-required proposals can be edited.", "error")
         return redirect(url_for("researcher_proposals"))
 
-    schemes = GrantScheme.query.all()
+    schemes = (
+        db.session.query(GrantScheme, Department)
+        .join(Department, GrantScheme.department_id == Department.department_id)
+        .order_by(Department.department_name.asc(), GrantScheme.open_date.desc())
+        .all()
+    )
 
     if request.method == "POST":
         action = (request.form.get("action") or "submit").strip().lower()

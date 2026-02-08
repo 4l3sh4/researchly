@@ -7,6 +7,35 @@
   margin-bottom: 16px;
 }
 
+.status-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 10px 0 16px;
+}
+
+.status-tab {
+  border: 1px solid rgba(0,0,0,0.12);
+  background: #fff;
+  color: #1a1a1a;
+  padding: 6px 12px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.status-tab.active {
+  background: var(--accent-2);
+  color: #fff;
+  border-color: var(--accent-2);
+}
+
+.status-tab:hover {
+  border-color: var(--accent-2);
+  color: var(--accent-2);
+}
+
 .search-input {
   flex: 1;
   min-width: 220px;
