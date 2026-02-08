@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Project Details - Researchly</title>
+
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/colors.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/researcher_dashboard.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/researcher_projects.css') }}">
+    <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='img/researchly_icon.png') }}">
+</head>
+
+<body>
+<!-- Topbar -->
+<header class="topbar">
+    <div class="left">
+        <button class="hamburger" type="button">&#9776;</button>
+        <div class="brand">Researchly™</div>
+    </div>
+
+    <div class="icons">
+        <a href="{{ url_for('notifications') }}" class="icon bell"></a>
+        <a href="{{ url_for('view_profile') }}" class="icon user">
+            {% if prof.profile_picture %}
+                <img class="top-avatar"
+                     src="{{ url_for('static', filename='uploads/' ~ prof.profile_picture) }}"
+                     alt="Profile">
+            {% else %}
+                <span class="fallback-user">👤</span>
+            {% endif %}
+        </a>
+    </div>
+</header>
+
+<main class="layout">
+    <!-- Sidebar -->
+    <aside class="sidebar">
+        <a class="side-link" href="{{ url_for('researcher_dashboard') }}">Researcher Dashboard</a>
+        <a class="side-link" href="{{ url_for('researcher_proposals') }}">Proposals</a>
+        <a class="side-link active" href="{{ url_for('researcher_projects') }}">Projects</a>
+        <a class="side-link" href="{{ url_for('researcher_grant_schemes') }}">Grant Scheme</a>
+
+        <div class="side-spacer"></div>
+        <a class="side-link logout" href="{{ url_for('logout') }}">Logout</a>
+    </aside>
+
+    <!-- Content -->
+    <section class="content">
+        <div class="project-shell">
+            <div class="project-header">
+                <div>
+                    <div class="eyebrow">Project Details</div>
+                    <h1 class="project-title">Title: {{ proposal.project_title }}</h1>
+                </div>
+                <a class="back-link" href="{{ url_for('researcher_projects') }}">← Back</a>
+            </div>
+
+            <div class="project-grid">
+                <div class="overview-card">
+                    <h2>Abstract</h2>
+                    <p class="overview-text">{{ proposal.abstract }}</p>
+
+                    <div class="doc-pills">
+                        {% if attachments %}
+                            {% for attachment in attachments %}
+                                <a class="doc-pill" href="{{ url_for('static', filename='uploads/' ~ attachment.stored_filename) }}" target="_blank" rel="noopener">
+                                    {{ attachment.original_filename }}
+                                </a>
+                            {% endfor %}
+                        {% else %}
+                            <span class="doc-pill muted">No attachments</span>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <div class="reports-card">
+                    <h2>Progress Reports</h2>
+                    <div class="reports-list">
+                        {% if reports %}
+                            {% for report in reports %}
+                            <div class="report-row">
+                                <span class="report-index">{{ reports|length - loop.index0 }}</span>
+                                <span class="report-date">
+                                    {{ report.period_start_date.strftime('%m/%d/%Y') }}
+                                    –
+                                    {{ report.period_end_date.strftime('%m/%d/%Y') }}
+                                </span>
+                                <button class="report-btn" type="button">View</button>
+                            </div>
+                            {% endfor %}
+                        {% else %}
+                            <div class="report-empty">No progress reports submitted yet.</div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+</main>
+</body>
+</html>

@@ -112,8 +112,13 @@
               </td>
 
               <td>
-                <a href="{{ url_for('view_proposal_feedback', proposal_id=proposal.proposal_id) }}"
-                   class="btn-view">View</a>
+                {% set status_value = (proposal.proposal_status or '')|lower %}
+                {% if status_value in ['pending review', 'under review'] %}
+                  <span class="muted">Not Reviewed Yet</span>
+                {% else %}
+                  <a href="{{ url_for('view_proposal_feedback', proposal_id=proposal.proposal_id) }}"
+                     class="btn-view">View Feedback</a>
+                {% endif %}
               </td>
             </tr>
             {% endfor %}

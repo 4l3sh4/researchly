@@ -1208,6 +1208,42 @@ def researcher_projects():
     )
     return render_template("researcher_projects.html", user=current_user, prof=prof, projects=projects)
 
+
+@app.route("/researcher/projects/<project_id>")
+@login_required
+def view_project(project_id):
+    prof = get_profile(current_user.id)
+    if not prof or prof.role != "RESEARCHER":
+        flash("Access denied. Researcher role required.", "error")
+        return redirect(url_for("dashboard"))
+
+    researcher = get_researcher(current_user.id)
+    if not researcher:
+        flash("Researcher profile not found.", "error")
+        return redirect(url_for("dashboard"))
+
+    project = Project.query.get(project_id)
+    if not project or project.researcher_id != researcher.researcher_id:
+        abort(404)
+
+    proposal = Proposal.query.get(project.proposal_id)
+    attachments = ProposalAttachment.query.filter_by(proposal_id=project.proposal_id).all()
+    reports = (
+        ProgressReport.query.filter_by(project_id=project.project_id)
+        .order_by(ProgressReport.period_start_date.desc())
+        .all()
+    )
+
+    return render_template(
+        "view_project.html",
+        user=current_user,
+        prof=prof,
+        project=project,
+        proposal=proposal,
+        attachments=attachments,
+        reports=reports,
+    )
+
 #---------------------------------------------------------------------------------------------------------
 # ADMIN ROUTES
 #---------------------------------------------------------------------------------------------------------
