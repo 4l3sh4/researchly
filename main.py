@@ -3321,7 +3321,7 @@ def reviewer_evaluate(proposal_id):
         # Notify researcher about the submitted review
         researcher = Researcher.query.get(proposal.researcher_id)
         if researcher:
-        db.session.flush()  # review now exists in the transaction (no early commit)
+            db.session.flush()  # review now exists in the transaction (no early commit)
 
         # ---- Find targets ----
         researcher_user_id = get_researcher_user_id_from_proposal(proposal)
