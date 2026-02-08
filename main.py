@@ -2691,11 +2691,14 @@ def reviewer_assignment_view(proposal_id):
 
     raw = (assignment.assignment_status or "").upper().strip()
 
-    # clean legacy junk
+    # normalize legacy junk
     if raw == "REJECTED":
         raw = "DECLINED"
         assignment.assignment_status = "DECLINED"
         db.session.commit()
+
+    # IMPORTANT: pending in DB is "ASSIGNED"
+    is_pending = (raw == "ASSIGNED")
 
     if request.method == "POST":
         decision = (request.form.get("decision") or "").upper().strip()
@@ -2705,7 +2708,8 @@ def reviewer_assignment_view(proposal_id):
         if decision not in {"ACCEPTED", "DECLINED"}:
             abort(400)
 
-        if raw != "PENDING":
+        # only allow response if still pending (ASSIGNED)
+        if not is_pending:
             flash("You already responded to this assignment.", "error")
             return redirect(url_for("reviewer_assignment_view", proposal_id=proposal_id))
 
@@ -2716,7 +2720,7 @@ def reviewer_assignment_view(proposal_id):
         return redirect(url_for("reviewer_assignment_view", proposal_id=proposal_id))
 
     display_status = {
-        "PENDING": "Pending",
+        "ASSIGNED": "Pending",
         "ACCEPTED": "Accepted",
         "DECLINED": "Declined",
     }.get(raw, "Pending")
@@ -2747,7 +2751,11 @@ def reviewer_under_review():
         .join(Proposal, Proposal.proposal_id == ReviewersAssignment.proposal_id)
         .filter(
             ReviewersAssignment.reviewer_id == rv.reviewer_id,
-            ReviewersAssignment.assignment_status == "ACCEPTED"
+            func.upper(ReviewersAssignment.assignment_status) == "ACCEPTED",
+            ~exists().where(and_(
+                Review.proposal_id == ReviewersAssignment.proposal_id,
+                Review.reviewer_id == ReviewersAssignment.reviewer_id
+            ))
         )
         .order_by(ReviewersAssignment.assigned_date.desc())
         .all()
@@ -2812,6 +2820,7 @@ def reviewer_evaluate(proposal_id):
             review_date=datetime.now(timezone.utc)
         )
         db.session.add(review)
+        assignment.assignment_status = "COMPLETED"
         db.session.commit()
         
         # Notify researcher about the submitted review
