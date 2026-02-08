@@ -170,26 +170,25 @@
           </div>
         </div>
 
-        {# ✅ BUTTONS APPEAR ONLY WHEN PENDING #}
-        {% if raw == "PENDING" %}
-          <div class="actions" id="actionButtons">
-            <form method="POST" style="display:inline;">
-              <input type="hidden" name="decision" value="ACCEPTED">
-              <button type="submit" class="btn-big btn-accept"
-                onclick="return confirm('Are you sure you want to ACCEPT this assignment?')">
-                Accept
-              </button>
-            </form>
+      {% if raw == "ASSIGNED" %}
+        <div class="actions" id="actionButtons">
+          <form method="POST" style="display:inline;">
+            <input type="hidden" name="decision" value="ACCEPTED">
+            <button type="submit" class="btn-big btn-accept"
+              onclick="return confirm('Are you sure you want to ACCEPT this assignment?')">
+              Accept
+            </button>
+          </form>
 
-            <form method="POST" style="display:inline;">
-              <input type="hidden" name="decision" value="DECLINED">
-              <button type="submit" class="btn-big btn-decline"
-                onclick="return confirm('Are you sure you want to DECLINE this assignment?')">
-                Decline
-              </button>
-            </form>
-          </div>
-        {% endif %}
+          <form method="POST" style="display:inline;">
+            <input type="hidden" name="decision" value="DECLINED">
+            <button type="submit" class="btn-big btn-decline"
+              onclick="return confirm('Are you sure you want to DECLINE this assignment?')">
+              Decline
+            </button>
+          </form>
+        </div>
+      {% endif %}
 
       </div>
     </section>
