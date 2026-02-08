@@ -31,7 +31,7 @@ app.config['SECRET_KEY'] = 'A&WGirlies'
 
 app.config["UPLOAD_FOLDER"] = os.path.join(app.root_path, "static", "uploads")
 app.config["MAX_CONTENT_LENGTH"] = 2 * 1024 * 1024  # 2MB limit
-ALLOWED_EXTENSIONS = {"png", "jpg", "jpeg", "gif"}
+ALLOWED_EXTENSIONS = {"png", "jpg", "jpeg", "gif", "pdf", "docx"}
 
 os.makedirs(app.config["UPLOAD_FOLDER"], exist_ok=True)
 
@@ -148,6 +148,17 @@ class Proposal(db.Model):
     expertise_needed = db.Column(db.String(500), nullable=True)
     submission_date = db.Column(db.DateTime, nullable=False)
     proposal_status = db.Column(db.String(15), nullable=False)
+
+class ProposalAttachment(db.Model):
+    attachment_id = db.Column(db.String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    proposal_id = db.Column(
+        db.String(36),
+        db.ForeignKey('proposal.proposal_id'),
+        nullable=False
+    )
+    stored_filename = db.Column(db.String(255), nullable=False)
+    original_filename = db.Column(db.String(255), nullable=False)
+    uploaded_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc), nullable=False)
 
 class Review(db.Model):
     review_id = db.Column(db.String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
@@ -576,7 +587,7 @@ def edit_profile():
         file = request.files.get("profile_picture")
         if file and file.filename:
             if not allowed_file(file.filename):
-                flash("Invalid file type. Please upload PNG/JPG/JPEG/GIF only.", "error")
+                flash("Invalid file type. Please upload PNG/JPG/JPEG/GIF/PDF/DOCX only.", "error")
                 return redirect(url_for("edit_profile"))
 
             ext = file.filename.rsplit(".", 1)[1].lower()
@@ -689,8 +700,61 @@ def researcher_dashboard():
     if not researcher:
         flash("Researcher profile not found.", "error")
         return redirect(url_for("dashboard"))
-    
-    return render_template("researcher_dashboard.html", user=current_user, prof=prof, researcher=researcher)
+
+    proposals_q = Proposal.query.filter_by(researcher_id=researcher.researcher_id)
+
+    total_proposals = proposals_q.count()
+    under_review = proposals_q.filter(
+        db.func.lower(Proposal.proposal_status) == "under review"
+    ).count()
+    revision_required = proposals_q.filter(
+        db.func.lower(Proposal.proposal_status).in_([
+            "return for revision",
+            "revision required",
+        ])
+    ).count()
+
+    active_projects = Project.query.filter_by(researcher_id=researcher.researcher_id).filter(
+        db.func.lower(Project.project_status).in_([
+            "in progress",
+            "in-progress",
+            "active",
+            "ongoing",
+        ])
+    ).count()
+
+    recent_activity = []
+    recent = proposals_q.order_by(Proposal.submission_date.desc()).limit(5).all()
+    for proposal in recent:
+        status = (proposal.proposal_status or "").strip().lower()
+        title = proposal.project_title or "Proposal"
+
+        if "pending" in status:
+            message = f"{title} submitted"
+        elif "under review" in status:
+            message = f"{title} under review"
+        elif "revision" in status:
+            message = f"Revision requested for {title}"
+        elif "approved" in status:
+            message = f"{title} approved"
+        elif "rejected" in status:
+            message = f"{title} rejected"
+        else:
+            message = f"{title} status: {proposal.proposal_status}"
+
+        recent_activity.append(message)
+
+    return render_template(
+        "researcher_dashboard.html",
+        user=current_user,
+        prof=prof,
+        researcher=researcher,
+        total_proposals=total_proposals,
+        under_review=under_review,
+        revision_required=revision_required,
+        active_projects=active_projects,
+        recent_activity=recent_activity,
+    )
 
 @app.route("/researcher/proposals")
 @login_required
@@ -725,32 +789,189 @@ def create_proposal():
     schemes = GrantScheme.query.all()
 
     if request.method == "POST":
+        action = (request.form.get("action") or "submit").strip().lower()
+        scheme_id = (request.form.get("scheme_id") or "").strip() or None
         title = (request.form.get("project_title") or "").strip()
         abstract = (request.form.get("abstract") or "").strip()
         methodology = (request.form.get("methodology") or "").strip()
         requested_budget = request.form.get("requested_budget") or 0
         expertise_needed = (request.form.get("expertise_needed") or "").strip()
+        attachments = request.files.getlist("attachments")
 
-        if not title or not abstract or not methodology:
+        if not title:
+            flash("Please add a proposal title before saving.", "error")
+            return render_template("create_proposal.html", user=current_user, prof=prof, schemes=schemes)
+
+        if action == "submit" and (not abstract or not methodology):
             flash("Please fill in the required fields.", "error")
             return render_template("create_proposal.html", user=current_user, prof=prof, schemes=schemes)
 
+        proposal_status = "Draft" if action == "draft" else "Pending Review"
+
         new = Proposal(
+            scheme_id=scheme_id,
             project_title=title,
             abstract=abstract,
             methodology=methodology,
             requested_budget=int(requested_budget),
             expertise_needed=expertise_needed,
             submission_date=datetime.now(timezone.utc),
-            proposal_status="Pending Review",
+            proposal_status=proposal_status,
             researcher_id=researcher.researcher_id
         )
         db.session.add(new)
+
+        db.session.flush()
+
+        for file in attachments:
+            if not file or not file.filename:
+                continue
+            if not allowed_file(file.filename):
+                flash("Invalid file type. Please upload PNG/JPG/JPEG/GIF only.", "error")
+                db.session.rollback()
+                return render_template("create_proposal.html", user=current_user, prof=prof, schemes=schemes)
+
+            ext = file.filename.rsplit(".", 1)[1].lower()
+            stored_name = secure_filename(f"{uuid.uuid4()}.{ext}")
+            save_path = os.path.join(app.config["UPLOAD_FOLDER"], stored_name)
+            file.save(save_path)
+
+            db.session.add(ProposalAttachment(
+                proposal_id=new.proposal_id,
+                stored_filename=stored_name,
+                original_filename=file.filename,
+            ))
+
         db.session.commit()
-        flash("Proposal submitted successfully.", "success")
+        if action == "draft":
+            flash("Draft saved.", "success")
+        else:
+            flash("Proposal submitted successfully.", "success")
         return redirect(url_for("researcher_proposals"))
 
-    return render_template("create_proposal.html", user=current_user, prof=prof, schemes=schemes)
+    return render_template(
+        "create_proposal.html",
+        user=current_user,
+        prof=prof,
+        schemes=schemes,
+        proposal=None,
+        form_action=url_for("create_proposal"),
+    )
+
+
+@app.route("/researcher/proposals/<proposal_id>/edit", methods=["GET", "POST"])
+@login_required
+def edit_proposal(proposal_id):
+    prof = get_profile(current_user.id)
+    if not prof or prof.role != "RESEARCHER":
+        flash("Access denied. Researcher role required.", "error")
+        return redirect(url_for("dashboard"))
+
+    researcher = get_researcher(current_user.id)
+    if not researcher:
+        flash("Researcher profile not found.", "error")
+        return redirect(url_for("dashboard"))
+
+    proposal = Proposal.query.get_or_404(proposal_id)
+    if proposal.researcher_id != researcher.researcher_id:
+        abort(403)
+
+    editable_statuses = {
+        "draft",
+        "return for revision",
+        "returned for revision",
+        "revision required",
+    }
+    if (proposal.proposal_status or "").strip().lower() not in editable_statuses:
+        flash("Only draft or revision-required proposals can be edited.", "error")
+        return redirect(url_for("researcher_proposals"))
+
+    schemes = GrantScheme.query.all()
+
+    if request.method == "POST":
+        action = (request.form.get("action") or "submit").strip().lower()
+        scheme_id = (request.form.get("scheme_id") or "").strip() or None
+        title = (request.form.get("project_title") or "").strip()
+        abstract = (request.form.get("abstract") or "").strip()
+        methodology = (request.form.get("methodology") or "").strip()
+        requested_budget = request.form.get("requested_budget") or 0
+        expertise_needed = (request.form.get("expertise_needed") or "").strip()
+        attachments = request.files.getlist("attachments")
+
+        if not title:
+            flash("Please add a proposal title before saving.", "error")
+            return render_template(
+                "create_proposal.html",
+                user=current_user,
+                prof=prof,
+                schemes=schemes,
+                proposal=proposal,
+                form_action=url_for("edit_proposal", proposal_id=proposal.proposal_id),
+            )
+
+        if action == "submit" and (not abstract or not methodology):
+            flash("Please fill in the required fields.", "error")
+            return render_template(
+                "create_proposal.html",
+                user=current_user,
+                prof=prof,
+                schemes=schemes,
+                proposal=proposal,
+                form_action=url_for("edit_proposal", proposal_id=proposal.proposal_id),
+            )
+
+        proposal.scheme_id = scheme_id
+        proposal.project_title = title
+        proposal.abstract = abstract
+        proposal.methodology = methodology
+        proposal.requested_budget = int(requested_budget)
+        proposal.expertise_needed = expertise_needed
+
+        if action == "submit":
+            proposal.proposal_status = "Pending Review"
+            proposal.submission_date = datetime.now(timezone.utc)
+
+        for file in attachments:
+            if not file or not file.filename:
+                continue
+            if not allowed_file(file.filename):
+                flash("Invalid file type. Please upload PNG/JPG/JPEG/GIF/PDF/DOCX only.", "error")
+                db.session.rollback()
+                return render_template(
+                    "create_proposal.html",
+                    user=current_user,
+                    prof=prof,
+                    schemes=schemes,
+                    proposal=proposal,
+                    form_action=url_for("edit_proposal", proposal_id=proposal.proposal_id),
+                )
+
+            ext = file.filename.rsplit(".", 1)[1].lower()
+            stored_name = secure_filename(f"{uuid.uuid4()}.{ext}")
+            save_path = os.path.join(app.config["UPLOAD_FOLDER"], stored_name)
+            file.save(save_path)
+
+            db.session.add(ProposalAttachment(
+                proposal_id=proposal.proposal_id,
+                stored_filename=stored_name,
+                original_filename=file.filename,
+            ))
+
+        db.session.commit()
+        if action == "draft":
+            flash("Draft updated.", "success")
+        else:
+            flash("Proposal submitted successfully.", "success")
+        return redirect(url_for("researcher_proposals"))
+
+    return render_template(
+        "create_proposal.html",
+        user=current_user,
+        prof=prof,
+        schemes=schemes,
+        proposal=proposal,
+        form_action=url_for("edit_proposal", proposal_id=proposal.proposal_id),
+    )
 
 
 @app.route("/researcher/proposals/<proposal_id>")
@@ -765,7 +986,18 @@ def view_proposal(proposal_id):
     if not proposal:
         abort(404)
 
-    return render_template("view_proposal.html", user=current_user, prof=prof, proposal=proposal)
+    if (proposal.proposal_status or "").strip().lower() == "draft":
+        return redirect(url_for("edit_proposal", proposal_id=proposal.proposal_id))
+
+    attachments = ProposalAttachment.query.filter_by(proposal_id=proposal.proposal_id).all()
+
+    return render_template(
+        "view_proposal.html",
+        user=current_user,
+        prof=prof,
+        proposal=proposal,
+        attachments=attachments,
+    )
 
 
 @app.route("/researcher/proposals/<proposal_id>/feedback")
@@ -780,8 +1012,27 @@ def view_proposal_feedback(proposal_id):
     if not proposal:
         abort(404)
 
-    reviews = Review.query.filter_by(proposal_id=proposal_id).all()
-    return render_template("view_proposal_feedback.html", user=current_user, prof=prof, proposal=proposal, reviews=reviews)
+    reviews = (
+        Review.query.filter_by(proposal_id=proposal_id)
+        .order_by(Review.review_date.desc())
+        .all()
+    )
+    latest_review = reviews[0] if reviews else None
+    hod_feedback = (
+        HODEndorsement.query.filter_by(proposal_id=proposal_id)
+        .order_by(HODEndorsement.decision_date.desc())
+        .first()
+    )
+
+    return render_template(
+        "view_proposal_feedback.html",
+        user=current_user,
+        prof=prof,
+        proposal=proposal,
+        reviews=reviews,
+        latest_review=latest_review,
+        hod_feedback=hod_feedback,
+    )
 
 @app.route("/researcher/projects")
 @login_required
@@ -796,7 +1047,12 @@ def researcher_projects():
         flash("Researcher profile not found.", "error")
         return redirect(url_for("dashboard"))
     
-    projects = Project.query.filter_by(researcher_id=researcher.researcher_id).all()
+    projects = (
+        db.session.query(Project, Proposal)
+        .join(Proposal, Project.proposal_id == Proposal.proposal_id)
+        .filter(Project.researcher_id == researcher.researcher_id)
+        .all()
+    )
     return render_template("researcher_projects.html", user=current_user, prof=prof, projects=projects)
 
 #---------------------------------------------------------------------------------------------------------
