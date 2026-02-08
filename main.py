@@ -894,6 +894,34 @@ def researcher_dashboard():
         recent_activity=recent_activity,
     )
 
+@app.route("/researcher/grant-schemes")
+@login_required
+def researcher_grant_schemes():
+    prof = get_profile(current_user.id)
+    if not prof or prof.role != "RESEARCHER":
+        flash("Access denied. Researcher role required.", "error")
+        return redirect(url_for("dashboard"))
+
+    researcher = get_researcher(current_user.id)
+    if not researcher:
+        flash("Researcher profile not found.", "error")
+        return redirect(url_for("dashboard"))
+
+    schemes = (
+        db.session.query(GrantScheme, Department)
+        .join(Department, GrantScheme.department_id == Department.department_id)
+        .filter(db.func.upper(GrantScheme.scheme_status) == "OPEN")
+        .order_by(Department.department_name.asc(), GrantScheme.open_date.desc())
+        .all()
+    )
+
+    return render_template(
+        "researcher_grant_schemes.html",
+        user=current_user,
+        prof=prof,
+        schemes=schemes,
+    )
+
 @app.route("/researcher/proposals")
 @login_required
 def researcher_proposals():
