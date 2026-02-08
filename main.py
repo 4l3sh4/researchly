@@ -2288,6 +2288,7 @@ def admin_assign_reviewers():
         .join(Department, Department.department_id == GrantScheme.department_id)
         .outerjoin(ReviewersAssignment, ReviewersAssignment.proposal_id == Proposal.proposal_id)
         .filter(ReviewersAssignment.proposal_id.is_(None))
+        .filter(db.func.lower(db.func.coalesce(Proposal.proposal_status, "")) != "draft")
     )
 
     if dept_id != "ALL":
@@ -2317,6 +2318,10 @@ def admin_assign_reviewers():
 def admin_assign_reviewer_detail(proposal_id):
     prof = get_profile(current_user.id)
     proposal = Proposal.query.get_or_404(proposal_id)
+
+    if (proposal.proposal_status or "").strip().lower() == "draft":
+        flash("Draft proposals cannot be assigned to reviewers.", "error")
+        return redirect(url_for("admin_assign_reviewers"))
 
     scheme = GrantScheme.query.get(proposal.scheme_id)
     dept = Department.query.get(scheme.department_id) if scheme else None
@@ -2399,7 +2404,7 @@ def admin_assign_reviewer_detail(proposal_id):
                 assignment_status="ASSIGNED"
             ))
 
-        proposal.proposal_status = "PENDING_REVIEW"
+        proposal.proposal_status = "Pending Review"
 
         for rid in selected:
             rv = Reviewer.query.get(rid)
