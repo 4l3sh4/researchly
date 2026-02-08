@@ -19,7 +19,7 @@
 
   <!-- Sidebar -->
   <aside class="sidebar">
-    <a class="side-link" href="{{ url_for('researcher_dashboard') }}">Dashboard</a>
+    <a class="side-link" href="{{ url_for('researcher_dashboard') }}">Researcher Dashboard</a>
     <a class="side-link active" href="{{ url_for('researcher_proposals') }}">Proposals</a>
     <a class="side-link" href="{{ url_for('researcher_projects') }}">Projects</a>
 
@@ -39,16 +39,18 @@
       <div class="proposals-header">
         <input
           type="text"
+          id="proposalSearch"
           class="search-input"
           placeholder="Search proposals">
 
-        <select class="filter-dropdown">
-          <option>All Status</option>
-          <option>Pending Review</option>
-          <option>Under Review</option>
-          <option>Approved</option>
-          <option>Rejected</option>
-          <option>Return for Revision</option>
+        <select id="proposalStatus" class="filter-dropdown">
+          <option value="all">All</option>
+          <option value="draft">Draft</option>
+          <option value="pending-review">Pending Review</option>
+          <option value="under-review">Under Review</option>
+          <option value="approved">Approved</option>
+          <option value="rejected">Rejected</option>
+          <option value="return-for-revision">Return for Revision</option>
         </select>
 
         <a href="{{ url_for('create_proposal') }}" class="create-btn">
@@ -70,12 +72,18 @@
 
           <tbody>
             {% for proposal in proposals %}
-            <tr>
+            <tr data-title="{{ (proposal.project_title or '')|lower }}"
+              data-status="{{ (proposal.proposal_status or 'unknown')|lower|replace(' ', '-') }}">
               <td class="proposal-name">{{ proposal.project_title }}</td>
 
               <td>
-                <a href="{{ url_for('view_proposal', proposal_id=proposal.proposal_id) }}"
+                 {% if (proposal.proposal_status or '')|lower == 'draft' %}
+                 <a href="{{ url_for('edit_proposal', proposal_id=proposal.proposal_id) }}"
+                   class="btn-view">Edit</a>
+                 {% else %}
+                 <a href="{{ url_for('view_proposal', proposal_id=proposal.proposal_id) }}"
                    class="btn-view">View</a>
+                 {% endif %}
               </td>
 
               <td>
@@ -98,5 +106,30 @@
   </section>
 
 </main>
+
+<script>
+  const proposalSearch = document.getElementById("proposalSearch");
+  const proposalStatus = document.getElementById("proposalStatus");
+  const proposalRows = Array.from(document.querySelectorAll(".proposals-table tbody tr"));
+
+  function filterProposals() {
+    const text = proposalSearch.value.trim().toLowerCase();
+    const status = proposalStatus.value;
+
+    proposalRows.forEach((row) => {
+      const title = row.dataset.title || "";
+      const rowStatus = row.dataset.status || "";
+
+      const matchesText = !text || title.includes(text);
+      const matchesStatus = status === "all" || rowStatus === status;
+
+      row.style.display = matchesText && matchesStatus ? "" : "none";
+    });
+  }
+
+  proposalSearch.addEventListener("input", filterProposals);
+  proposalStatus.addEventListener("change", filterProposals);
+  filterProposals();
+</script>
 </body>
 </html>

@@ -65,6 +65,32 @@
       font-weight: 700;
       margin: 3px 6px 3px 0;
     }
+
+    .attachment-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 8px;
+    }
+
+    .attachment-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 10px;
+      border-radius: 10px;
+      border: 1px solid rgba(0,0,0,0.12);
+      background: #fff;
+      color: #333;
+      text-decoration: none;
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    .attachment-pill:hover {
+      border-color: var(--accent-2);
+      color: var(--accent-2);
+    }
   </style>
 </head>
 <body>
@@ -116,6 +142,23 @@
       <div class="section">
         <div class="section-title">Requested Budget</div>
         <div class="section-content">${{ "{:,}".format(proposal.requested_budget) }}</div>
+      </div>
+
+      <div class="section">
+        <div class="section-title">Attachment(s)</div>
+        {% if attachments %}
+        <div class="attachment-list">
+          {% for attachment in attachments %}
+          <a class="attachment-pill"
+             href="{{ url_for('static', filename='uploads/' ~ attachment.stored_filename) }}"
+             target="_blank" rel="noopener">
+            {{ attachment.original_filename }}
+          </a>
+          {% endfor %}
+        </div>
+        {% else %}
+        <div class="section-content">No attachments uploaded.</div>
+        {% endif %}
       </div>
 
       <div class="cta-row">

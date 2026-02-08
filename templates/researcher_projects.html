@@ -2,72 +2,122 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Projects</title>
+    <title>My Projects - Researchly</title>
+
     <link rel="stylesheet" href="{{ url_for('static', filename='css/colors.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/researcher_dashboard.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/researcher_projects.css') }}">
     <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='img/researchly_icon.png') }}">
 </head>
+
 <body>
 
 {% include "_topbar.html" %}
 
-<div class="container">
-    <div class="sidebar">
-        <h2>Researcher<br>Dashboard</h2>
-        <nav>
-            <a href="{{ url_for('researcher_dashboard') }}" class="nav-item">Dashboard</a>
-            <a href="{{ url_for('researcher_proposals') }}" class="nav-item">Proposals</a>
-            <a href="{{ url_for('researcher_projects') }}" class="nav-item active">Projects</a>
-            <a href="{{ url_for('logout') }}" class="nav-item">Logout</a>
-        </nav>
-    </div>
+<main class="layout">
 
-    <div class="main-content">
-        <div class="projects-header">
-            <div class="search-bar">
-                <input type="text" id="searchInput" placeholder="Search" class="search-input">
+    <!-- Sidebar -->
+    <aside class="sidebar">
+        <a class="side-link" href="{{ url_for('researcher_dashboard') }}">Researcher Dashboard</a>
+        <a class="side-link" href="{{ url_for('researcher_proposals') }}">Proposals</a>
+        <a class="side-link active" href="{{ url_for('researcher_projects') }}">Projects</a>
+
+        <div class="side-spacer"></div>
+        <a class="side-link logout" href="{{ url_for('logout') }}">Logout</a>
+    </aside>
+
+    <!-- Content -->
+    <section class="content">
+        <div class="card">
+            <h1>My Projects</h1>
+            <p class="muted">
+                View ongoing and completed projects linked to your approved proposals.
+            </p>
+
+            <!-- Controls -->
+            <div class="projects-header">
+                <input
+                    type="text"
+                    id="projectSearch"
+                    class="search-input"
+                    placeholder="Search projects">
+
+                <select id="statusFilter" class="filter-dropdown">
+                    <option value="all">All Status</option>
+                    <option value="in-progress">In progress</option>
+                    <option value="completed">Completed</option>
+                    <option value="on-hold">On hold</option>
+                </select>
             </div>
-            <select class="filter-dropdown">
-                <option>Filter</option>
-                <option>In progress</option>
-                <option>Completed</option>
-                <option>On hold</option>
-            </select>
-        </div>
 
-        <div class="projects-table-wrapper">
-            <table class="projects-table">
-                <thead>
-                    <tr>
-                        <th>Project Name</th>
-                        <th>Project Details</th>
-                        <th>Status</th>
-                        <th>Feedbacks</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for project in projects %}
-                    <tr>
-                        <td class="project-name">{{ project.title }}</td>
-                        <td class="project-details">
-                            <a href="{{ url_for('view_project', project_id=project.id) }}" class="btn-view">View</a>
-                        </td>
-                        <td class="project-status">
-                            <span class="status-badge status-{{ project.status.lower().replace(' ', '-') }}">
-                                {{ project.status }}
-                            </span>
-                        </td>
-                        <td class="project-feedback">
-                            <a href="{{ url_for('view_project_feedback', project_id=project.id) }}" class="btn-view">View</a>
-                        </td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
+            <!-- Table -->
+            <div class="table-card">
+                <table class="projects-table">
+                    <thead>
+                        <tr>
+                            <th>Project Name</th>
+                            <th>Project Details</th>
+                            <th>Status</th>
+                            <th>Feedbacks</th>
+                        </tr>
+                    </thead>
+
+                    <tbody>
+                        {% for project, proposal in projects %}
+                        <tr data-title="{{ (proposal.project_title or '')|lower }}"
+                                data-status="{{ (project.project_status or 'unknown')|lower|replace(' ', '-') }}">
+                            <td class="project-name">{{ proposal.project_title }}</td>
+
+                            <td>
+                                <a href="{{ url_for('view_proposal', proposal_id=proposal.proposal_id) }}"
+                                     class="btn-view">View</a>
+                            </td>
+
+                            <td>
+                                <span class="status-badge status-{{ (project.project_status or 'unknown')|lower|replace(' ', '-') }}">
+                                    {{ project.project_status or "Unknown" }}
+                                </span>
+                            </td>
+
+                            <td>
+                                <a href="{{ url_for('view_proposal_feedback', proposal_id=proposal.proposal_id) }}"
+                                     class="btn-view">View</a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
         </div>
-    </div>
-</div>
+    </section>
+
+</main>
+
+<script>
+    const searchInput = document.getElementById("projectSearch");
+    const statusFilter = document.getElementById("statusFilter");
+    const rows = Array.from(document.querySelectorAll(".projects-table tbody tr"));
+
+    function applyFilters() {
+        const text = searchInput.value.trim().toLowerCase();
+        const status = statusFilter.value;
+
+        rows.forEach((row) => {
+            const title = row.dataset.title || "";
+            const rowStatus = row.dataset.status || "";
+
+            const matchesText = !text || title.includes(text);
+            const matchesStatus = status === "all" || rowStatus === status;
+
+            row.style.display = matchesText && matchesStatus ? "" : "none";
+        });
+    }
+
+    searchInput.addEventListener("input", applyFilters);
+    statusFilter.addEventListener("change", applyFilters);
+    applyFilters();
+</script>
 
 </body>
 </html>
