@@ -1054,7 +1054,8 @@ def create_proposal():
             )
 
         db.session.commit()
-            flash("Proposal submitted successfully.", "success")
+        
+        flash("Proposal submitted successfully.", "success")
         return redirect(url_for("researcher_proposals"))
 
     return render_template(
