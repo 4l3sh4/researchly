@@ -18,20 +18,24 @@
     .guidelines{
       display:flex; flex-direction:column; gap:16px; margin-top:20px;
     }
-    .guide{
-      border:1px solid rgba(0,0,0,0.10);
-      border-radius:12px;
-      background:#fff;
-      overflow:hidden;
-    }
     .guide-title{
-      display:flex; justify-content:space-between; align-items:center;
+      display:flex;
+      align-items:center;
+      justify-content:flex-start;
+      gap:12px;
       padding:14px 16px;
-      font-size:18px; font-weight:800;
+      font-size:18px;
+      font-weight:900;
       cursor:pointer;
-      background:#f5f5f5;
     }
     .guide-title .arrow{
+      flex: 0 0 auto;
+      width:28px;
+      height:28px;
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      color:#0fa7a1;
       transition: transform 0.3s ease;
     }
     .guide[open] .guide-title .arrow{
@@ -92,10 +96,10 @@
         <div class="guidelines">
 
           <details class="guide" open>
-            <summary class="guide-title">
-            <span>Evaluation Criteria</span>
-            <span class="arrow">▸</span>
-            </summary>
+              <summary class="guide-title">
+                <span class="arrow">▸</span>
+                <span class="title-text">Evaluation Criteria</span>
+              </summary>
             <div class="guide-body">
               <ul class="guide-list">
                 <li><strong>Relevance:</strong> Fits the grant scheme objectives and department scope.</li>
@@ -110,10 +114,10 @@
           </details>
 
           <details class="guide">
-            <summary class="guide-title">
-            <span>Evaluation Approach</span>
-            <span class="arrow">▸</span>
-            </summary>
+              <summary class="guide-title">
+                <span class="arrow">▸</span>
+                <span class="title-text">Evaluation Approach</span>
+              </summary>
             <div class="guide-body">
               <p class="guide-text">
                 Be consistent. Don’t reward “nice writing” if the plan is weak. Don’t punish simple writing if the plan is solid.
@@ -132,10 +136,10 @@
           </details>
 
           <details class="guide">
-            <summary class="guide-title">
-            <span>Recommendation Guidelines</span>
-            <span class="arrow">▸</span>
-            </summary>
+              <summary class="guide-title">
+                <span class="arrow">▸</span>
+                <span class="title-text">Recommendation Guidelines</span>
+              </summary>
             <div class="guide-body">
               <ul class="guide-list">
                 <li><strong>Recommended:</strong> Strong proposal; minor issues only.</li>
@@ -149,10 +153,10 @@
           </details>
 
           <details class="guide">
-            <summary class="guide-title">
-            <span>Ethical Review Conduct</span>
-            <span class="arrow">▸</span>
-            </summary>
+              <summary class="guide-title">
+                <span class="arrow">▸</span>
+                <span class="title-text">Ethical Review Conduct</span>
+              </summary>
             <div class="guide-body">
               <ul class="guide-list">
                 <li><strong>Confidentiality:</strong> Do not share proposal content outside the platform.</li>
