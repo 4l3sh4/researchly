@@ -52,7 +52,7 @@
                 <a class="back-link" href="{{ url_for('view_project', project_id=project.project_id) }}">← Back</a>
             </div>
 
-            <form class="report-form" method="POST">
+            <form class="report-form" method="POST" enctype="multipart/form-data">
                 <div class="form-row">
                     <div class="form-field">
                         <label for="period_start_date">Start Date</label>
@@ -72,6 +72,18 @@
                             value="{{ form_data.get('period_end_date', '') }}"
                             required>
                     </div>
+                </div>
+
+                <!-- Title -->
+                <div class="form-field">
+                <label class="form-label">Title</label>
+                <input
+                    type="text"
+                    name="project_title"
+                    class="form-control"
+                    placeholder="Project title"
+                    value="{{ proposal.project_title if proposal else '' }}"
+                    required>
                 </div>
 
                 <div class="form-field">
@@ -110,6 +122,18 @@
                         required>{{ form_data.get('resource_usage', '') }}</textarea>
                 </div>
 
+                <div class="form-field upload-section">
+                    <label class="form-label">Attachment(s)</label>
+                    <input
+                        type="file"
+                        id="attachments"
+                        name="attachments"
+                        multiple
+                        hidden>
+                    <button type="button" class="upload-btn" id="uploadBtn">Upload</button>
+                    <div id="fileList" class="file-list"></div>
+                </div>
+
                 <div class="cta-row">
                     <button class="btn primary" type="submit">Submit Report</button>
                 </div>
@@ -117,5 +141,21 @@
         </div>
     </section>
 </main>
+<script>
+    const uploadBtn = document.getElementById("uploadBtn");
+    const attachmentsInput = document.getElementById("attachments");
+    const fileList = document.getElementById("fileList");
+
+    uploadBtn.addEventListener("click", () => attachmentsInput.click());
+
+    attachmentsInput.addEventListener("change", () => {
+        if (!attachmentsInput.files.length) {
+            fileList.textContent = "";
+            return;
+        }
+        const names = Array.from(attachmentsInput.files).map((file) => file.name);
+        fileList.textContent = names.join(", ");
+    });
+</script>
 </body>
 </html>

@@ -97,23 +97,26 @@
                 <div class="reports-card">
                     <div class="reports-header">
                         <h2>Progress Reports</h2>
-                        <a class="report-create" href="{{ url_for('create_progress_report', project_id=project.project_id) }}">Create</a>
                     </div>
                     <div class="reports-list">
-                        {% if reports %}
-                            {% for report in reports %}
+                        {% if weekly_periods %}
+                            {% for period in weekly_periods|reverse %}
                             <div class="report-row">
-                                <span class="report-index">{{ reports|length - loop.index0 }}</span>
+                                <span class="report-index">{{ loop.index }}</span>
                                 <span class="report-date">
-                                    {{ report.period_start_date.strftime('%m/%d/%Y') }}
-                                    –
-                                    {{ report.period_end_date.strftime('%m/%d/%Y') }}
+                                    {{ period.start.strftime('%m/%d/%Y') }} – {{ period.end.strftime('%m/%d/%Y') }}
                                 </span>
-                                <a class="report-btn" href="{{ url_for('view_progress_report', project_id=project.project_id, progress_id=report.progress_id) }}">View</a>
+                                {% if period.report %}
+                                    <a class="report-btn" href="{{ url_for('view_progress_report', project_id=project.project_id, progress_id=period.report.progress_id) }}">View</a>
+                                {% elif period.allow_create %}
+                                    <a class="report-btn create" href="{{ url_for('create_progress_report', project_id=project.project_id, start=period.start.strftime('%Y-%m-%d'), end=period.end.strftime('%Y-%m-%d')) }}">Create</a>
+                                {% else %}
+                                    <span class="report-btn placeholder">Pending</span>
+                                {% endif %}
                             </div>
                             {% endfor %}
                         {% else %}
-                            <div class="report-empty">No progress reports submitted yet.</div>
+                            <div class="report-empty">No progress periods available yet.</div>
                         {% endif %}
                     </div>
                 </div>
