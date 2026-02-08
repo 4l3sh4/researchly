@@ -34,6 +34,45 @@
     .overview-scroll::-webkit-scrollbar{ width:6px; }
     .overview-scroll::-webkit-scrollbar-thumb{background: rgba(0,0,0,0.25);border-radius: 6px;}
 
+    .overview-card{
+      border:1px solid rgba(0,0,0,0.10);
+      border-radius:14px;
+      background:#fff;
+      overflow:hidden;
+
+      display:flex;
+      flex-direction:column;
+
+      height:520px; /* controls card height */
+    }
+
+    /* header INSIDE box */
+    .overview-head{
+      padding:14px 16px;
+      border-bottom:1px solid rgba(0,0,0,0.10);
+      color:#0fa7a1;
+      font-weight:1000;
+      font-size:20px;
+      background:#fff;
+    }
+
+    /* only body scroll */
+    .overview-body{
+      padding:14px 16px;
+      overflow:auto;
+      flex:1;
+    }
+    .overview-body::-webkit-scrollbar{ width:6px; }
+    .overview-body::-webkit-scrollbar-thumb{ background:rgba(0,0,0,0.25); border-radius:6px; }
+
+    /* footer fixed */
+    .overview-foot{
+      padding:10px 16px;
+      border-top:1px solid rgba(0,0,0,0.10);
+      background:rgba(0,0,0,0.02);
+    }
+
+
     .block{margin-bottom:18px;}
     .block h4{margin:0 0 8px;font-size:14px;font-weight:1000;color:#111;}
     .block p{margin:0;line-height:1.55;color:#222;font-size:14px;white-space:pre-wrap;word-break:break-word;}
@@ -154,32 +193,37 @@
         </div>
 
         <div class="grid">
-          <!-- LEFT -->
-          <div>
-            <div class="section-h">Overview</div>
+        <!-- LEFT -->
+        <div>
+          <div class="overview-card">
 
-            <div class="overview">
-              <div class="overview-scroll">
-                <div class="block">
-                  <h4>Abstract</h4>
-                  <p>{{ proposal.abstract if proposal.abstract is defined else proposal['abstract'] }}</p>
-                </div>
+            <!-- CARD HEADER (stays fixed, inside white box) -->
+            <div class="overview-head">Overview</div>
 
-                <div class="block">
-                  <h4>Methodology</h4>
-                  <p>{{ proposal.methodology if proposal.methodology is defined else proposal['methodology'] }}</p>
-                </div>
+            <!-- ONLY THIS PART SCROLLS -->
+            <div class="overview-body">
+              <div class="block">
+                <h4>Abstract</h4>
+                <p>{{ proposal.abstract if proposal.abstract is defined else proposal['abstract'] }}</p>
               </div>
 
-              <div class="overview-footer">
-                <div class="footer-label">Attachments</div>
-                <div class="doc-row">
-                  <a class="doc-pill" href="#" onclick="return false;">Proposal.pdf</a>
-                  <a class="doc-pill" href="#" onclick="return false;">Budget_plan.pdf</a>
-                </div>
+              <div class="block">
+                <h4>Methodology</h4>
+                <p>{{ proposal.methodology if proposal.methodology is defined else proposal['methodology'] }}</p>
               </div>
             </div>
+
+            <!-- FOOTER FIXED -->
+            <div class="overview-foot">
+              <div class="footer-label">Attachments</div>
+              <div class="doc-row">
+                <a class="doc-pill" href="#" onclick="return false;">Proposal.pdf</a>
+                <a class="doc-pill" href="#" onclick="return false;">Budget_plan.pdf</a>
+              </div>
+            </div>
+
           </div>
+        </div>
 
           <!-- RIGHT -->
           <div>

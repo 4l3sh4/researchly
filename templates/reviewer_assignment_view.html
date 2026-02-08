@@ -89,6 +89,14 @@
     .btn-accept{ background:#11b84a; color:#fff; }
     .btn-decline{ background:#e53935; color:#fff; }
     .btn-accept:hover,.btn-decline:hover{ filter:brightness(0.95); }
+
+    .detail-actions{
+      margin-top:18px;
+      display:flex;
+      justify-content:flex-end;  /* push to right */
+      gap:12px;
+      width:100%;
+    }
   </style>
 </head>
 
@@ -170,8 +178,8 @@
           </div>
         </div>
 
-      {% if raw == "ASSIGNED" %}
-        <div class="actions" id="actionButtons">
+      {% if raw == "PENDING" %}
+        <div class="detail-actions" id="actionButtons">
           <form method="POST" style="display:inline;">
             <input type="hidden" name="decision" value="ACCEPTED">
             <button type="submit" class="btn-big btn-accept"
