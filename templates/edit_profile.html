@@ -83,9 +83,14 @@
               </div>
 
               <div>
-                {% if prof.role != "ADMIN" %}
+                {% if prof.role in ["RESEARCHER", "REVIEWER", "HOD"] %}
                   <label class="field-label">Department</label>
-                  <input class="input" type="text" name="department_name" value="{{ prof.department_name or '' }}" />
+                  <select class="input" name="department_name">
+                    <option value="" {% if not prof.department_name %}selected{% endif %}>Select a department</option>
+                    {% for dept in departments %}
+                      <option value="{{ dept }}" {% if prof.department_name == dept %}selected{% endif %}>{{ dept }}</option>
+                    {% endfor %}
+                  </select>
                 {% endif %}
               </div>
             </div>

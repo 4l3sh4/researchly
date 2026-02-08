@@ -50,7 +50,7 @@
       <div class="card">
         <!-- Welcome Banner -->
         <div class="welcome-banner">
-          You are the Head of the Engineering Department.
+          You are the Head of the {{ department_name }} Department.
         </div>
 
         <!-- Stats Grid -->
@@ -62,7 +62,7 @@
 
           <div class="stat-card">
             <div class="stat-title">Members</div>
-            <div class="stat-number">39</div>
+            <div class="stat-number">{{ member_count }}</div>
           </div>
         </div>
 
@@ -71,30 +71,38 @@
           <div class="recent-section">
             <h3>Recently added reviewers</h3>
             <div class="avatar-row">
-              <div class="avatar">
-                <img src="https://i.pravatar.cc/150?img=1" alt="Reviewer">
-              </div>
-              <div class="avatar">
-                <img src="https://i.pravatar.cc/150?img=2" alt="Reviewer">
-              </div>
-              <div class="avatar">
-                <img src="https://i.pravatar.cc/150?img=3" alt="Reviewer">
-              </div>
+              {% if recent_reviewers %}
+                {% for reviewer in recent_reviewers %}
+                  <div class="avatar" title="{{ reviewer.full_name }}">
+                    {% if reviewer.profile_picture %}
+                      <img src="{{ url_for('static', filename='uploads/' ~ reviewer.profile_picture) }}" alt="Reviewer">
+                    {% else %}
+                      <span class="fallback-user">👤</span>
+                    {% endif %}
+                  </div>
+                {% endfor %}
+              {% else %}
+                <div class="empty-state">No reviewers yet.</div>
+              {% endif %}
             </div>
           </div>
 
           <div class="recent-section">
             <h3>Recently added researchers</h3>
             <div class="avatar-row">
-              <div class="avatar">
-                <img src="https://i.pravatar.cc/150?img=4" alt="Researcher">
-              </div>
-              <div class="avatar">
-                <img src="https://i.pravatar.cc/150?img=5" alt="Researcher">
-              </div>
-              <div class="avatar">
-                <img src="https://i.pravatar.cc/150?img=6" alt="Researcher">
-              </div>
+              {% if recent_researchers %}
+                {% for researcher in recent_researchers %}
+                  <div class="avatar" title="{{ researcher.full_name }}">
+                    {% if researcher.profile_picture %}
+                      <img src="{{ url_for('static', filename='uploads/' ~ researcher.profile_picture) }}" alt="Researcher">
+                    {% else %}
+                      <span class="fallback-user">👤</span>
+                    {% endif %}
+                  </div>
+                {% endfor %}
+              {% else %}
+                <div class="empty-state">No researchers yet.</div>
+              {% endif %}
             </div>
           </div>
         </div>
@@ -103,18 +111,13 @@
         <div class="description-section">
           <div class="description-header">
             <h2>Description</h2>
-            <button class="edit-icon" title="Edit Description">
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
-                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
-              </svg>
-            </button>
           </div>
-          <div class="description-text">
-            <p>The Engineering Department is a hub of innovation dedicated to addressing complex societal challenges through cutting-edge engineering research. Our department specializes in systems optimization, advanced materials, and data-driven modeling, with a focus on translating theoretical research into practical, high-impact applications.</p>
-            
-            <p>Supported by state-of-the-art facilities, including multi-disciplinary makerspaces and high-performance computing clusters, we engage in advanced prototyping, experimental validation, and computational modeling. We are actively involved in interdisciplinary collaborations, focusing on sustainable development and emerging technologies to create sustainable solutions. Our research outputs significantly contribute to global industry standards, intellectual property development, and transformative policy change.</p>
-          </div>
+          <form method="POST" action="{{ url_for('hod_department_overview') }}">
+            <div class="description-text">
+              <textarea class="input" name="department_description" rows="6" placeholder="Describe your department...">{{ department_description }}</textarea>
+            </div>
+            <button class="btn" type="submit">Save Description</button>
+          </form>
         </div>
       </div>
     </section>
