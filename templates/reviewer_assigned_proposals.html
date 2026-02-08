@@ -3,79 +3,52 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Assigned Proposals - Researchly</title>
+  <title>Pending Assignments - Researchly</title>
 
   <link rel="stylesheet" href="{{ url_for('static', filename='css/reviewer_dashboard.css') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/colors.css') }}">
   <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='img/researchly_icon.png') }}">
 
   <style>
-    .toolbar{
-      display:flex; gap:14px; align-items:center; margin-bottom:14px;
-    }
+    .toolbar{ display:flex; gap:14px; align-items:center; margin-bottom:14px; }
     .search{
       flex:1; display:flex; align-items:center; gap:10px;
       border:1px solid rgba(0,0,0,0.12); border-radius:12px;
       padding:10px 12px; background:#fff;
     }
-    .search input{
-      border:none; outline:none; width:100%;
-      font-size:15px;
-    }
+    .search input{ border:none; outline:none; width:100%; font-size:15px; }
     .filter{
-      width:220px;
-      border:1px solid rgba(0,0,0,0.12);
-      border-radius:12px;
-      padding:10px 12px;
-      background:#fff;
+      width:220px; border:1px solid rgba(0,0,0,0.12);
+      border-radius:12px; padding:10px 12px; background:#fff;
       font-weight:800;
     }
 
     .table-wrap{
-      margin-top:10px;
-      border:1px solid rgba(0,0,0,0.10);
-      border-radius:14px;
-      overflow:hidden;
-      background:#fff;
+      margin-top:10px; border:1px solid rgba(0,0,0,0.10);
+      border-radius:14px; overflow:hidden; background:#fff;
     }
     table{ width:100%; border-collapse:collapse; }
     thead th{
-      text-align:left;
-      font-size:18px;
-      padding:14px 16px;
-      background:#ececec;
-      border-bottom:1px solid rgba(0,0,0,0.08);
+      text-align:left; font-size:18px; padding:14px 16px;
+      background:#ececec; border-bottom:1px solid rgba(0,0,0,0.08);
     }
-    tbody td{
-      padding:16px;
-      border-bottom:1px solid rgba(0,0,0,0.08);
-      vertical-align:middle;
-    }
+    tbody td{ padding:16px; border-bottom:1px solid rgba(0,0,0,0.08); vertical-align:middle; }
     tbody tr:last-child td{ border-bottom:none; }
 
-    /* keep teal like your screenshot */
     .st-pending{ color:#0fa7a1; }
     .st-accepted{ color:#0fa7a1; }
     .st-declined{ color:#0fa7a1; }
+
     .actions{ width:110px; text-align:right; }
 
     .btn-view{
-      display:inline-block;
-      padding:10px 16px;
-      border-radius:10px;
-      background:#0fa7a1;
-      color:#fff;
-      font-weight:900;
-      text-decoration:none;
+      display:inline-block; padding:10px 16px; border-radius:10px;
+      background:#0fa7a1; color:#fff; font-weight:900; text-decoration:none;
     }
     .btn-view:hover{ filter:brightness(0.95); }
 
-    /* nicer empty state */
-    .empty{
-      padding:18px;
-      color:#7b7b7b;
-      font-weight:700;
-    }
+    .empty{ padding:18px; color:#7b7b7b; font-weight:700; }
+
     .page-title{
       margin:0 0 14px;
       color:#0fa7a1;
@@ -142,41 +115,32 @@
                 <th class="actions"></th>
               </tr>
             </thead>
+
+            <tbody id="tableBody">
+              {% for r in rows %}
+              <tr class="row"
+                  data-title="{{ (r.title or '')|lower }}"
+                  data-status="{{ r.status or '' }}">
+                <td style="font-weight:700;">{{ r.title }}</td>
+
+                <td class="status
+                  {% if r.status == 'Pending' %}st-pending{% endif %}
+                  {% if r.status == 'Accepted' %}st-accepted{% endif %}
+                  {% if r.status == 'Declined' %}st-declined{% endif %}
+                ">
+                  {{ r.status }}
+                </td>
+
+                <td class="actions">
+                  <a class="btn-view"
+                     href="{{ url_for('reviewer_assignment_view', proposal_id=r.id) }}">
+                    View
+                  </a>
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
           </table>
-
-          <div class="table-scroll">
-            <table>
-              <tbody id="tableBody">
-                {% for r in rows %}
-                <tr class="row"
-                    data-title="{{ r.title|lower }}"
-                    data-status="{{ r.status }}">
-                  <td style="font-weight:700;">{{ r.title }}</td>
-
-                  <td class="status
-                    {% if r.status == 'Pending' %}st-pending{% endif %}
-                    {% if r.status == 'Accepted' %}st-accepted{% endif %}
-                    {% if r.status == 'Declined' %}st-declined{% endif %}
-                  ">
-                    {{ r.status }}
-                  </td>
-
-                  <td class="actions">
-                    <a class="btn-view"
-                      href="{{ url_for('reviewer_assignment_view', proposal_id=r.id) }}">
-                      View
-                    </a>
-                  </td>
-                </tr>
-                {% endfor %}
-              </tbody>
-            </table>
-
-            <div id="emptyState" class="empty" style="display:none;">
-              No proposals match your search/filter.
-            </div>
-          </div>
-        </div>
 
           <div id="emptyState" class="empty" style="display:none;">
             No proposals match your search/filter.
@@ -201,8 +165,11 @@
     // search + filter
     const searchInput = document.getElementById('searchInput');
     const filterSelect = document.getElementById('filterSelect');
-    const rows = Array.from(document.querySelectorAll('tr.row'));
     const emptyState = document.getElementById('emptyState');
+
+    function getRows(){
+      return Array.from(document.querySelectorAll('tr.row'));
+    }
 
     function applyFilters(){
       const q = (searchInput.value || "").trim().toLowerCase();
@@ -210,7 +177,7 @@
 
       let shown = 0;
 
-      rows.forEach(tr => {
+      getRows().forEach(tr => {
         const title = tr.dataset.title || "";
         const status = tr.dataset.status || "";
 
@@ -227,8 +194,6 @@
 
     searchInput.addEventListener('input', applyFilters);
     filterSelect.addEventListener('change', applyFilters);
-
-    // init
     applyFilters();
   </script>
 </body>
