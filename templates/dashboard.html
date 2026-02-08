@@ -6,12 +6,13 @@
     <title>Dashboard - Researchly</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/colors.css') }}">
+    <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='img/researchly_icon.png') }}">
 </head>
 <body>
     <header class="topbar">
         <div class="logo">Researchly™</div>
         <div class="icons">
-            <span class="icon bell"></span>
+            <a href="{{ url_for('notifications') }}" class="icon bell"></a>
             <span class="icon user"></span>
         </div>
     </header>

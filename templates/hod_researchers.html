@@ -7,6 +7,7 @@
 
   <link rel="stylesheet" href="{{ url_for('static', filename='css/hod_researchers.css') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/colors.css') }}">
+  <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='img/researchly_icon.png') }}">
 </head>
 
 <body>
@@ -18,7 +19,7 @@
     </div>
 
     <div class="icons">
-      <span class="icon bell" title="Notifications"></span>
+      <a href="{{ url_for('notifications') }}" class="icon bell" title="Notifications"></a>
       <a href="{{ url_for('view_profile') }}" class="icon user" title="Profile">
         {% if prof.profile_picture %}
           <img class="top-avatar"
@@ -49,13 +50,13 @@
     <section class="content">
       <div class="card">
         <!-- Filter and Search Bar -->
-        <div class="controls-bar">
+        <form class="controls-bar" method="GET" action="{{ url_for('hod_researchers') }}" id="filterForm">
           <div class="filter-dropdown">
-            <select id="filterSelect">
-              <option value="">Filter</option>
-              <option value="projects">By Projects</option>
-              <option value="name">By Name</option>
-              <option value="email">By Email</option>
+            <select id="filterSelect" name="filter">
+              <option value="" {% if not filter_by %}selected{% endif %}>Filter</option>
+              <option value="projects" {% if filter_by == "projects" %}selected{% endif %}>By Projects</option>
+              <option value="name" {% if filter_by == "name" %}selected{% endif %}>By Name</option>
+              <option value="email" {% if filter_by == "email" %}selected{% endif %}>By Email</option>
             </select>
           </div>
           <div class="search-box">
@@ -63,9 +64,10 @@
               <circle cx="11" cy="11" r="8"></circle>
               <path d="m21 21-4.35-4.35"></path>
             </svg>
-            <input type="text" id="searchInput" placeholder="Search">
+            <input type="text" id="searchInput" name="q" placeholder="Search" value="{{ q or '' }}">
           </div>
-        </div>
+          <button type="submit" class="btn">Apply</button>
+        </form>
 
         <!-- Researchers Table -->
         <div class="table-container">
@@ -78,90 +80,30 @@
               </tr>
             </thead>
             <tbody>
-              <tr>
-                <td>
-                  <div class="profile-cell">
-                    <div class="avatar">
-                      <img src="https://i.pravatar.cc/150?img=10" alt="Lauren Faust">
-                    </div>
-                    <span class="name">Lauren Faust</span>
-                  </div>
-                </td>
-                <td>lauren@mmu.edu.my</td>
-                <td>3</td>
-              </tr>
-              <tr>
-                <td>
-                  <div class="profile-cell">
-                    <div class="avatar">
-                      <img src="https://i.pravatar.cc/150?img=11" alt="Craig McCracken">
-                    </div>
-                    <span class="name">Craig McCracken</span>
-                  </div>
-                </td>
-                <td>craig@mmu.edu.my</td>
-                <td>2</td>
-              </tr>
-              <tr>
-                <td>
-                  <div class="profile-cell">
-                    <div class="avatar">
-                      <img src="https://i.pravatar.cc/150?img=12" alt="Reggie Fils-Aimé">
-                    </div>
-                    <span class="name">Reggie Fils-Aimé</span>
-                  </div>
-                </td>
-                <td>reggie@mmu.edu.my</td>
-                <td>1</td>
-              </tr>
-              <tr>
-                <td>
-                  <div class="profile-cell">
-                    <div class="avatar">
-                      <img src="https://i.pravatar.cc/150?img=13" alt="Keiichiro Toyama">
-                    </div>
-                    <span class="name">Keiichiro Toyama</span>
-                  </div>
-                </td>
-                <td>keiichiro@mmu.edu.my</td>
-                <td>5</td>
-              </tr>
-              <tr>
-                <td>
-                  <div class="profile-cell">
-                    <div class="avatar">
-                      <img src="https://i.pravatar.cc/150?img=14" alt="Wan Hazmer">
-                    </div>
-                    <span class="name">Wan Hazmer</span>
-                  </div>
-                </td>
-                <td>wan.hazmer@mmu.edu.my</td>
-                <td>4</td>
-              </tr>
-              <tr>
-                <td>
-                  <div class="profile-cell">
-                    <div class="avatar">
-                      <img src="https://i.pravatar.cc/150?img=15" alt="Damien McCarthy">
-                    </div>
-                    <span class="name">Damien McCarthy</span>
-                  </div>
-                </td>
-                <td>damien@mmu.edu.my</td>
-                <td>5</td>
-              </tr>
-              <tr>
-                <td>
-                  <div class="profile-cell">
-                    <div class="avatar">
-                      <img src="https://i.pravatar.cc/150?img=16" alt="Inio Asano">
-                    </div>
-                    <span class="name">Inio Asano</span>
-                  </div>
-                </td>
-                <td>inio.asano@mmu.edu.my</td>
-                <td>1</td>
-              </tr>
+              {% if researchers %}
+                {% for researcher in researchers %}
+                  <tr>
+                    <td>
+                      <a href="{{ url_for('user_profile', user_id=researcher.user_id) }}" class="profile-cell">
+                        <div class="avatar">
+                          {% if researcher.profile_picture %}
+                            <img src="{{ url_for('static', filename='uploads/' ~ researcher.profile_picture) }}" alt="{{ researcher.full_name }}">
+                          {% else %}
+                            <span class="fallback-user">👤</span>
+                          {% endif %}
+                        </div>
+                        <span class="name">{{ researcher.full_name }}</span>
+                      </a>
+                    </td>
+                    <td>{{ researcher.email }}</td>
+                    <td>{{ researcher.project_count }}</td>
+                  </tr>
+                {% endfor %}
+              {% else %}
+                <tr>
+                  <td colspan="3" class="empty-state">No researchers found for this department.</td>
+                </tr>
+              {% endif %}
             </tbody>
           </table>
         </div>
@@ -173,10 +115,23 @@
     const hamburger = document.getElementById('hamburger');
     const sidebar = document.getElementById('sidebar');
     const layout = document.getElementById('layout');
+    const filterSelect = document.getElementById('filterSelect');
+    const searchInput = document.getElementById('searchInput');
+    const filterForm = document.getElementById('filterForm');
 
     hamburger.addEventListener('click', () => {
       sidebar.classList.toggle('collapsed');
       layout.classList.toggle('sidebar-collapsed');
+    });
+
+    // Auto-submit on filter change
+    filterSelect.addEventListener('change', () => {
+      filterForm.submit();
+    });
+
+    // Live search: submit form as user types
+    searchInput.addEventListener('input', () => {
+      filterForm.submit();
     });
   </script>
 </body>

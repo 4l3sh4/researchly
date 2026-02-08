@@ -280,30 +280,83 @@ a.icon {
 
 /* Description Section */
 .description-section {
-  border-top: 1px solid rgba(0,0,0,0.08);
-  padding-top: 20px;
+  border-top: 2px solid rgba(15,167,161,0.2);
+  padding-top: 28px;
+  margin-top: 24px;
 }
 
 .description-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 16px;
+  margin-bottom: 20px;
 }
 
-.edit-icon {
-  background: transparent;
-  border: none;
-  cursor: pointer;
-  padding: 8px;
-  border-radius: 8px;
+.description-header h2 {
+  font-size: 20px;
+  font-weight: 700;
   color: #1a1a1a;
+  margin: 0;
+}
+
+.description-section form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.description-section textarea {
+  width: 100%;
+  padding: 16px;
+  border: 2px solid rgba(0,0,0,0.12);
+  border-radius: 12px;
+  font-family: inherit;
+  font-size: 15px;
+  color: #1a1a1a;
+  line-height: 1.6;
+  resize: vertical;
+  min-height: 140px;
+  max-height: 400px;
+  box-sizing: border-box;
   transition: all 0.3s ease;
 }
 
-.edit-icon:hover {
-  background: rgba(0,0,0,0.05);
-  color: var(--accent-2);
+.description-section textarea::placeholder {
+  color: #999;
+}
+
+.description-section textarea:hover {
+  border-color: rgba(0,0,0,0.2);
+}
+
+.description-section textarea:focus {
+  outline: none;
+  border-color: var(--accent-2);
+  box-shadow: 0 0 0 3px rgba(15,167,161,0.1);
+}
+
+.description-section .btn {
+  align-self: flex-start;
+  padding: 12px 32px;
+  background: linear-gradient(135deg, var(--accent-2), #0d8a85);
+  color: #fff;
+  border: none;
+  border-radius: 10px;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 8px rgba(15,167,161,0.2);
+}
+
+.description-section .btn:hover {
+  background: linear-gradient(135deg, #0d8a85, #0a6b67);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(15,167,161,0.3);
+}
+
+.description-section .btn:active {
+  transform: translateY(0);
 }
 
 .description-text {

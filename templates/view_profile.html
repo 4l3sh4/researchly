@@ -6,6 +6,7 @@
   <title>View Profile</title>
   <link rel="stylesheet" href="{{ url_for('static', filename='css/view_profile.css') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/colors.css') }}">
+  <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='img/researchly_icon.png') }}">
 </head>
 
 <body>
@@ -15,7 +16,7 @@
       <div class="brand">Researchly™</div>
     </div>
     <div class="icons">
-      <span class="icon bell" title="Notifications"></span>
+      <a href="{{ url_for('notifications') }}" class="icon bell" title="Notifications"></a>
       <a href="{{ url_for('view_profile') }}" class="icon user" title="Profile">
         {% if prof.profile_picture %}
           <img class="top-avatar"

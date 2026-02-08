@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8" />
+	<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+	<title>Evaluation - Researchly</title>
+
+	<link rel="stylesheet" href="{{ url_for('static', filename='css/hod_view_review_proposals.css') }}">
+	<link rel="stylesheet" href="{{ url_for('static', filename='css/colors.css') }}">
+	<link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='img/researchly_icon.png') }}">
+</head>
+
+<body>
+	<!-- Top bar -->
+	<header class="topbar">
+		<div class="left">
+			<button class="hamburger" type="button" aria-label="Menu" id="hamburger">&#9776;</button>
+			<div class="brand">Researchly™</div>
+		</div>
+
+		<div class="icons">
+			<a href="{{ url_for('notifications') }}" class="icon bell" title="Notifications"></a>
+			<a href="{{ url_for('view_profile') }}" class="icon user" title="Profile">
+				{% if prof.profile_picture %}
+					<img class="top-avatar"
+						src="{{ url_for('static', filename='uploads/' ~ prof.profile_picture) }}"
+						alt="Profile">
+				{% else %}
+					<span class="fallback-user">👤</span>
+				{% endif %}
+			</a>
+		</div>
+	</header>
+
+	<main class="layout" id="layout">
+		<!-- Sidebar -->
+		<aside class="sidebar" id="sidebar">
+			<a class="side-link" href="{{ url_for('hod_dashboard') }}">HOD Dashboard</a>
+			<a class="side-link" href="{{ url_for('hod_department_overview') }}">Department<br/>Overview</a>
+			<a class="side-link" href="{{ url_for('hod_active_projects') }}">Active Projects</a>
+			<a class="side-link active" href="{{ url_for('hod_review_proposals') }}">Review Proposals</a>
+			<a class="side-link" href="{{ url_for('hod_reviewers') }}">Reviewers</a>
+			<a class="side-link" href="{{ url_for('hod_researchers') }}">Researchers</a>
+
+			<div class="side-spacer"></div>
+			<a class="side-link logout" href="{{ url_for('logout') }}">Logout</a>
+		</aside>
+
+		<!-- Content -->
+		<section class="content">
+			<div class="eval-header">
+				<div class="eval-title">Evaluation</div>
+				<div class="eval-meta">
+					<div><span class="label">Title:</span> <span class="value">{{ proposal_title or "Automated Hybrid Smart Door System" }}</span></div>
+					<div><span class="label">Status:</span> <span class="value status">{{ proposal_status or "Under review" }}</span></div>
+				</div>
+			</div>
+
+			<div class="eval-grid">
+				<div class="overview-card">
+					<h2>Overview</h2>
+					<div class="overview-body">
+						<h3>Abstract</h3>
+						<p>
+							{{ proposal_abstract or "Flooding remains one of the most frequent and destructive natural disasters, causing significant economic losses and threats to human safety worldwide. This project proposes the development of an AI-based early warning system for flood risk prediction that leverages historical flood data, real-time environmental inputs, and machine learning techniques to forecast potential flood events. The system aims to provide timely and accurate alerts to relevant authorities and communities, enabling proactive mitigation and emergency response. By improving prediction accuracy and response time, the proposed solution seeks to reduce the impact of flood-related disasters and support data-driven planning and resilience." }}
+						</p>
+					</div>
+					<div class="doc-pills">
+						<span class="doc-pill">Proposal.pdf</span>
+						<span class="doc-pill">Budget_plan.pdf</span>
+					</div>
+				</div>
+
+				<div class="remarks-card">
+					<h2>Remarks</h2>
+					<textarea class="remarks-box" placeholder="Write remarks..."></textarea>
+
+					<div class="evaluation-section">
+						<h2>Evaluation</h2>
+						<label class="check-row"><input type="checkbox"> Endorsed</label>
+						<label class="check-row"><input type="checkbox"> Revision required</label>
+						<label class="check-row"><input type="checkbox"> Rejected</label>
+
+						<div class="submit-row">
+							<button class="submit-btn" type="button">Submit</button>
+						</div>
+					</div>
+				</div>
+			</div>
+		</section>
+	</main>
+
+	<script>
+		const hamburger = document.getElementById('hamburger');
+		const sidebar = document.getElementById('sidebar');
+		const layout = document.getElementById('layout');
+
+		hamburger.addEventListener('click', () => {
+			sidebar.classList.toggle('collapsed');
+			layout.classList.toggle('sidebar-collapsed');
+		});
+	</script>
+</body>
+</html>
