@@ -59,14 +59,8 @@
     .actions{ width:140px; text-align:right; }
 
     .btn-eval{
-      display:inline-block;
-      padding:6px 10px;
-      border-radius:10px;
-      background:#0fa7a1;
-      color:#fff;
-      font-weight:700;
-      text-decoration:none;
-      white-space:nowrap;
+      display:inline-block; padding:8px 16px; border-radius:8px;
+      background:#0fa7a1; color:#fff; font-weight:700; text-decoration:none;
     }
     .btn-eval:hover{ filter:brightness(0.95); }
 
@@ -81,8 +75,9 @@
       font-size:32px;
       font-weight:1000;
     }
-    .col-title { width: 60%; }
-    .col-date  { width: 25%; text-align: left; white-space: nowrap; }
+    .col-title { width: 60%; font-weight: 700; }
+    .col-date{ width:140px; white-space:nowrap; font-weight: 500; }
+    .col-date-header { font-weight: 700; }
     .actions   { width: 15%; text-align: right; }
   </style>
 </head>
@@ -129,48 +124,40 @@
         </div>
 
         <div class="table-wrap">
-          <table>
+          <table class="table-unified">
             <thead>
               <tr>
-                <th>Assigned Proposals</th>
-                <th class="col-date">Assigned Date</th>
+                <th class="col-title">Assigned Proposals</th>
+                <th class="col-date-header">Assigned Date</th>
                 <th class="actions"></th>
               </tr>
             </thead>
+
+            <tbody id="tableBody">
+              {% for a, p in rows %}
+              <tr class="row" data-title="{{ (p.project_title or '')|lower }}">
+                <td class="col-title" style="font-weight:700;">
+                  {{ p.project_title }}
+                </td>
+
+                <td class="col-date">
+                  {{ a.assigned_date.strftime("%d %b %Y, %I:%M %p") if a.assigned_date else "-" }}
+                </td>
+
+                <td class="actions">
+                  <a class="btn-eval"
+                    href="{{ url_for('reviewer_evaluate', proposal_id=p.proposal_id) }}">
+                    Evaluate
+                  </a>
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
           </table>
 
-          <div class="table-scroll">
-            <table>
-              <tbody id="tableBody">
-                {% if rows and rows|length > 0 %}
-                  {% for a, p in rows %}
-                  <tr class="row"
-                      data-title="{{ (p.project_title or '')|lower }}">
-                    <td style="font-weight:700;">{{ p.project_title }}</td>
-
-                    <td class="col-date">
-                      {{ a.assigned_date.strftime("%d %b %Y, %I:%M %p") if a.assigned_date else "-" }}
-                    </td>
-
-                    <td class="actions">
-                        <a class="btn-eval" href="{{ url_for('reviewer_evaluate', proposal_id=p.proposal_id) }}">
-                        Evaluate
-                        </a>
-                    </td>
-                  </tr>
-                  {% endfor %}
-                {% endif %}
-              </tbody>
-            </table>
-
-            {% if not rows or rows|length == 0 %}
-              <div class="empty">No proposals under review yet.</div>
-            {% endif %}
-
-            <div id="emptyState" class="empty" style="display:none;">
-              No proposals match your search.
-            </div>
-          </div>
+          {% if not rows %}
+            <div class="empty">No proposals under review yet.</div>
+          {% endif %}
         </div>
 
       </div>
