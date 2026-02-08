@@ -47,7 +47,7 @@ class User(db.Model, UserMixin):
     id = db.Column(db.String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
     full_name = db.Column(db.String(80), nullable=False)
     email = db.Column(db.String(255), nullable=False, unique=True)
-    password = db.Column(db.String(50), nullable=False)
+    password = db.Column(db.String(255), nullable=False)
 
 class UserProfile(db.Model):
     user_id = db.Column(db.String(36), db.ForeignKey('user.id'), primary_key=True)
@@ -832,6 +832,47 @@ def register():
             return redirect(url_for('login'))
 
     return render_template('register.html', form=form)
+
+@app.route("/change_password", methods=["GET", "POST"])
+@login_required
+def change_password():
+    prof = get_profile(current_user.id)
+    if not prof:
+        flash("Profile not found. Please contact admin.", "error")
+        return redirect(url_for("dashboard"))
+
+    if request.method == "POST":
+        current_pw = (request.form.get("current_password") or "").strip()
+        new_pw = (request.form.get("new_password") or "").strip()
+        confirm_pw = (request.form.get("confirm_password") or "").strip()
+
+        if not current_pw or not new_pw or not confirm_pw:
+            flash("Please fill in all password fields.", "error")
+            return redirect(url_for("change_password"))
+
+        if not bcrypt.check_password_hash(current_user.password, current_pw):
+            flash("Current password is incorrect.", "error")
+            return redirect(url_for("change_password"))
+
+        if new_pw != confirm_pw:
+            flash("New password and confirmation do not match.", "error")
+            return redirect(url_for("change_password"))
+
+        if bcrypt.check_password_hash(current_user.password, new_pw):
+            flash("New password cannot be the same as your current password.", "error")
+            return redirect(url_for("change_password"))
+
+        if len(new_pw) < 6:
+            flash("New password must be at least 6 characters.", "error")
+            return redirect(url_for("change_password"))
+
+        current_user.password = bcrypt.generate_password_hash(new_pw).decode("utf-8")
+        db.session.commit()
+
+        flash("Password has been changed successfully!", "success")
+        return redirect(url_for("view_profile"))
+
+    return render_template("change_password.html", prof=prof, user=current_user)
 
 #---------------------------------------------------------------------------------------------------------
 # RESEARCHER ROUTES
