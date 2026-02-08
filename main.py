@@ -396,7 +396,7 @@ def reviewer_required(fn):
 
 def get_reviewer_by_user(user_id: str):
     return Reviewer.query.filter_by(user_id=user_id).first()
-def log_activity(message, action="INFO", proposal_id=None, actor_user_id=None, commit=False):
+def log_activity(message, action="INFO", proposal_id=None, actor_user_id=None, scheme_id=None, commit=False, **kwargs):
     db.session.add(ActivityLog(
         activity_id=str(uuid.uuid4()),
         action=action,
@@ -1280,107 +1280,121 @@ def admin_grant_create():
     prof = get_profile(current_user.id)
     admin = get_admin_by_user(current_user.id)
 
-    # for the datalist suggestions in your HTML
     departments = Department.query.order_by(Department.department_name.asc()).all()
 
     if not admin:
         flash("Admin record not found for this user.", "error")
         return redirect(url_for("admin_dashboard"))
 
-    if request.method == "POST":
-        department_name = (request.form.get("department_name") or "").strip()
-        description = (request.form.get("description") or "").strip()
-        eligibiliity = (request.form.get("eligibiliity") or "").strip()
-        required_documents = (request.form.get("required_documents") or "").strip()
-        reporting_requirements = (request.form.get("reporting_requirements") or "").strip()
-
-        open_date = parse_date_yyyy_mm_dd(request.form.get("open_date"))
-        close_date = parse_date_yyyy_mm_dd(request.form.get("close_date"))
-
-        max_budget = (request.form.get("max_budget") or "").strip()
-        project_duration_limit = (request.form.get("project_duration_limit") or "").strip()
-
-        action = (request.form.get("action") or "draft").lower()  # draft / confirm
-
-        # -----------------------------
-        # 1) Department: auto-create if missing
-        # -----------------------------
-        if not department_name:
-            flash("Please enter a department name.", "error")
-            return redirect(url_for("admin_grant_create"))
-
-        department = Department.query.filter(
-            db.func.lower(Department.department_name) == department_name.lower()
-        ).first()
-
-        if not department:
-            # Auto-create the department if it doesn't exist
-            department = Department(
-                department_name=department_name,
-                department_description="(Created by Admin)"
-            )
-            db.session.add(department)
-            db.session.commit()
-
-        department_id = department.department_id
-
-        # -----------------------------
-        # 2) Validation rules
-        # -----------------------------
-        if action == "confirm":
-            # require important fields
-            if not (description and eligibiliity and open_date and close_date and max_budget and project_duration_limit):
-                flash("Please fill in all required fields before confirming.", "error")
-                return redirect(url_for("admin_grant_create"))
-
-            if close_date < open_date:
-                flash("Closing date must be after opening date.", "error")
-                return redirect(url_for("admin_grant_create"))
-
-        # convert numbers safely
-        try:
-            max_budget_int = int(max_budget) if max_budget else 0
-            duration_int = int(project_duration_limit) if project_duration_limit else 0
-        except ValueError:
-            flash("Max Budget and Project Duration Limit must be numbers.", "error")
-            return redirect(url_for("admin_grant_create"))
-
-        scheme_status = "DRAFT" if action == "draft" else "OPEN"
-
-        # -----------------------------
-        # 3) Create scheme
-        # -----------------------------
-        scheme = GrantScheme(
-            admin_id=admin.admin_id,
-            department_id=department_id,
-            description=description or "(Draft) - not final",
-            eligibiliity=eligibiliity or "(Draft)",
-            open_date=open_date or datetime.today().date(),
-            close_date=close_date or datetime.today().date(),
-            max_budget=max_budget_int,
-            project_duration_limit=duration_int,
-            required_documents=required_documents or "(Draft)",
-            reporting_requirements=reporting_requirements or "(Draft)",
-            scheme_status=scheme_status
+    # -----------------------------
+    # GET: show form
+    # -----------------------------
+    if request.method == "GET":
+        return render_template(
+            "admin_grant_scheme_create.html",
+            departments=departments,
+            prof=prof
         )
 
-        log_activity(
-            f"Grant scheme created for '{department.department_name}': {scheme.description} ({scheme.scheme_status})",
-            action="CREATE_GRANT_SCHEME",
-            actor_user_id=current_user.id,
-        )
+    # -----------------------------
+    # POST: read inputs
+    # -----------------------------
+    department_name = (request.form.get("department_name") or "").strip()
+    description = (request.form.get("description") or "").strip()
+    eligibiliity = (request.form.get("eligibiliity") or "").strip()
+    required_documents = (request.form.get("required_documents") or "").strip()
+    reporting_requirements = (request.form.get("reporting_requirements") or "").strip()
 
-        db.session.add(scheme)
+    open_date = parse_date_yyyy_mm_dd(request.form.get("open_date"))
+    close_date = parse_date_yyyy_mm_dd(request.form.get("close_date"))
+
+    max_budget_raw = (request.form.get("max_budget") or "").strip()
+    project_duration_raw = (request.form.get("project_duration_limit") or "").strip()
+
+    action = (request.form.get("action") or "draft").lower()  # draft / confirm
+
+    # -----------------------------
+    # 1) Department: required + auto-create if missing
+    # -----------------------------
+    if not department_name:
+        flash("Please enter a department name.", "error")
+        return redirect(url_for("admin_grant_create"))
+
+    department = Department.query.filter(
+        db.func.lower(Department.department_name) == department_name.lower()
+    ).first()
+
+    if not department:
+        department = Department(
+            department_name=department_name,
+            department_description="(Created by Admin)"
+        )
+        db.session.add(department)
         db.session.commit()
 
-        flash("Grant scheme saved!" if action == "draft" else "Grant scheme confirmed and opened!", "success")
-        return redirect(url_for("admin_grants", status="ALL"))
+    department_id = department.department_id
 
-    return render_template(
-        "admin_grant_scheme_create.html",
-        departments=departments,
-        prof=prof
+    # -----------------------------
+    # 2) Validation rules (Draft + Confirm)
+    # -----------------------------
+    # Always validate date order if both are provided
+    if open_date and close_date and close_date < open_date:
+        flash("Closing date must be after opening date.", "error")
+        return redirect(url_for("admin_grant_create"))
+
+    # Only "confirm" requires all required fields
+    if action == "confirm":
+        if not (description and eligibiliity and open_date and close_date and max_budget_raw and project_duration_raw):
+            flash("Please fill in all required fields before confirming.", "error")
+            return redirect(url_for("admin_grant_create"))
+
+    # -----------------------------
+    # 3) Convert numeric fields safely (Draft + Confirm)
+    # -----------------------------
+    try:
+        max_budget_int = int(max_budget_raw) if max_budget_raw else 0
+        duration_int = int(project_duration_raw) if project_duration_raw else 0
+    except ValueError:
+        flash("Max Budget and Project Duration Limit must be numbers.", "error")
+        return redirect(url_for("admin_grant_create"))
+
+    # -----------------------------
+    # 4) Set status
+    # -----------------------------
+    scheme_status = "DRAFT" if action == "draft" else "OPEN"
+
+    # -----------------------------
+    # 5) Create scheme (Draft + Confirm)
+    # -----------------------------
+    scheme = GrantScheme(
+        admin_id=admin.admin_id,
+        department_id=department_id,
+        description=description or "(Draft) - not final",
+        eligibiliity=eligibiliity or "(Draft)",
+        open_date=open_date or datetime.today().date(),
+        close_date=close_date or datetime.today().date(),
+        max_budget=max_budget_int,
+        project_duration_limit=duration_int,
+        required_documents=required_documents or "(Draft)",
+        reporting_requirements=reporting_requirements or "(Draft)",
+        scheme_status=scheme_status
     )
+
+    db.session.add(scheme)
+    db.session.commit()
+
+    # log after commit so scheme exists
+    log_activity(
+        f"Grant scheme created for '{department.department_name}': {scheme.description} ({scheme.scheme_status})",
+        action="CREATE_GRANT_SCHEME",
+        actor_user_id=current_user.id,
+    )
+
+    flash(
+        "Grant scheme saved as draft!" if action == "draft" else "Grant scheme confirmed and opened!",
+        "success"
+    )
+    return redirect(url_for("admin_grants", status="ALL"))
 
 @app.route("/admin/grants/<scheme_id>", methods=["GET", "POST"])
 @login_required

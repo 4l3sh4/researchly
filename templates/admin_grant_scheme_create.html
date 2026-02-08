@@ -124,5 +124,42 @@
       layout.classList.toggle('sidebar-collapsed');
     });
   </script>
+
+  <script>
+    // Date order validation (Draft + Confirm)
+    const form = document.querySelector("form.form");
+    const openInput = document.querySelector('input[name="open_date"]');
+    const closeInput = document.querySelector('input[name="close_date"]');
+
+    function validateDateOrder() {
+      // If inputs not found, don't crash
+      if (!openInput || !closeInput) return true;
+
+      const open = openInput.value;
+      const close = closeInput.value;
+
+      // Only validate when BOTH dates are selected
+      if (open && close && close < open) {
+        closeInput.setCustomValidity("Closing date must be after opening date.");
+        closeInput.reportValidity();
+        return false;
+      }
+
+      closeInput.setCustomValidity("");
+      return true;
+    }
+
+    // Validate when dates change
+    if (openInput) openInput.addEventListener("change", validateDateOrder);
+    if (closeInput) closeInput.addEventListener("change", validateDateOrder);
+
+    // Validate on submit (blocks both Draft and Confirm)
+    if (form) {
+      form.addEventListener("submit", function (e) {
+        if (!validateDateOrder()) e.preventDefault();
+      });
+    }
+  </script>
+
 </body>
 </html>
