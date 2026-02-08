@@ -964,8 +964,9 @@ def create_proposal():
         return redirect(url_for("dashboard"))
 
     schemes = (
-        db.session.query(GrantScheme)
-        .order_by(GrantScheme.scheme_id.asc())
+        db.session.query(GrantScheme, Department)
+        .join(Department, GrantScheme.department_id == Department.department_id)
+        .order_by(Department.department_name.asc(), GrantScheme.open_date.desc())
         .all()
     )
 

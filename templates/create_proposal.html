@@ -134,10 +134,10 @@
           <label class="form-label">Grant Scheme</label>
           <select name="scheme_id" class="form-control">
             <option value="">Select a grant scheme...</option>
-            {% for scheme in schemes %}
+            {% for scheme, dept in schemes %}
               <option value="{{ scheme.scheme_id }}"
                 {% if proposal and proposal.scheme_id == scheme.scheme_id %}selected{% endif %}>
-                {{ scheme.description }}
+                {{ dept.department_name }}
               </option>
             {% endfor %}
           </select>
