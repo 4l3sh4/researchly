@@ -1,0 +1,122 @@
+/* Header controls */
+.proposals-header {
+  display: flex;
+  gap: 14px;
+  align-items: center;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+}
+
+.search-input {
+  flex: 1;
+  min-width: 220px;
+  padding: 10px 14px;
+  border-radius: 12px;
+  border: 2px solid rgba(0,0,0,0.08);
+  font-size: 14px;
+}
+
+.search-input:focus {
+  outline: none;
+  border-color: var(--accent-2);
+}
+
+.filter-dropdown {
+  padding: 10px 14px;
+  border-radius: 12px;
+  border: 2px solid rgba(0,0,0,0.08);
+  background: #fff;
+  font-size: 14px;
+}
+
+.create-btn {
+  padding: 10px 16px;
+  border-radius: 12px;
+  font-weight: 800;
+  text-decoration: none;
+  background: var(--accent-2);
+  color: #fff;
+}
+
+.create-btn:hover {
+  filter: brightness(0.95);
+}
+
+/* Table container */
+.table-card {
+  border-radius: 18px;
+  border: 1px solid rgba(0,0,0,0.08);
+  overflow: hidden;
+  background: #fff;
+}
+
+/* Table */
+.proposals-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+.proposals-table thead {
+  background: #f7f7f7;
+}
+
+.proposals-table th {
+  padding: 16px;
+  text-align: left;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.proposals-table td {
+  padding: 16px;
+  border-top: 1px solid rgba(0,0,0,0.05);
+}
+
+.proposal-name {
+  font-weight: 600;
+  max-width: 260px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Buttons */
+.btn-view {
+  padding: 6px 14px;
+  border-radius: 10px;
+  background: var(--accent-2);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.btn-view:hover {
+  filter: brightness(0.95);
+}
+
+/* Status */
+.status-badge {
+  padding: 6px 12px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.status-pending-review {
+  background: #fff4e6;
+  color: #e39a2d;
+}
+
+.status-under-review,
+.status-approved,
+.status-return-for-revision {
+  background: #e8f5f7;
+  color: var(--accent-2);
+}
+
+.status-rejected {
+  background: #ffe8e8;
+  color: #d85c5c;
+}

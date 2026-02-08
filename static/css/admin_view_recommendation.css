@@ -1,0 +1,40 @@
+/* KEEP TOPBAR & SIDEBAR STATIC */
+html, body {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  overflow: hidden; 
+  background: #f7f7f7;
+}
+
+.topbar {
+  position: sticky;  
+  top: 0;
+  z-index: 1000;
+}
+
+.layout {
+  height: calc(100vh - 64px);   
+  overflow: hidden;             
+  display: grid;
+  grid-template-columns: 280px 1fr;
+  transition: grid-template-columns 0.3s ease;
+}
+
+.sidebar {
+  height: 100%;
+  overflow-y: auto; 
+}
+
+/* ONLY the content section scrolls */
+.content {
+  height: 100%;
+  overflow-y: auto;              
+  padding: 22px 24px 40px;
+}
+
+.content, .sidebar {
+  -webkit-overflow-scrolling: touch;
+}

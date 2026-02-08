@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Create Proposal - Researchly</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/colors.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/research_dashboard.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/research_proposals.css') }}">
+  <style>
+    .proposal-form {
+      max-width: 900px;
+      margin: 0 auto;
+    }
+
+    .form-title {
+      color: var(--accent-2);
+      font-size: 22px;
+      font-weight: 800;
+      margin-bottom: 24px;
+    }
+
+    .back-link {
+      display: inline-block;
+      margin-bottom: 16px;
+      color: var(--accent-2);
+      text-decoration: none;
+      font-weight: 700;
+    }
+
+    .back-link:hover {
+      text-decoration: underline;
+    }
+
+    .form-group {
+      margin-bottom: 18px;
+    }
+
+    .form-label {
+      display: block;
+      font-weight: 700;
+      color: #333;
+      margin-bottom: 6px;
+      font-size: 14px;
+    }
+
+    .form-control {
+      width: 100%;
+      padding: 10px 14px;
+      border: 1px solid rgba(0,0,0,0.12);
+      border-radius: 8px;
+      font-size: 14px;
+      font-family: inherit;
+    }
+
+    .form-control:focus {
+      outline: none;
+      border-color: var(--accent-2);
+      box-shadow: 0 0 0 2px rgba(0,151,178,0.1);
+    }
+
+    textarea.form-control {
+      resize: vertical;
+      min-height: 100px;
+    }
+
+    .form-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+    }
+
+    .upload-section {
+      margin-bottom: 18px;
+    }
+
+    .upload-btn {
+      padding: 8px 16px;
+      border: 2px solid rgba(0,0,0,0.12);
+      border-radius: 8px;
+      background: #fff;
+      cursor: pointer;
+      font-weight: 600;
+      font-size: 14px;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .upload-btn:hover {
+      border-color: var(--accent-2);
+      color: var(--accent-2);
+    }
+
+    .form-actions {
+      display: flex;
+      gap: 12px;
+      margin-top: 24px;
+      justify-content: flex-end;
+    }
+  </style>
+</head>
+<body>
+<header class="topbar">
+  <div class="left">
+    <button class="hamburger" type="button">&#9776;</button>
+    <div class="brand">Researchly™</div>
+  </div>
+  <div class="icons">
+    <span class="icon bell"></span>
+    <a href="{{ url_for('view_profile') }}" class="icon user">
+      {% if prof.profile_picture %}
+        <img class="top-avatar" src="{{ url_for('static', filename='uploads/' ~ prof.profile_picture) }}" alt="Profile">
+      {% else %}
+        <span class="fallback-user">👤</span>
+      {% endif %}
+    </a>
+  </div>
+</header>
+
+<main class="layout">
+  <aside class="sidebar">
+    <a class="side-link" href="{{ url_for('researcher_dashboard') }}">Dashboard</a>
+    <a class="side-link active" href="{{ url_for('researcher_proposals') }}">Proposals</a>
+    <a class="side-link" href="{{ url_for('researcher_projects') }}">Projects</a>
+    <div class="side-spacer"></div>
+    <a class="side-link logout" href="{{ url_for('logout') }}">Logout</a>
+  </aside>
+
+  <section class="content">
+    <div class="card proposal-form">
+      <div style="position:relative;">
+        <a class="back-link" href="{{ url_for('researcher_proposals') }}">← Back</a>
+        <h1 class="form-title">Create Proposal Form</h1>
+      </div>
+
+      <form method="post">
+        <!-- Grant Scheme -->
+        <div class="form-group">
+          <label class="form-label">Grant Scheme</label>
+          <select name="scheme_id" class="form-control form-select" required>
+            <option value="">Select Grant Scheme</option>
+
+            {% for scheme, dept in rows %}
+              <option value="{{ scheme.scheme_id }}">
+                {{ dept.department_name if dept else 'Unknown Department' }}
+              </option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <!-- Title -->
+        <div class="form-group">
+          <label class="form-label">Title</label>
+          <input type="text" name="project_title" class="form-control" placeholder="Project title" required>
+        </div>
+
+        <!-- Abstract -->
+        <div class="form-group">
+          <label class="form-label">Abstract</label>
+          <textarea name="abstract" class="form-control" placeholder="Provide a brief abstract of your proposal" required></textarea>
+        </div>
+
+        <!-- Methodology -->
+        <div class="form-group">
+          <label class="form-label">Methodology</label>
+          <textarea name="methodology" class="form-control" placeholder="Describe your research methodology" required></textarea>
+        </div>
+
+        <!-- Budget Request -->
+        <div class="form-group">
+          <label class="form-label">Budget Request</label>
+          <input type="number" name="requested_budget" class="form-control" placeholder="0" min="0">
+        </div>
+
+        <!-- Expertise Needed (single-line) -->
+        <div class="form-group">
+          <label class="form-label">Expertise Needed</label>
+          <input name="expertise_needed" type="text" class="form-control" placeholder="e.g., UI/UX, AR/VR, Game Design">
+        </div>
+
+        <!-- Attachment(s) -->
+        <div class="form-group upload-section">
+          <label class="form-label">Attachment(s)</label>
+          <button type="button" class="upload-btn">
+            ⬇ Upload
+          </button>
+        </div>
+
+        <!-- Actions -->
+        <div class="form-actions">
+          <button type="button" class="btn ghost" onclick="window.history.back()">Save Draft</button>
+          <button type="submit" class="btn primary">Submit Proposal</button>
+        </div>
+      </form>
+    </div>
+  </section>
+</main>
+</body>
+</html>
