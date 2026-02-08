@@ -4,9 +4,8 @@
   <meta charset="UTF-8">
   <title>Create Proposal - Researchly</title>
   <link rel="stylesheet" href="{{ url_for('static', filename='css/colors.css') }}">
-  <link rel="stylesheet" href="{{ url_for('static', filename='css/research_dashboard.css') }}">
-  <link rel="stylesheet" href="{{ url_for('static', filename='css/research_proposals.css') }}">
-  <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='img/researchly_icon.png') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/researcher_dashboard.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/researcher_proposals.css') }}">
   <style>
     .proposal-form {
       max-width: 900px;
@@ -92,6 +91,13 @@
       color: var(--accent-2);
     }
 
+    .file-list {
+      margin-top: 8px;
+      font-size: 13px;
+      color: #666;
+      word-break: break-word;
+    }
+
     .form-actions {
       display: flex;
       gap: 12px;
@@ -131,19 +137,21 @@
     <div class="card proposal-form">
       <div style="position:relative;">
         <a class="back-link" href="{{ url_for('researcher_proposals') }}">← Back</a>
-        <h1 class="form-title">Create Proposal Form</h1>
+        <h1 class="form-title">
+          {{ "Edit Draft Proposal" if proposal else "Create Proposal Form" }}
+        </h1>
       </div>
 
-      <form method="post">
+      <form method="post" enctype="multipart/form-data" action="{{ form_action }}">
         <!-- Grant Scheme -->
         <div class="form-group">
           <label class="form-label">Grant Scheme</label>
-          <select name="scheme_id" class="form-control form-select" required>
-            <option value="">Select Grant Scheme</option>
-
-            {% for scheme, dept in rows %}
-              <option value="{{ scheme.scheme_id }}">
-                {{ dept.department_name if dept else 'Unknown Department' }}
+          <select name="scheme_id" class="form-control">
+            <option value="">Select a grant scheme...</option>
+            {% for scheme in schemes %}
+              <option value="{{ scheme.scheme_id }}"
+                {% if proposal and proposal.scheme_id == scheme.scheme_id %}selected{% endif %}>
+                {{ scheme.scheme_id }}
               </option>
             {% endfor %}
           </select>
@@ -152,49 +160,99 @@
         <!-- Title -->
         <div class="form-group">
           <label class="form-label">Title</label>
-          <input type="text" name="project_title" class="form-control" placeholder="Project title" required>
+          <input
+            type="text"
+            name="project_title"
+            class="form-control"
+            placeholder="Project title"
+            value="{{ proposal.project_title if proposal else '' }}"
+            required>
         </div>
 
         <!-- Abstract -->
         <div class="form-group">
           <label class="form-label">Abstract</label>
-          <textarea name="abstract" class="form-control" placeholder="Provide a brief abstract of your proposal" required></textarea>
+          <textarea
+            name="abstract"
+            class="form-control"
+            placeholder="Provide a brief abstract of your proposal">{{ proposal.abstract if proposal else '' }}</textarea>
         </div>
 
         <!-- Methodology -->
         <div class="form-group">
           <label class="form-label">Methodology</label>
-          <textarea name="methodology" class="form-control" placeholder="Describe your research methodology" required></textarea>
+          <textarea
+            name="methodology"
+            class="form-control"
+            placeholder="Describe your research methodology">{{ proposal.methodology if proposal else '' }}</textarea>
         </div>
 
         <!-- Budget Request -->
         <div class="form-group">
           <label class="form-label">Budget Request</label>
-          <input type="number" name="requested_budget" class="form-control" placeholder="0" min="0">
+          <input
+            type="number"
+            name="requested_budget"
+            class="form-control"
+            placeholder="0"
+            min="0"
+            value="{{ proposal.requested_budget if proposal else '' }}">
         </div>
 
         <!-- Expertise Needed (single-line) -->
         <div class="form-group">
           <label class="form-label">Expertise Needed</label>
-          <input name="expertise_needed" type="text" class="form-control" placeholder="e.g., UI/UX, AR/VR, Game Design">
+          <input
+            name="expertise_needed"
+            type="text"
+            class="form-control"
+            placeholder="e.g., UI/UX, AR/VR, Game Design"
+            value="{{ proposal.expertise_needed if proposal else '' }}">
         </div>
 
         <!-- Attachment(s) -->
         <div class="form-group upload-section">
           <label class="form-label">Attachment(s)</label>
-          <button type="button" class="upload-btn">
+          <input
+            type="file"
+            id="attachments"
+            name="attachments"
+            class="file-input"
+            multiple
+            hidden>
+          <button type="button" class="upload-btn" id="uploadBtn">
             ⬇ Upload
           </button>
+          <div id="fileList" class="file-list"></div>
         </div>
 
         <!-- Actions -->
         <div class="form-actions">
-          <button type="button" class="btn ghost" onclick="window.history.back()">Save Draft</button>
-          <button type="submit" class="btn primary">Submit Proposal</button>
+          <button type="submit" class="btn ghost" name="action" value="draft">Save Draft</button>
+          <button type="submit" class="btn primary" name="action" value="submit">Submit Proposal</button>
         </div>
       </form>
     </div>
   </section>
 </main>
+
+<script>
+  const uploadBtn = document.getElementById("uploadBtn");
+  const attachments = document.getElementById("attachments");
+  const fileList = document.getElementById("fileList");
+
+  uploadBtn.addEventListener("click", () => {
+    attachments.click();
+  });
+
+  attachments.addEventListener("change", () => {
+    if (!attachments.files || attachments.files.length === 0) {
+      fileList.textContent = "";
+      return;
+    }
+    const names = Array.from(attachments.files).map((file) => file.name);
+    fileList.textContent = names.join(", ");
+  });
+</script>
 </body>
 </html>
