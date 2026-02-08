@@ -5,7 +5,7 @@ from flask_wtf import FlaskForm
 from wtforms import StringField, PasswordField, SubmitField
 from wtforms.validators import InputRequired, Length, ValidationError
 from flask_bcrypt import Bcrypt
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from flask import request, abort, flash
 from functools import wraps
 from werkzeug.utils import secure_filename
@@ -273,6 +273,17 @@ class ProgressReport(db.Model):
     submission_date = db.Column(db.DateTime, default=lambda:datetime.now(timezone.utc), nullable=False)
     status = db.Column(db.String(50), nullable=False)
     hod_comments = db.Column(db.String(500), nullable=False)
+
+class ProgressReportAttachment(db.Model):
+    attachment_id = db.Column(db.String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    progress_id = db.Column(
+        db.String(36),
+        db.ForeignKey('progress_report.progress_id'),
+        nullable=False
+    )
+    stored_filename = db.Column(db.String(255), nullable=False)
+    original_filename = db.Column(db.String(255), nullable=False)
+    uploaded_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc), nullable=False)
 
 class Notification(db.Model):
     notification_id = db.Column(db.String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
@@ -1317,6 +1328,33 @@ def view_project(project_id):
         .order_by(ProgressReport.period_start_date.desc())
         .all()
     )
+    report_lookup = {
+        (report.period_start_date, report.period_end_date): report
+        for report in reports
+    }
+
+    weekly_periods = []
+    if project.start_date and project.end_date:
+        today = datetime.now(timezone.utc).date()
+        period_end_limit = min(project.end_date, today)
+        week_start = project.start_date
+
+        while week_start <= period_end_limit:
+            week_end = min(week_start + timedelta(days=6), project.end_date)
+            weekly_periods.append(
+                {
+                    "start": week_start,
+                    "end": week_end,
+                    "report": report_lookup.get((week_start, week_end)),
+                    "allow_create": False,
+                }
+            )
+            week_start = week_end + timedelta(days=1)
+
+    for period in reversed(weekly_periods):
+        if period["report"] is None:
+            period["allow_create"] = True
+            break
 
     return render_template(
         "view_project.html",
@@ -1326,6 +1364,7 @@ def view_project(project_id):
         proposal=proposal,
         attachments=attachments,
         reports=reports,
+        weekly_periods=weekly_periods,
     )
 
 
@@ -1381,6 +1420,15 @@ def create_progress_report(project_id):
                 form_data=request.form,
             )
 
+        existing_report = ProgressReport.query.filter_by(
+            project_id=project.project_id,
+            period_start_date=start_date,
+            period_end_date=end_date,
+        ).first()
+        if existing_report:
+            flash("A report for this period already exists.", "error")
+            return redirect(url_for("view_project", project_id=project.project_id))
+
         report = ProgressReport(
             project_id=project.project_id,
             researcher_id=researcher.researcher_id,
@@ -1399,13 +1447,18 @@ def create_progress_report(project_id):
         flash("Progress report submitted.", "success")
         return redirect(url_for("view_project", project_id=project.project_id))
 
+    form_data = {
+        "period_start_date": request.args.get("start", ""),
+        "period_end_date": request.args.get("end", ""),
+    }
+
     return render_template(
         "create_progress_report.html",
         user=current_user,
         prof=prof,
         project=project,
         proposal=proposal,
-        form_data={},
+        form_data=form_data,
     )
 
 
@@ -1431,6 +1484,7 @@ def view_progress_report(project_id, progress_id):
         abort(404)
 
     proposal = Proposal.query.get(project.proposal_id)
+    attachments = ProgressReportAttachment.query.filter_by(progress_id=report.progress_id).all()
 
     return render_template(
         "view_progress_report.html",
@@ -1439,6 +1493,7 @@ def view_progress_report(project_id, progress_id):
         project=project,
         proposal=proposal,
         report=report,
+        attachments=attachments,
     )
 
 #---------------------------------------------------------------------------------------------------------

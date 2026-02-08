@@ -72,6 +72,20 @@
                     <div class="detail-title">Resource Usage</div>
                     <div class="detail-text">{{ report.resource_usage }}</div>
                 </div>
+                {% if attachments %}
+                <div class="detail-block">
+                    <div class="detail-title">Attachment(s)</div>
+                    <div class="detail-text">
+                        <div class="doc-pills">
+                            {% for attachment in attachments %}
+                                <a class="doc-pill" href="{{ url_for('static', filename='uploads/' ~ attachment.stored_filename) }}" target="_blank" rel="noopener">
+                                    {{ attachment.original_filename }}
+                                </a>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
                 {% if report.hod_comments %}
                 <div class="detail-block">
                     <div class="detail-title">HOD Comments</div>
