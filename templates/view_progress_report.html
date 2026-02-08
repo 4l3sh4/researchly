@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Progress Report - Researchly</title>
+
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/colors.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/researcher_dashboard.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/researcher_projects.css') }}">
+    <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='img/researchly_icon.png') }}">
+</head>
+
+<body>
+<header class="topbar">
+    <div class="left">
+        <button class="hamburger" type="button">&#9776;</button>
+        <div class="brand">Researchly™</div>
+    </div>
+
+    <div class="icons">
+        <a href="{{ url_for('notifications') }}" class="icon bell"></a>
+        <a href="{{ url_for('view_profile') }}" class="icon user">
+            {% if prof.profile_picture %}
+                <img class="top-avatar"
+                     src="{{ url_for('static', filename='uploads/' ~ prof.profile_picture) }}"
+                     alt="Profile">
+            {% else %}
+                <span class="fallback-user">👤</span>
+            {% endif %}
+        </a>
+    </div>
+</header>
+
+<main class="layout">
+    <aside class="sidebar">
+        <a class="side-link" href="{{ url_for('researcher_dashboard') }}">Researcher Dashboard</a>
+        <a class="side-link" href="{{ url_for('researcher_proposals') }}">Proposals</a>
+        <a class="side-link active" href="{{ url_for('researcher_projects') }}">Projects</a>
+        <a class="side-link" href="{{ url_for('researcher_grant_schemes') }}">Grant Scheme</a>
+
+        <div class="side-spacer"></div>
+        <a class="side-link logout" href="{{ url_for('logout') }}">Logout</a>
+    </aside>
+
+    <section class="content">
+        <div class="card">
+            <div class="card-top">
+                <div>
+                    <div class="eyebrow">Progress Report</div>
+                    <h1 class="project-title">{{ proposal.project_title }}</h1>
+                    <div class="report-period">
+                        {{ report.period_start_date.strftime('%m/%d/%Y') }} – {{ report.period_end_date.strftime('%m/%d/%Y') }}
+                    </div>
+                </div>
+                <a class="back-link" href="{{ url_for('view_project', project_id=project.project_id) }}">← Back</a>
+            </div>
+
+            <div class="report-detail">
+                <div class="detail-block">
+                    <div class="detail-title">Summary</div>
+                    <div class="detail-text">{{ report.summary }}</div>
+                </div>
+                <div class="detail-block">
+                    <div class="detail-title">Milestones Achieved</div>
+                    <div class="detail-text">{{ report.milestones_achieved }}</div>
+                </div>
+                <div class="detail-block">
+                    <div class="detail-title">Challenges</div>
+                    <div class="detail-text">{{ report.challenges }}</div>
+                </div>
+                <div class="detail-block">
+                    <div class="detail-title">Resource Usage</div>
+                    <div class="detail-text">{{ report.resource_usage }}</div>
+                </div>
+                {% if report.hod_comments %}
+                <div class="detail-block">
+                    <div class="detail-title">HOD Comments</div>
+                    <div class="detail-text">{{ report.hod_comments }}</div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </section>
+</main>
+</body>
+</html>

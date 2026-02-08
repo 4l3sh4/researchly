@@ -57,8 +57,29 @@
 
             <div class="project-grid">
                 <div class="overview-card">
-                    <h2>Abstract</h2>
-                    <p class="overview-text">{{ proposal.abstract }}</p>
+                    <h2>Project Details</h2>
+                    {% if proposal %}
+                        <div class="detail-block">
+                            <div class="detail-title">Abstract</div>
+                            <div class="detail-text">{{ proposal.abstract or "No abstract provided." }}</div>
+                        </div>
+                        <div class="detail-block">
+                            <div class="detail-title">Methodology</div>
+                            <div class="detail-text">{{ proposal.methodology or "No methodology provided." }}</div>
+                        </div>
+                        <div class="detail-block">
+                            <div class="detail-title">Requested Budget</div>
+                            <div class="detail-text">${{ "{:,}".format(proposal.requested_budget or 0) }}</div>
+                        </div>
+                        <div class="detail-block">
+                            <div class="detail-title">Project Timeline</div>
+                            <div class="detail-text detail-text-tight">
+                                {{ project.start_date.strftime('%m/%d/%Y') }} – {{ project.end_date.strftime('%m/%d/%Y') }}
+                            </div>
+                        </div>
+                    {% else %}
+                        <p class="overview-text">Project details are not available.</p>
+                    {% endif %}
 
                     <div class="doc-pills">
                         {% if attachments %}
@@ -74,7 +95,10 @@
                 </div>
 
                 <div class="reports-card">
-                    <h2>Progress Reports</h2>
+                    <div class="reports-header">
+                        <h2>Progress Reports</h2>
+                        <a class="report-create" href="{{ url_for('create_progress_report', project_id=project.project_id) }}">Create</a>
+                    </div>
                     <div class="reports-list">
                         {% if reports %}
                             {% for report in reports %}
@@ -85,7 +109,7 @@
                                     –
                                     {{ report.period_end_date.strftime('%m/%d/%Y') }}
                                 </span>
-                                <button class="report-btn" type="button">View</button>
+                                <a class="report-btn" href="{{ url_for('view_progress_report', project_id=project.project_id, progress_id=report.progress_id) }}">View</a>
                             </div>
                             {% endfor %}
                         {% else %}

@@ -1328,6 +1328,119 @@ def view_project(project_id):
         reports=reports,
     )
 
+
+@app.route("/researcher/projects/<project_id>/reports/new", methods=["GET", "POST"])
+@login_required
+def create_progress_report(project_id):
+    prof = get_profile(current_user.id)
+    if not prof or prof.role != "RESEARCHER":
+        flash("Access denied. Researcher role required.", "error")
+        return redirect(url_for("dashboard"))
+
+    researcher = get_researcher(current_user.id)
+    if not researcher:
+        flash("Researcher profile not found.", "error")
+        return redirect(url_for("dashboard"))
+
+    project = Project.query.get(project_id)
+    if not project or project.researcher_id != researcher.researcher_id:
+        abort(404)
+
+    proposal = Proposal.query.get(project.proposal_id)
+
+    if request.method == "POST":
+        period_start = (request.form.get("period_start_date") or "").strip()
+        period_end = (request.form.get("period_end_date") or "").strip()
+        summary = (request.form.get("summary") or "").strip()
+        milestones = (request.form.get("milestones_achieved") or "").strip()
+        challenges = (request.form.get("challenges") or "").strip()
+        resource_usage = (request.form.get("resource_usage") or "").strip()
+
+        if not all([period_start, period_end, summary, milestones, challenges, resource_usage]):
+            flash("Please complete all progress report fields.", "error")
+            return render_template(
+                "create_progress_report.html",
+                user=current_user,
+                prof=prof,
+                project=project,
+                proposal=proposal,
+                form_data=request.form,
+            )
+
+        try:
+            start_date = datetime.strptime(period_start, "%Y-%m-%d").date()
+            end_date = datetime.strptime(period_end, "%Y-%m-%d").date()
+        except ValueError:
+            flash("Please provide valid start and end dates.", "error")
+            return render_template(
+                "create_progress_report.html",
+                user=current_user,
+                prof=prof,
+                project=project,
+                proposal=proposal,
+                form_data=request.form,
+            )
+
+        report = ProgressReport(
+            project_id=project.project_id,
+            researcher_id=researcher.researcher_id,
+            period_start_date=start_date,
+            period_end_date=end_date,
+            summary=summary,
+            milestones_achieved=milestones,
+            challenges=challenges,
+            resource_usage=resource_usage,
+            status="Submitted",
+            hod_comments="",
+        )
+
+        db.session.add(report)
+        db.session.commit()
+        flash("Progress report submitted.", "success")
+        return redirect(url_for("view_project", project_id=project.project_id))
+
+    return render_template(
+        "create_progress_report.html",
+        user=current_user,
+        prof=prof,
+        project=project,
+        proposal=proposal,
+        form_data={},
+    )
+
+
+@app.route("/researcher/projects/<project_id>/reports/<progress_id>")
+@login_required
+def view_progress_report(project_id, progress_id):
+    prof = get_profile(current_user.id)
+    if not prof or prof.role != "RESEARCHER":
+        flash("Access denied. Researcher role required.", "error")
+        return redirect(url_for("dashboard"))
+
+    researcher = get_researcher(current_user.id)
+    if not researcher:
+        flash("Researcher profile not found.", "error")
+        return redirect(url_for("dashboard"))
+
+    project = Project.query.get(project_id)
+    if not project or project.researcher_id != researcher.researcher_id:
+        abort(404)
+
+    report = ProgressReport.query.get(progress_id)
+    if not report or report.project_id != project.project_id:
+        abort(404)
+
+    proposal = Proposal.query.get(project.proposal_id)
+
+    return render_template(
+        "view_progress_report.html",
+        user=current_user,
+        prof=prof,
+        project=project,
+        proposal=proposal,
+        report=report,
+    )
+
 #---------------------------------------------------------------------------------------------------------
 # ADMIN ROUTES
 #---------------------------------------------------------------------------------------------------------
