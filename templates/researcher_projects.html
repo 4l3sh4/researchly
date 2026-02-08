@@ -4,8 +4,9 @@
     <meta charset="UTF-8">
     <title>Projects</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/colors.css') }}">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/research_dashboard.css') }}">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/research_projects.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/researcher_dashboard.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/researcher_projects.css') }}">
+    <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='img/researchly_icon.png') }}">
 </head>
 <body>
 
@@ -13,7 +14,7 @@
     <div class="menu-icon">☰</div>
     <div class="logo">Researchly™</div>
     <div class="icons">
-        <div class="icon bell"></div>
+        <a href="{{ url_for('notifications') }}" class="icon bell"></a>
         <div class="icon user"></div>
     </div>
 </div>

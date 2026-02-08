@@ -328,3 +328,27 @@ a.icon {
   border-radius: 50%;
   border: 2px solid #fff;
 }
+
+/* Apply Button */
+.btn {
+  padding: 12px 28px;
+  background: linear-gradient(135deg, var(--accent-2), #0d8a85);
+  color: #fff;
+  border: none;
+  border-radius: 10px;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 8px rgba(15,167,161,0.2);
+}
+
+.btn:hover {
+  background: linear-gradient(135deg, #0d8a85, #0a6b67);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(15,167,161,0.3);
+}
+
+.btn:active {
+  transform: translateY(0);
+}
