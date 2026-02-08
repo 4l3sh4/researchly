@@ -7,7 +7,6 @@
 
   <link rel="stylesheet" href="{{ url_for('static', filename='css/reviewer_dashboard.css') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/colors.css') }}">
-  <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='img/researchly_icon.png') }}">
 
   <style>
     .toolbar{
@@ -82,11 +81,30 @@
       font-size:32px;
       font-weight:1000;
     }
+    .col-title { width: 60%; }
+    .col-date  { width: 25%; text-align: left; white-space: nowrap; }
+    .actions   { width: 15%; text-align: right; }
   </style>
 </head>
 
 <body>
-  {% include "_topbar.html" %}
+  <header class="topbar">
+    <div class="left">
+      <button class="hamburger" type="button" id="hamburger">&#9776;</button>
+      <div class="brand">Researchly™</div>
+    </div>
+
+    <div class="icons">
+      <span class="icon bell" title="Notifications"></span>
+      <a href="{{ url_for('view_profile') }}" class="icon user" title="Profile">
+        {% if prof and prof.profile_picture %}
+          <img class="top-avatar" src="{{ url_for('static', filename='uploads/' ~ prof.profile_picture) }}" alt="Profile">
+        {% else %}
+          <span class="fallback-user">👤</span>
+        {% endif %}
+      </a>
+    </div>
+  </header>
 
   <main class="layout" id="layout">
     <aside class="sidebar" id="sidebar">

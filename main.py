@@ -3132,36 +3132,71 @@ def reviewer_dashboard():
 @reviewer_required
 def reviewer_assigned_proposals():
     rv = get_reviewer_by_user(current_user.id)
+    if not rv:
+        flash("Reviewer record missing. Contact admin.", "error")
+        return redirect(url_for("dashboard"))
 
+    # UI inputs
     q = (request.args.get("q") or "").strip()
-    status = (request.args.get("status") or "ALL").upper()
+    status_ui = (request.args.get("status") or "ALL").strip().upper()
 
+    allowed = {"ALL", "PENDING", "ACCEPTED", "DECLINED"}
+    if status_ui not in allowed:
+        status_ui = "ALL"
+
+    # Base query: this reviewer only
     query = (
         db.session.query(ReviewersAssignment, Proposal)
         .join(Proposal, Proposal.proposal_id == ReviewersAssignment.proposal_id)
         .filter(ReviewersAssignment.reviewer_id == rv.reviewer_id)
     )
 
-    if status != "ALL":
-        query = query.filter(db.func.upper(ReviewersAssignment.assignment_status) == status)
+    # Status filter (UI -> DB mapping)
+    if status_ui == "PENDING":
+        query = query.filter(func.upper(func.trim(ReviewersAssignment.assignment_status)) == "ASSIGNED")
+    elif status_ui in {"ACCEPTED", "DECLINED"}:
+        query = query.filter(func.upper(func.trim(ReviewersAssignment.assignment_status)) == status_ui)
+    # ALL -> no filter
 
+    # Search
     if q:
-        like = f"%{q}%"
-        query = query.filter(Proposal.project_title.ilike(like))
+        query = query.filter(Proposal.project_title.ilike(f"%{q}%"))
 
-    rows = query.order_by(ReviewersAssignment.assigned_date.desc()).all()
+    results = query.order_by(ReviewersAssignment.assigned_date.desc()).all()
 
-    return render_template("reviewer_assigned_proposals.html", rows=rows, q=q, status=status)
+    # Build view rows
+    rows = []
+    for assignment, proposal in results:
+        raw = (assignment.assignment_status or "").upper().strip()
+        display_status = "Pending" if raw == "ASSIGNED" else raw.title()
 
+        rows.append({
+            "id": proposal.proposal_id,
+            "title": proposal.project_title,
+            "status": display_status,
+            "raw_status": raw,
+            "assigned_date": assignment.assigned_date,
+        })
 
+    # Nice label for header
+    status_label = "All" if status_ui == "ALL" else status_ui.title()
 
-@app.route("/reviewer/assignments/view/<proposal_id>")
+    return render_template(
+        "reviewer_assigned_proposals.html",
+        rows=rows,
+        q=q,
+        status=status_ui,          # keep for dropdown selected
+        status_label=status_label  # display string
+    )
+
+@app.route("/reviewer/assignments/view/<proposal_id>", methods=["GET", "POST"])
 @login_required
 @reviewer_required
 def reviewer_assignment_view(proposal_id):
     rv = get_reviewer_by_user(current_user.id)
+    if not rv:
+        abort(403)
 
-    # ensure this proposal is actually assigned to this reviewer
     row = (
         db.session.query(ReviewersAssignment, Proposal)
         .join(Proposal, Proposal.proposal_id == ReviewersAssignment.proposal_id)
@@ -3171,20 +3206,58 @@ def reviewer_assignment_view(proposal_id):
         )
         .first()
     )
-
     if not row:
         abort(404)
 
     assignment, proposal = row
 
-    # format for your template (you used proposal.title/status)
+    raw = (assignment.assignment_status or "").upper().strip()
+
+    # normalize legacy junk
+    if raw == "REJECTED":
+        raw = "DECLINED"
+        assignment.assignment_status = "DECLINED"
+        db.session.commit()
+
+    # IMPORTANT: pending in DB is "ASSIGNED"
+    is_pending = (raw == "ASSIGNED")
+
+    if request.method == "POST":
+        decision = (request.form.get("decision") or "").upper().strip()
+        if decision == "REJECTED":
+            decision = "DECLINED"
+
+        if decision not in {"ACCEPTED", "DECLINED"}:
+            abort(400)
+
+        # only allow response if still pending (ASSIGNED)
+        if not is_pending:
+            flash("You already responded to this assignment.", "error")
+            return redirect(url_for("reviewer_assignment_view", proposal_id=proposal_id))
+
+        assignment.assignment_status = decision
+        db.session.commit()
+
+        flash("Assignment updated.", "success")
+        return redirect(url_for("reviewer_assignment_view", proposal_id=proposal_id))
+
+    display_status = {
+        "ASSIGNED": "Pending",
+        "ACCEPTED": "Accepted",
+        "DECLINED": "Declined",
+    }.get(raw, "Pending")
+
     view_model = {
         "id": proposal.proposal_id,
         "title": proposal.project_title,
-        "status": assignment.assignment_status.title(),  # ASSIGNED -> Assigned
+        "status": display_status,     # UI label
         "abstract": proposal.abstract,
         "methodology": proposal.methodology,
-        "assignment_status": assignment.assignment_status,  # raw
+        "assignment_status": raw,     # RAW logic
+        "attachments": [
+            {"name": "Proposal.pdf", "url": "#"},
+            {"name": "Budget_plan.pdf", "url": "#"},
+        ],
     }
 
     return render_template("reviewer_assignment_view.html", proposal=view_model)
@@ -3200,7 +3273,11 @@ def reviewer_under_review():
         .join(Proposal, Proposal.proposal_id == ReviewersAssignment.proposal_id)
         .filter(
             ReviewersAssignment.reviewer_id == rv.reviewer_id,
-            ReviewersAssignment.assignment_status == "ACCEPTED"
+            func.upper(ReviewersAssignment.assignment_status) == "ACCEPTED",
+            ~exists().where(and_(
+                Review.proposal_id == ReviewersAssignment.proposal_id,
+                Review.reviewer_id == ReviewersAssignment.reviewer_id
+            ))
         )
         .order_by(ReviewersAssignment.assigned_date.desc())
         .all()
@@ -3241,6 +3318,10 @@ def reviewer_evaluate(proposal_id):
         feedback = (request.form.get("feedback") or "").strip()
         recommendation = (request.form.get("recommendation") or "").upper()
 
+        if len(feedback) < 30:
+            flash("Feedback is too short. Provide at least 30 characters.", "error")
+            return redirect(request.url)
+
         if not feedback:
             flash("Feedback cannot be empty.", "error")
             return redirect(request.url)
@@ -3262,7 +3343,13 @@ def reviewer_evaluate(proposal_id):
         )
 
         db.session.add(review)
-        db.session.flush()  # review now exists in the transaction (no early commit)
+        assignment.assignment_status = "COMPLETED"
+        db.session.commit()
+        
+        # Notify researcher about the submitted review
+        researcher = Researcher.query.get(proposal.researcher_id)
+        if researcher:
+            db.session.flush()  # review now exists in the transaction (no early commit)
 
         # ---- Find targets ----
         researcher_user_id = get_researcher_user_id_from_proposal(proposal)
