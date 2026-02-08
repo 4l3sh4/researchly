@@ -15,25 +15,7 @@
 	{% set role_label = 'HOD' if role == 'HOD' else role|title %}
 
 	<!-- Topbar -->
-	<header class="topbar">
-		<div class="left">
-			<button class="hamburger" type="button" aria-label="Menu" id="hamburger">&#9776;</button>
-			<div class="brand">Researchly™</div>
-		</div>
-
-		<div class="icons">
-			<a href="{{ url_for('notifications') }}" class="icon bell" title="Notifications"></a>
-			<a href="{{ url_for('view_profile') }}" class="icon user" title="Profile">
-				{% if prof.profile_picture %}
-					<img class="top-avatar"
-						src="{{ url_for('static', filename='uploads/' ~ prof.profile_picture) }}"
-						alt="Profile">
-				{% else %}
-					<span class="fallback-user">👤</span>
-				{% endif %}
-			</a>
-		</div>
-	</header>
+	{% include "_topbar.html" %}
 
 	<main class="layout" id="layout">
 		<!-- Sidebar -->
@@ -71,22 +53,49 @@
 
 		<!-- Content -->
 		<section class="content">
-			<h1 class="page-title">Notifications</h1>
+  			<div class="page-head">
+    			<h1 class="page-title">Notifications</h1>
 
-			<div class="notice-card">
-				{% if notifications %}
-					{% for n in notifications %}
-						<div class="notice-row">
-							<span class="notice-text">{{ n.message }}</span>
-							<span class="notice-arrow"></span>
-						</div>
-					{% endfor %}
-				{% else %}
-					<div class="notice-row">
-						<span class="notice-text">No notifications received</span>
-					</div>
-				{% endif %}
-			</div>
+    			{% if notifications %}
+      				<form method="POST" action="{{ url_for('mark_all_notifications_read') }}">
+        				<button class="btn-outline" type="submit">Mark all as read</button>
+      				</form>
+    			{% endif %}
+  			</div>
+
+  			<div class="notice-card">
+    			{% if notifications %}
+      				{% for n in notifications %}
+        				<div class="notice-row {{ 'unread' if not n.is_read else '' }}">
+          					<div class="notice-main">
+            					<span class="notice-text">{{ n.message }}</span>
+
+            					<div class="notice-meta">
+              						{% if n.created_at %}
+                						{{ n.created_at.strftime("%d %b %Y, %I:%M %p") }}
+              						{% endif %}
+              						{% if n.notif_type %}
+                						<span class="type-pill {{ (n.notif_type or '')|lower }}">{{ n.notif_type }}</span>
+              						{% endif %}
+            					</div>
+          					</div>
+
+          					<div class="notice-actions">
+            					{% if not n.is_read %}
+              						<form method="POST" action="{{ url_for('mark_notification_read', notif_id=n.notification_id) }}">
+                						<button class="btn-link" type="submit">Mark read</button>
+              						</form>
+            					{% endif %}
+            					<span class="notice-arrow"></span>
+          					</div>
+        				</div>
+      				{% endfor %}
+    			{% else %}
+      				<div class="notice-row">
+        				<span class="notice-text">No notifications received</span>
+      				</div>
+    			{% endif %}
+  			</div>
 		</section>
 	</main>
 

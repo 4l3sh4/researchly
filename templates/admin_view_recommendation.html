@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Reviewer Recommendation</title>
+
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/colors.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/admin_view_recommendation.css') }}">
+</head>
+
+<body>
+  <!-- Topbar -->
+  <header class="topbar">
+    <div class="left">
+      <button class="hamburger" type="button" aria-label="Menu" id="hamburger">&#9776;</button>
+      <div class="brand">Researchly™</div>
+    </div>
+
+    <div class="icons">
+      <a class="icon bell" title="Notifications" href="{{ url_for('notifications') }}"></a>
+
+      <a href="{{ url_for('view_profile') }}" class="icon user" title="Profile">
+        {% if prof and prof.profile_picture %}
+          <img class="top-avatar"
+               src="{{ url_for('static', filename='uploads/' ~ prof.profile_picture) }}"
+               alt="Profile">
+        {% else %}
+          <span class="avatar-fallback" aria-hidden="true"></span>
+        {% endif %}
+      </a>
+
+      <a class="logout" href="{{ url_for('logout') }}" title="Logout">Logout</a>
+    </div>
+  </header>
+
+  <div class="layout">
+    <!-- Sidebar -->
+    <aside class="sidebar" id="sidebar">
+      <nav class="nav">
+        <a href="{{ url_for('admin_dashboard') }}" class="nav-link">Dashboard</a>
+        <a href="{{ url_for('admin_users') }}" class="nav-link">User Management</a>
+        <a href="{{ url_for('admin_grants') }}" class="nav-link">Grant Schemes</a>
+        <a href="{{ url_for('admin_assign_reviewers') }}" class="nav-link">Assign Reviewers</a>
+        <a href="{{ url_for('admin_final_approval_list') }}" class="nav-link">Final Approval</a>
+        <a href="{{ url_for('admin_funding_list') }}" class="nav-link">Funding</a>
+      </nav>
+    </aside>
+
+    <!-- Main -->
+    <main class="content">
+      <div class="content-inner">
+
+        <a class="back-link" href="{{ url_for('admin_view_proposal', proposal_id=proposal.proposal_id) }}">
+          &#8592; Back to Proposal
+        </a>
+
+        <div class="page-head">
+          <div>
+            <h1 class="title">Reviewer Recommendation</h1>
+            <p class="subtitle">All reviewer feedback submitted for this proposal.</p>
+          </div>
+
+          <div class="badge-wrap">
+            {% set st = (proposal.proposal_status or '') %}
+            <span class="status-badge">{{ st }}</span>
+          </div>
+        </div>
+
+        <!-- Proposal summary -->
+        <section class="card">
+          <div class="card-head">
+            <h2 class="card-title">Proposal Summary</h2>
+          </div>
+
+          <div class="grid">
+            <div class="field">
+              <div class="label">Project Title</div>
+              <div class="value">{{ proposal.project_title }}</div>
+            </div>
+
+            <div class="field">
+              <div class="label">Department</div>
+              <div class="value">{{ dept.department_name if dept else '-' }}</div>
+            </div>
+
+            <div class="field">
+              <div class="label">Grant Scheme</div>
+              <div class="value">{{ scheme.description if scheme else '-' }}</div>
+            </div>
+
+            <div class="field">
+              <div class="label">Requested Budget</div>
+              <div class="value">
+                {% if proposal.requested_budget is not none %}
+                  RM {{ "{:,}".format(proposal.requested_budget) }}
+                {% else %}
+                  -
+                {% endif %}
+              </div>
+            </div>
+
+            <div class="field">
+              <div class="label">Researcher ID</div>
+              <div class="value">{{ proposal.researcher_id }}</div>
+            </div>
+
+            <div class="field">
+              <div class="label">Submission Date</div>
+              <div class="value">
+                {% if proposal.submission_date %}
+                  {{ proposal.submission_date.strftime("%d %b %Y, %I:%M %p") }}
+                {% else %}
+                  -
+                {% endif %}
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- Reviews -->
+        <section class="card">
+          <div class="card-head">
+            <h2 class="card-title">Reviews</h2>
+            <div class="card-meta">
+              {{ reviews|length }} review(s)
+            </div>
+          </div>
+
+          {% if reviews and reviews|length > 0 %}
+            <div class="table-wrap">
+              <table class="table">
+                <thead>
+                  <tr>
+                    <th style="width: 210px;">Review Date</th>
+                    <th style="width: 200px;">Reviewer</th>
+                    <th style="width: 170px;">Recommendation</th>
+                    <th>Feedback</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {% for r in reviews %}
+                    <tr>
+                      <td>
+                        {% if r.review_date %}
+                          {{ r.review_date.strftime("%d %b %Y, %I:%M %p") }}
+                        {% else %}
+                          -
+                        {% endif %}
+                      </td>
+                      <td class="mono">{{ r.reviewer_id }}</td>
+                      <td>
+                        <span class="pill {{ (r.recommendation or '')|lower }}">
+                          {{ r.recommendation }}
+                        </span>
+                      </td>
+                      <td class="wrap">{{ r.feedback }}</td>
+                    </tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+            </div>
+          {% else %}
+            <div class="empty">
+              <div class="empty-title">No reviews yet</div>
+              <div class="empty-sub">This proposal has not received any reviewer submission.</div>
+            </div>
+          {% endif %}
+        </section>
+
+      </div>
+    </main>
+  </div>
+
+  <script>
+    // simple sidebar toggle (optional)
+    const hamburger = document.getElementById("hamburger");
+    const sidebar = document.getElementById("sidebar");
+    if (hamburger && sidebar) {
+      hamburger.addEventListener("click", () => sidebar.classList.toggle("open"));
+    }
+  </script>
+</body>
+</html>

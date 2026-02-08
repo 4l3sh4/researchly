@@ -12,29 +12,9 @@
 
 <body>
   <!-- Top bar (same structure as admin_dashboard.html) -->
-  <header class="topbar">
-    <div class="left">
-      <button class="hamburger" type="button" aria-label="Menu" id="hamburger">&#9776;</button>
-      <div class="brand">Researchly™</div>
-    </div>
-
-    <div class="icons">
-      <a href="{{ url_for('notifications') }}" class="icon bell" title="Notifications"></a>
-
-      <a href="{{ url_for('view_profile') }}" class="icon user" title="Profile">
-        {% if prof and prof.profile_picture %}
-          <img class="top-avatar"
-               src="{{ url_for('static', filename='uploads/' ~ prof.profile_picture) }}"
-               alt="Profile">
-        {% else %}
-          <span class="fallback-user">👤</span>
-        {% endif %}
-      </a>
-    </div>
-  </header>
+  {% include "_topbar.html" %}
 
   <main class="layout" id="layout">
-    <!-- ✅ Sidebar (same feel as other pages) -->
     <aside class="sidebar" id="sidebar">
       <a class="side-link" href="{{ url_for('admin_dashboard') }}">Admin Dashboard</a>
       <a class="side-link" href="{{ url_for('admin_users', status='PENDING') }}">User Management</a>
