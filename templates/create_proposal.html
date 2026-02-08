@@ -126,9 +126,10 @@
 
 <main class="layout">
   <aside class="sidebar">
-    <a class="side-link" href="{{ url_for('researcher_dashboard') }}">Dashboard</a>
+    <a class="side-link" href="{{ url_for('researcher_dashboard') }}">Research Dashboard</a>
     <a class="side-link active" href="{{ url_for('researcher_proposals') }}">Proposals</a>
     <a class="side-link" href="{{ url_for('researcher_projects') }}">Projects</a>
+    <a class="side-link" href="{{ url_for('researcher_grant_schemes') }}">Grant Scheme</a>
     <div class="side-spacer"></div>
     <a class="side-link logout" href="{{ url_for('logout') }}">Logout</a>
   </aside>
@@ -151,7 +152,7 @@
             {% for scheme in schemes %}
               <option value="{{ scheme.scheme_id }}"
                 {% if proposal and proposal.scheme_id == scheme.scheme_id %}selected{% endif %}>
-                {{ scheme.scheme_id }}
+                {{ scheme.description }}
               </option>
             {% endfor %}
           </select>
