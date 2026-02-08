@@ -18,7 +18,7 @@
     </div>
 
     <div class="icons">
-      <span class="icon bell" title="Notifications"></span>
+      <a href="{{ url_for('notifications') }}" class="icon bell" title="Notifications"></a>
       <a href="{{ url_for('view_profile') }}" class="icon user" title="Profile">
         {% if prof and prof.profile_picture %}
           <img class="top-avatar"

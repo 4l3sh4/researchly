@@ -407,6 +407,20 @@ def log_activity(message, action="INFO", proposal_id=None, actor_user_id=None, c
     if commit:
         db.session.commit()
 
+def create_notification(user_id: str, message: str, notif_type: str = "INFO", commit=False):
+    """Helper function to create a notification for a user."""
+    notification = Notification(
+        user_id=user_id,
+        message=message,
+        notif_type=notif_type,
+        created_at=datetime.now(timezone.utc),
+        is_read=False
+    )
+    db.session.add(notification)
+    if commit:
+        db.session.commit()
+    return notification
+
 from flask import abort
 
 def get_or_404(model, pk):
@@ -571,6 +585,25 @@ def view_profile():
         bank=bank
     )
 
+@app.route("/notifications")
+@login_required
+def notifications():
+    prof = get_profile(current_user.id)
+    if not prof:
+        flash("Profile not found. Please contact admin.", "error")
+        return redirect(url_for("dashboard"))
+
+    notifications_list = (Notification.query
+        .filter_by(user_id=current_user.id)
+        .order_by(Notification.created_at.desc())
+        .all())
+
+    return render_template(
+        "notifications.html",
+        prof=prof,
+        notifications=notifications_list
+    )
+
 @app.route("/edit_profile", methods=["GET", "POST"])
 @login_required
 def edit_profile():
@@ -649,6 +682,15 @@ def edit_profile():
             prof.expertise_tags = (request.form.get("expertise_tags") or "").strip()
 
         db.session.commit()
+        
+        # Create notification for profile update
+        create_notification(
+            user_id=current_user.id,
+            message="You've successfully updated your profile.",
+            notif_type="PROFILE",
+            commit=True
+        )
+        
         flash("Profile updated successfully!", "success")
         return redirect(url_for("view_profile"))
 
@@ -791,6 +833,15 @@ def create_proposal():
         )
         db.session.add(new)
         db.session.commit()
+        
+        # Create notification for researcher
+        create_notification(
+            user_id=current_user.id,
+            message=f"Your proposal '{title}' has been successfully submitted and is pending review.",
+            notif_type="PROPOSAL",
+            commit=True
+        )
+        
         flash("Proposal submitted successfully.", "success")
         return redirect(url_for("researcher_proposals"))
 
@@ -1644,6 +1695,14 @@ def admin_funding_allocate(proposal_id):
                 proposal_id=proposal.proposal_id,
                 actor_user_id=current_user.id
             )
+            # Notify researcher about funding confirmation
+            researcher = Researcher.query.get(proposal.researcher_id)
+            if researcher:
+                create_notification(
+                    user_id=researcher.user_id,
+                    message=f"Funding of ${total_amount:,} has been confirmed for your project '{proposal.project_title}'.",
+                    notif_type="FUNDING"
+                )
 
         db.session.commit()
 
@@ -1848,6 +1907,17 @@ def admin_final_approval_detail(proposal_id):
         )
 
         db.session.commit()
+        
+        # Notify the researcher about the decision
+        researcher = Researcher.query.get(proposal.researcher_id)
+        if researcher:
+            decision_text = "approved" if decision == "APPROVED" else "rejected"
+            create_notification(
+                user_id=researcher.user_id,
+                message=f"Your proposal '{proposal.project_title}' has been {decision_text}.",
+                notif_type="DECISION",
+                commit=True
+            )
 
         flash(f"Final decision recorded: {decision}", "success")
         return redirect(url_for("admin_final_approval_list"))
@@ -2026,6 +2096,12 @@ def admin_assign_reviewer_detail(proposal_id):
                     action="ASSIGN_REVIEWER",
                     proposal_id=proposal.proposal_id,
                     actor_user_id=current_user.id
+                )
+                # Notify the reviewer about the assignment
+                create_notification(
+                    user_id=reviewer_user.id,
+                    message=f"You have been assigned to review proposal '{proposal.project_title}'.",
+                    notif_type="ASSIGNMENT"
                 )
 
         db.session.commit()
@@ -2664,6 +2740,16 @@ def reviewer_evaluate(proposal_id):
         )
         db.session.add(review)
         db.session.commit()
+        
+        # Notify researcher about the submitted review
+        researcher = Researcher.query.get(proposal.researcher_id)
+        if researcher:
+            create_notification(
+                user_id=researcher.user_id,
+                message=f"A review has been submitted for your proposal '{proposal.project_title}'.",
+                notif_type="REVIEW",
+                commit=True
+            )
 
         flash("Review submitted successfully.", "success")
         return redirect(url_for("reviewer_under_review"))

@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8" />
+	<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+	<title>Active Project - Researchly</title>
+
+	<link rel="stylesheet" href="{{ url_for('static', filename='css/hod_view_active_projects.css') }}">
+	<link rel="stylesheet" href="{{ url_for('static', filename='css/colors.css') }}">
+</head>
+
+<body>
+	<!-- Top bar -->
+	<header class="topbar">
+		<div class="left">
+			<button class="hamburger" type="button" aria-label="Menu" id="hamburger">&#9776;</button>
+			<div class="brand">Researchly™</div>
+		</div>
+
+		<div class="icons">
+			<a href="{{ url_for('notifications') }}" class="icon bell" title="Notifications"></a>
+			<a href="{{ url_for('view_profile') }}" class="icon user" title="Profile">
+				{% if prof.profile_picture %}
+					<img class="top-avatar"
+						src="{{ url_for('static', filename='uploads/' ~ prof.profile_picture) }}"
+						alt="Profile">
+				{% else %}
+					<span class="fallback-user">👤</span>
+				{% endif %}
+			</a>
+		</div>
+	</header>
+
+	<main class="layout" id="layout">
+		<!-- Sidebar -->
+		<aside class="sidebar" id="sidebar">
+			<a class="side-link" href="{{ url_for('hod_dashboard') }}">HOD Dashboard</a>
+			<a class="side-link" href="{{ url_for('hod_department_overview') }}">Department<br/>Overview</a>
+			<a class="side-link active" href="{{ url_for('hod_active_projects') }}">Active Projects</a>
+			<a class="side-link" href="{{ url_for('hod_review_proposals') }}">Review Proposals</a>
+			<a class="side-link" href="{{ url_for('hod_reviewers') }}">Reviewers</a>
+			<a class="side-link" href="{{ url_for('hod_researchers') }}">Researchers</a>
+
+			<div class="side-spacer"></div>
+			<a class="side-link logout" href="{{ url_for('logout') }}">Logout</a>
+		</aside>
+
+		<!-- Content -->
+		<section class="content">
+			<div class="project-header">
+				<div>
+					<div class="eyebrow">Active Project</div>
+					<h1 class="project-title">{{ project_title or "Intelligent Voice-Controlled Wheelchair" }}</h1>
+					<div class="project-meta">
+						<div class="avatar">
+							{% if project_owner_picture %}
+								<img src="{{ url_for('static', filename='uploads/' ~ project_owner_picture) }}" alt="Creator">
+							{% else %}
+								<span class="fallback-user">👤</span>
+							{% endif %}
+						</div>
+						<div class="meta-text">
+							<div class="meta-name">Created by {{ project_owner_name or "Hank Green" }}</div>
+							<div class="meta-date">{{ project_start or "12/1/2025" }} – {{ project_end or "12/1/2030" }}</div>
+						</div>
+					</div>
+				</div>
+			</div>
+
+			<div class="project-grid">
+				<div class="overview-card">
+					<h2>Overview</h2>
+					<div class="overview-body">
+						<h3>Abstract</h3>
+						<p>
+							{{ project_abstract or "This research introduces an intelligent voice-controlled wheelchair system that empowers individuals with limited mobility by translating spoken commands into wheelchair movement, offering a user-friendly, hands-free alternative to joystick controls. The system integrates a speech recognition module with a microcontroller (e.g., Arduino, Raspberry Pi) to interpret commands like 'forward,' 'stop,' and 'turn left/right,' controlling DC motors for navigation. Key features include integrated ultrasonic sensors for automatic obstacle detection and audible warnings, enhancing safety and usability for everyday environments." }}
+						</p>
+					</div>
+					<div class="doc-pills">
+						<span class="doc-pill">Proposal.pdf</span>
+						<span class="doc-pill">Budget_plan.pdf</span>
+					</div>
+				</div>
+
+				<div class="reports-card">
+					<h2>Progress Reports</h2>
+					<div class="reports-list">
+						<div class="report-row">
+							<span class="report-index">6</span>
+							<span class="report-date">12/6/2025 – 12/7/2025</span>
+							<button class="report-btn has-alert" type="button">View</button>
+						</div>
+						<div class="report-row">
+							<span class="report-index">5</span>
+							<span class="report-date">12/5/2025 – 12/6/2025</span>
+							<button class="report-btn" type="button">View</button>
+						</div>
+						<div class="report-row">
+							<span class="report-index">4</span>
+							<span class="report-date">12/4/2025 – 12/5/2025</span>
+							<button class="report-btn" type="button">View</button>
+						</div>
+						<div class="report-row">
+							<span class="report-index">3</span>
+							<span class="report-date">12/3/2025 – 12/4/2025</span>
+							<button class="report-btn" type="button">View</button>
+						</div>
+						<div class="report-row">
+							<span class="report-index">2</span>
+							<span class="report-date">12/2/2025 – 12/3/2025</span>
+							<button class="report-btn" type="button">View</button>
+						</div>
+						<div class="report-row">
+							<span class="report-index">1</span>
+							<span class="report-date">12/1/2025 – 12/2/2025</span>
+							<button class="report-btn" type="button">View</button>
+						</div>
+					</div>
+				</div>
+			</div>
+		</section>
+	</main>
+
+	<script>
+		const hamburger = document.getElementById('hamburger');
+		const sidebar = document.getElementById('sidebar');
+		const layout = document.getElementById('layout');
+
+		hamburger.addEventListener('click', () => {
+			sidebar.classList.toggle('collapsed');
+			layout.classList.toggle('sidebar-collapsed');
+		});
+	</script>
+</body>
+</html>
