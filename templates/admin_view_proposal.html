@@ -4,18 +4,149 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>View Proposal</title>
+
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/admin_view_proposal.css') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/colors.css') }}">
 </head>
-<body style="font-family:Segoe UI, Arial, sans-serif; padding:24px;">
 
-  <h2>{{ proposal.project_title }}</h2>
+<body>
+  <!-- Top bar (same structure as admin pages) -->
+  <header class="topbar">
+    <div class="left">
+      <button class="hamburger" type="button" aria-label="Menu" id="hamburger">&#9776;</button>
+      <div class="brand">Researchly™</div>
+    </div>
 
-  <p><b>Department:</b> {{ dept.department_name if dept else "-" }}</p>
-  <p><b>Abstract:</b><br>{{ proposal.abstract }}</p>
-  <p><b>Methodology:</b><br>{{ proposal.methodology }}</p>
-  <p><b>Requested Budget:</b> RM {{ proposal.requested_budget }}</p>
+    <div class="icons">
+      <span class="icon bell" title="Notifications"></span>
 
-  <br>
-  <a href="javascript:history.back()">← Back</a>
+      <a href="{{ url_for('view_profile') }}" class="icon user" title="Profile">
+        {% if prof and prof.profile_picture %}
+          <img class="top-avatar"
+               src="{{ url_for('static', filename='uploads/' ~ prof.profile_picture) }}"
+               alt="Profile">
+        {% else %}
+          <span class="fallback-user">👤</span>
+        {% endif %}
+      </a>
+    </div>
+  </header>
+
+  <main class="layout" id="layout">
+    <!-- Sidebar -->
+    <aside class="sidebar" id="sidebar">
+      <a class="side-link" href="{{ url_for('admin_dashboard') }}">Admin Dashboard</a>
+      <a class="side-link" href="{{ url_for('admin_users', status='PENDING') }}">User Management</a>
+      <a class="side-link" href="{{ url_for('admin_grants', status='ALL') }}">Grant Scheme<br/>Management</a>
+
+      <a class="side-link" href="{{ url_for('admin_funding_list', dept='ALL') }}">Funding Allocation</a>
+      <a class="side-link" href="{{ url_for('admin_final_approval_list', dept='ALL') }}">Final Approval<br/>Decision</a>
+      <a class="side-link" href="{{ url_for('admin_assign_reviewers', dept='ALL') }}">Assign Reviewers</a>
+      <a class="side-link active" href="{{ url_for('admin_proposal_list') }}">Proposal List</a>
+
+      <div class="side-spacer"></div>
+      <a class="side-link logout" href="{{ url_for('logout') }}">Logout</a>
+    </aside>
+
+    <!-- Content -->
+    <section class="content">
+      <div class="page-wrap">
+
+        <div class="page-head">
+          <h1>View Proposal</h1>
+
+          {# optional status pill if you have proposal_status/display_status #}
+          {% set st = (proposal.proposal_status or proposal.display_status or '') %}
+          {% if st %}
+            <span class="status-pill {{ st|lower|replace(' ', '-') }}">{{ st }}</span>
+          {% endif %}
+        </div>
+
+        <form class="card form">
+          <div class="row">
+            <label>Title</label>
+            <input type="text" value="{{ proposal.project_title }}" disabled>
+          </div>
+
+          <div class="row">
+            <label>Abstract</label>
+            <textarea disabled>{{ proposal.abstract }}</textarea>
+          </div>
+
+          <div class="row">
+            <label>Methodology</label>
+            <textarea disabled>{{ proposal.methodology }}</textarea>
+          </div>
+
+          <div class="row">
+            <label>Budget Requested (RM)</label>
+            <input type="number" value="{{ proposal.requested_budget or 0 }}" disabled>
+          </div>
+
+          <div class="row">
+            <label>Expertise Needed</label>
+            <input type="text" value="{{ proposal.expertise_needed or '' }}" disabled>
+          </div>
+
+          <div class="row">
+            <label>Submission Date</label>
+            <input type="text"
+              value="{% if proposal.submission_date %}{{ proposal.submission_date.strftime('%Y-%m-%d %H:%M') }}{% else %}-{% endif %}"
+              disabled>
+          </div>
+
+          <div class="row">
+            <label>Attachment(s)</label>
+
+            <div class="attachments">
+              {# ---- Option A: proposal.supporting_documents is a comma-separated string ---- #}
+              {% if proposal.supporting_documents %}
+                {% set files = proposal.supporting_documents.split(',') %}
+                {% for f in files %}
+                  {% set fname = f.strip() %}
+                  {% if fname %}
+                    <a class="file-link"
+                       href="{{ url_for('static', filename='uploads/' ~ fname) }}"
+                       target="_blank" rel="noopener">
+                      {{ fname }}
+                      <span class="open-tag">OPEN</span>
+                    </a>
+                  {% endif %}
+                {% endfor %}
+
+              {# ---- Option B: single filename field (change to your actual field if needed) ---- #}
+              {% elif proposal.attachment %}
+                <a class="file-link"
+                   href="{{ url_for('static', filename='uploads/' ~ proposal.attachment) }}"
+                   target="_blank" rel="noopener">
+                  {{ proposal.attachment }}
+                  <span class="open-tag">OPEN</span>
+                </a>
+
+              {% else %}
+                <div class="no-file">No attachments uploaded.</div>
+              {% endif %}
+            </div>
+          </div>
+
+          <div class="actions-row">
+            <a class="btn ghost" href="{{ url_for('admin_proposal_list') }}">Back</a>
+          </div>
+        </form>
+
+      </div>
+    </section>
+  </main>
+
+  <script>
+    const hamburger = document.getElementById('hamburger');
+    const sidebar = document.getElementById('sidebar');
+    const layout = document.getElementById('layout');
+
+    hamburger.addEventListener('click', () => {
+      sidebar.classList.toggle('collapsed');
+      layout.classList.toggle('sidebar-collapsed');
+    });
+  </script>
 </body>
 </html>

@@ -45,14 +45,29 @@ body{ margin:0; min-height:100vh; background:#f7f7f7; }
 
 /* TOPBAR */
 .topbar{
-  height:64px; padding:0 18px; display:flex; align-items:center; justify-content:space-between;
-  background: linear-gradient(90deg, var(--accent-2), var(--accent-1)); color:#fff;
+  height:64px; 
+  padding:0 18px; 
+  display:flex; 
+  align-items:center; 
+  justify-content:space-between;
+  background: linear-gradient(90deg, var(--accent-2), var(--accent-1)); 
+  color:#fff;
 }
-.topbar .left{ display:flex; align-items:center; gap:14px; }
+
+.topbar .left{ display:flex; 
+  align-items:center; 
+  gap:14px; }
+
 .hamburger{
-  border:none; background:transparent; color:#fff; font-size:28px; cursor:pointer;
-  padding:6px 10px; border-radius:10px;
+  border:none; 
+  background:transparent; 
+  color:#fff; 
+  font-size:28px; 
+  cursor:pointer;
+  padding:6px 10px; 
+  border-radius:10px;
 }
+
 .hamburger:hover{ background: rgba(255,255,255,0.15); }
 .brand{ font-size:30px; font-weight:800; letter-spacing:0.3px; }
 .icons{ display:flex; gap:14px; align-items:center; }
@@ -75,6 +90,7 @@ body{ margin:0; min-height:100vh; background:#f7f7f7; }
 .sidebar.collapsed{ transform: translateX(-100%); width: 0; overflow: hidden; }
 .side-link{
   display:block; padding:18px 22px; color:#fff; text-decoration:none;
+  font-weight:700; font-size:22px; line-height:1.1;
   font-weight:700; font-size:22px; line-height:1.1; white-space: nowrap;
 }
 .side-link:hover{ background: rgba(255,255,255,0.16); }
@@ -170,22 +186,24 @@ body{ margin:0; min-height:100vh; background:#f7f7f7; }
   border-top: 1px solid #eee;
   vertical-align: middle;
 }
-.col-dept{ width: 240px; }
-.col-action{ width: 140px; }
-.dept{ color:#111; font-weight: 600; }
-.actions{ text-align:right; }
 
-.btn{
+.col-status{ width: 240px; }
+
+/* Make rows clickable like your earlier design */
+.row-click{ cursor: pointer; }
+.row-click:hover{ background: rgba(0,0,0,0.02); }
+
+/* STATUS PILL (matches your reference screenshot) */
+.status-pill{
   display:inline-block;
-  background:#19a5a5;
-  color:#fff;
-  text-decoration:none;
-  font-weight:900;
-  padding: 10px 18px;
-  border-radius: 10px;
+  padding: 10px 16px;
+  border-radius: 999px;
+  font-weight: 900;
+  color: #0f8f8f;
+  background: rgba(25,165,165,0.12);
 }
-.btn:hover{ filter: brightness(0.95); }
 
+/* empty state */
 .empty{
   text-align:center;
   color:#777;
@@ -196,4 +214,63 @@ body{ margin:0; min-height:100vh; background:#f7f7f7; }
   .layout{ grid-template-columns: 1fr; }
   .sidebar{ display:none; }
   .filter{ min-width: 160px; }
+}
+
+/* base pill */
+.status-pill{
+  display:inline-block;
+  padding: 10px 16px;
+  border-radius: 999px;
+  font-weight: 900;
+  border: 1px solid transparent;
+}
+
+/* Pending states */
+.status-pending-assignment{
+  color:#0f8f8f;
+  background: rgba(25,165,165,0.12);
+  border-color: rgba(25,165,165,0.18);
+}
+
+.status-pending-review{
+  color:#1463a1;
+  background: rgba(30,144,255,0.14);
+  border-color: rgba(30,144,255,0.22);
+}
+
+.status-pending-endorsement{
+  color:#6b36c5;
+  background: rgba(160,90,255,0.14);
+  border-color: rgba(160,90,255,0.22);
+}
+
+.status-pending-approval{
+  color:#a86b00;
+  background: rgba(255,165,0,0.16);
+  border-color: rgba(255,165,0,0.25);
+}
+
+.status-pending-funding{
+  color:#7a5a00;
+  background: rgba(255, 206, 86, 0.22);
+  border-color: rgba(255, 206, 86, 0.35);
+}
+
+/* Final states */
+.status-approved{
+  color:#008a55;
+  background: rgba(0,160,90,0.14);
+  border-color: rgba(0,160,90,0.22);
+}
+
+.status-rejected{
+  color:#b42318;
+  background: rgba(255, 0, 0, 0.10);
+  border-color: rgba(255, 0, 0, 0.18);
+}
+
+.status-funded{
+  color:#0a7a7a;
+  background: rgba(25,165,165,0.18);
+  border-color: rgba(25,165,165,0.28);
 }

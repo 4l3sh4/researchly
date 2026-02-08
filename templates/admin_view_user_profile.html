@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>View Profile</title>
+
+  <!-- keep same global colors file -->
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/colors.css') }}">
+
+  <!-- page css for admin viewing a user -->
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/admin_view_user_profile.css') }}">
+</head>
+
+<body>
+  <header class="topbar">
+    <div class="left">
+      <button class="hamburger" type="button" aria-label="Menu">&#9776;</button>
+      <div class="brand">Researchly™</div>
+    </div>
+
+    <div class="icons">
+      <span class="icon bell" title="Notifications"></span>
+
+      <a href="{{ url_for('view_profile') }}" class="icon user" title="Profile">
+        {% if prof.profile_picture %}
+          <img class="top-avatar"
+            src="{{ url_for('static', filename='uploads/' ~ prof.profile_picture) }}"
+            alt="Profile">
+        {% else %}
+          <span class="fallback-user">👤</span>
+        {% endif %}
+      </a>
+    </div>
+  </header>
+
+  <main class="page">
+    <h2 class="title">View Profile</h2>
+
+    <div class="layout">
+      <section class="profile-card">
+        <div class="profile-top">
+          <!-- Target user's avatar -->
+          <div class="avatar">
+            <div class="avatar-circle">
+              {% if target_prof and target_prof.profile_picture %}
+                <img class="avatar-img"
+                  src="{{ url_for('static', filename='uploads/' ~ target_prof.profile_picture) }}"
+                  alt="Profile picture">
+              {% else %}
+                <div class="avatar-head"></div>
+                <div class="avatar-body"></div>
+              {% endif %}
+            </div>
+          </div>
+
+          <!-- Target user's name + badges -->
+          <div class="top-info">
+            <div class="name">{{ user.full_name }}</div>
+
+            <div class="badges">
+              {% if target_prof and target_prof.role %}
+                <span class="pill teal">
+                  {{ "Head of Department" if target_prof.role == "HOD" else target_prof.role|capitalize }}
+                </span>
+              {% endif %}
+
+              {% if target_prof and target_prof.role != "ADMIN" and target_prof.department_name %}
+                <span class="pill pill-dept">{{ target_prof.department_name }}</span>
+              {% endif %}
+            </div>
+          </div>
+
+          <!-- Target user's address -->
+          <div class="address-block">
+            <div class="label">Address</div>
+            <div class="value">{{ target_prof.address or "-" }}</div>
+          </div>
+        </div>
+
+        <!-- Body grid -->
+        <div class="grid">
+          <div class="col">
+            <div class="label">Contact Number</div>
+            <div class="value">{{ target_prof.contact_number or "-" }}</div>
+
+            <div class="label" style="margin-top:18px;">Email</div>
+            <div class="value">{{ user.email or "-" }}</div>
+
+            {% if target_prof and target_prof.role == "REVIEWER" %}
+              <div class="label" style="margin-top:18px;">Expertise</div>
+
+              {% set tags = (target_prof.expertise_tags or "").split(",") %}
+              <div class="value">
+                {% if target_prof.expertise_tags %}
+                  <div style="display:flex; flex-wrap:wrap; gap:8px; margin-top:6px;">
+                    {% for t in tags %}
+                      {% set clean = t.strip() %}
+                      {% if clean %}
+                        <span class="pill pill-exp">{{ clean }}</span>
+                      {% endif %}
+                    {% endfor %}
+                  </div>
+                {% else %}
+                  -
+                {% endif %}
+              </div>
+            {% endif %}
+
+            {% if target_prof and target_prof.role == "RESEARCHER" %}
+              <div class="bank-title">
+                <span class="bank-icon">Ⓢ</span> Bank Account Details
+              </div>
+
+              <div class="bank-grid">
+                <div>
+                  <div class="label">Account Number</div>
+                  <div class="value">{{ bank.bank_account_number if bank else '-' }}</div>
+                </div>
+                <div>
+                  <div class="label">Bank Name</div>
+                  <div class="value">{{ bank.bank_name if bank else '-' }}</div>
+                </div>
+              </div>
+            {% endif %}
+          </div>
+
+          <div class="col">
+            <div class="label">Emergency Contact Name</div>
+            <div class="value">{{ target_prof.emergency_contact_name or "-" }}</div>
+
+            <div class="label" style="margin-top:18px;">Emergency Contact Number</div>
+            <div class="value">{{ target_prof.emergency_contact_number or "-" }}</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Admin actions -->
+      <aside class="actions">
+        <a class="btn primary" href="{{ url_for('admin_users', status='ACTIVE') }}">Back to User Management</a>
+        <a class="btn ghost" href="{{ url_for('admin_dashboard') }}">Back to Admin Dashboard</a>
+      </aside>
+    </div>
+  </main>
+</body>
+</html>

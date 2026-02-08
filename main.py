@@ -9,9 +9,19 @@ from datetime import datetime, timezone
 from flask import request, abort, flash
 from functools import wraps
 from werkzeug.utils import secure_filename
-from sqlalchemy import func
+from sqlalchemy import exists, and_, or_, func
 import uuid
 import os
+
+DISPLAY_STATUS_OPTIONS = [
+    "Pending Assignment",
+    "Pending Review",
+    "Pending Endorsement",
+    "Pending Approval",
+    "Pending Funding",
+    "Rejected",
+    "Funded",
+]
 
 app = Flask(__name__)
 
@@ -135,6 +145,7 @@ class Proposal(db.Model):
     abstract = db.Column(db.String(500), nullable=False)
     methodology = db.Column(db.String(500), nullable=False)
     requested_budget = db.Column(db.Integer, nullable=False)
+    expertise_needed = db.Column(db.String(500), nullable=True)
     submission_date = db.Column(db.DateTime, nullable=False)
     proposal_status = db.Column(db.String(15), nullable=False)
 
@@ -263,6 +274,16 @@ class Notification(db.Model):
     created_at = db.Column(db.DateTime, default=lambda:datetime.now(timezone.utc), nullable=False)
     is_read = db.Column(db.Boolean, default=False, nullable=False)
 
+class ActivityLog(db.Model):
+    __tablename__ = "activity_log"
+    activity_id = db.Column(db.String, primary_key=True)
+    created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+
+    actor_user_id = db.Column(db.String, nullable=True)     
+    proposal_id = db.Column(db.String, nullable=True)       
+    action = db.Column(db.String, nullable=False)           
+    message = db.Column(db.String, nullable=False)          
+
 @login_manager.user_loader
 def load_user(user_id):
     # Flask-Login uses this to reload the user from the session
@@ -357,49 +378,113 @@ def compute_reviewer_recommendation(proposal_id: str) -> str:
     other = len(reviews) - approve
     return "Recommended" if approve >= other else "Not Recommended"
 
+def is_reviewer_user(user: User) -> bool:
+    prof = get_profile(user.id)
+    if not prof or prof.account_status != "ACTIVE" or prof.role != "REVIEWER":
+        return False
+    return Reviewer.query.filter_by(user_id=user.id).first() is not None
+
+def reviewer_required(fn):
+    @wraps(fn)
+    def wrapper(*args, **kwargs):
+        if not current_user.is_authenticated:
+            return login_manager.unauthorized()
+        if not is_reviewer_user(current_user):
+            abort(403)
+        return fn(*args, **kwargs)
+    return wrapper
+
+def get_reviewer_by_user(user_id: str):
+    return Reviewer.query.filter_by(user_id=user_id).first()
+def log_activity(message, action="INFO", proposal_id=None, actor_user_id=None, commit=False):
+    db.session.add(ActivityLog(
+        activity_id=str(uuid.uuid4()),
+        action=action,
+        message=message,
+        proposal_id=proposal_id,
+        actor_user_id=actor_user_id
+    ))
+    if commit:
+        db.session.commit()
+
+from flask import abort
+
+def get_or_404(model, pk):
+    obj = db.session.get(model, pk)
+    if not obj:
+        abort(404)
+    return obj
+
 @app.context_processor
 def inject_profile():
     if current_user.is_authenticated:
         return {"prof": get_profile(current_user.id)}
     return {"prof": None}
 
+from typing import Union
+
+def compute_proposal_display_status(p_or_id: Union["Proposal", str]) -> str:
+    # Accept either Proposal object or proposal_id string
+    if isinstance(p_or_id, str):
+        p = db.session.get(Proposal, p_or_id)
+        if not p:
+            return "Unknown"
+    else:
+        p = p_or_id
+
+    pid = p.proposal_id
+
+    # 1) If proposal_status already stores an end-state, trust it
+    st = (p.proposal_status or "").upper().strip()
+    if st in {"FUNDED", "REJECTED"}:
+        return st.title()  # Funded / Rejected
+
+    # 2) Funding confirmed? (Project + FundingAllocation exists)
+    project = Project.query.filter_by(proposal_id=pid).first()
+    if project:
+        alloc = FundingAllocation.query.filter_by(project_id=project.project_id).first()
+        if alloc and (alloc.allocation_status or "").upper() == "CONFIRMED":
+            return "Funded"
+
+    # 3) Final decision exists?
+    final = FinalDecision.query.filter_by(proposal_id=pid).first()
+    if final:
+        if (final.decision or "").upper() == "APPROVED":
+            # If not funded yet, it's pending funding
+            project = Project.query.filter_by(proposal_id=pid).first()
+            if project:
+                alloc = FundingAllocation.query.filter_by(project_id=project.project_id).first()
+                if alloc and (alloc.allocation_status or "").upper() == "CONFIRMED":
+                    return "Funded"
+            return "Pending Funding"
+        return "Rejected"
+
+    # 4) HoD endorsement exists?
+    hod = HODEndorsement.query.filter_by(proposal_id=pid).first()
+    if hod:
+        if (hod.decision or "").upper() == "ENDORSE":
+            return "Pending Approval"
+        return "Rejected"
+
+    # 5) Reviewer assignments exist?
+    assignments = ReviewersAssignment.query.filter_by(proposal_id=pid).all()
+    if not assignments:
+        return "Pending Assignment"
+
+    # 6) Reviews progress
+    reviews = Review.query.filter_by(proposal_id=pid).all()
+    if not reviews:
+        return "Pending Review"
+
+    if len(reviews) >= len(assignments):
+        return "Pending Endorsement"
+
+    return "Pending Review"
+
 @app.route("/")
 def home():
     return redirect(url_for("register"))
 
-# @app.route('/login', methods=['GET', 'POST'])
-# def login():
-#     form = LoginForm()
-#     error_message = None
-
-#     if form.validate_on_submit():
-#         user = User.query.filter_by(email=form.email.data).first()
-
-#         if user and bcrypt.check_password_hash(user.password, form.password.data):
-#             prof = get_profile(user.id)
-
-#             if not prof:
-#                 error_message = "Profile not found. Please contact admin."
-#             elif prof.account_status != "ACTIVE":
-#                 error_message = "Your account is not active yet. Please wait for admin approval."
-#             else:
-#                 login_user(user)
-
-#                 # Force complete profile first (ALL roles)
-#                 if profile_needs_setup(prof):
-#                     flash("Please complete your profile before continuing.", "info")
-#                     return redirect(url_for("edit_profile"))
-
-#                 # then normal routing
-#                 if prof.role == "ADMIN":
-#                     return redirect(url_for("admin_users"))
-#                 return redirect(url_for("dashboard"))
-#         else:
-#             error_message = "Invalid email or password. Please try again."
-
-#     return render_template('login.html', form=form, error_message=error_message)
-
-# Temporary to allow seed_demo_data.py
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     form = LoginForm()
@@ -408,16 +493,7 @@ def login():
     if form.validate_on_submit():
         user = User.query.filter_by(email=form.email.data).first()
 
-        # Accept BOTH bcrypt-hash passwords and plain-text demo passwords
-        ok = False
-        if user:
-            try:
-                ok = bcrypt.check_password_hash(user.password, form.password.data)
-            except ValueError:
-                # stored password is not a bcrypt hash (e.g. "demo")
-                ok = (user.password == form.password.data)
-
-        if user and ok:
+        if user and bcrypt.check_password_hash(user.password, form.password.data):
             prof = get_profile(user.id)
 
             if not prof:
@@ -426,7 +502,14 @@ def login():
                 error_message = "Your account is not active yet. Please wait for admin approval."
             else:
                 login_user(user)
-                
+                # Route based on role
+                if prof.role == "ADMIN":
+                    return redirect(url_for("admin_users"))
+                  
+                elif prof.role == "RESEARCHER":
+                    return redirect(url_for("researcher_dashboard"))
+                return redirect(url_for('dashboard'))
+
                 # Force complete profile first (ALL roles)
                 if profile_needs_setup(prof):
                     flash("Please complete your profile before continuing.", "info")
@@ -461,6 +544,10 @@ def dashboard():
     # HOD -> go to HOD dashboard
     if prof.role == "HOD":
         return redirect(url_for("hod_dashboard"))
+    
+    # Reviewer -> go to reviewer dashboard
+    if prof.role == "REVIEWER":
+        return redirect(url_for("reviewer_dashboard"))
 
     # Others -> normal dashboard (for now reuse the same template or create user_dashboard.html later)
     return render_template("dashboard.html")
@@ -506,6 +593,7 @@ def edit_profile():
         else:
             prof.department_name = None
 
+        import time
         # profile picture upload
         file = request.files.get("profile_picture")
         if file and file.filename:
@@ -517,6 +605,13 @@ def edit_profile():
             filename = secure_filename(f"{current_user.id}.{ext}")  # stable name per user
             save_path = os.path.join(app.config["UPLOAD_FOLDER"], filename)
             file.save(save_path)
+
+            old = prof.profile_picture
+            if old:
+                old_path = os.path.join(app.config["UPLOAD_FOLDER"], old)
+                if os.path.exists(old_path):
+                    os.remove(old_path)
+
             prof.profile_picture = filename
 
         # bank details: only for researchers
@@ -601,6 +696,149 @@ def register():
     return render_template('register.html', form=form)
 
 #---------------------------------------------------------------------------------------------------------
+# RESEARCHER ROUTES
+#---------------------------------------------------------------------------------------------------------
+
+@app.route("/researcher/dashboard")
+@login_required
+def researcher_dashboard():
+    prof = get_profile(current_user.id)
+    if not prof or prof.role != "RESEARCHER":
+        flash("Access denied. Researcher role required.", "error")
+        return redirect(url_for("dashboard"))
+    
+    researcher = get_researcher(current_user.id)
+    if not researcher:
+        flash("Researcher profile not found.", "error")
+        return redirect(url_for("dashboard"))
+    
+    return render_template("researcher_dashboard.html", user=current_user, prof=prof, researcher=researcher)
+
+@app.route("/researcher/proposals")
+@login_required
+def researcher_proposals():
+    prof = get_profile(current_user.id)
+    if not prof or prof.role != "RESEARCHER":
+        flash("Access denied. Researcher role required.", "error")
+        return redirect(url_for("dashboard"))
+    
+    researcher = get_researcher(current_user.id)
+    if not researcher:
+        flash("Researcher profile not found.", "error")
+        return redirect(url_for("dashboard"))
+    
+    proposals = Proposal.query.filter_by(researcher_id=researcher.researcher_id).all()
+    return render_template("researcher_proposals.html", user=current_user, prof=prof, proposals=proposals)
+
+
+@app.route("/researcher/proposals/create", methods=["GET", "POST"])
+@login_required
+def create_proposal():
+    prof = get_profile(current_user.id)
+    if not prof or prof.role != "RESEARCHER":
+        flash("Access denied. Researcher role required.", "error")
+        return redirect(url_for("dashboard"))
+
+    researcher = get_researcher(current_user.id)
+    if not researcher:
+        flash("Researcher profile not found.", "error")
+        return redirect(url_for("dashboard"))
+
+    rows = (
+        db.session.query(GrantScheme, Department)
+        .outerjoin(Department, GrantScheme.department_id == Department.department_id)
+        .order_by(Department.department_name.asc())
+        .all()
+    )
+
+    if request.method == "POST":
+        title = (request.form.get("project_title") or "").strip()
+        abstract = (request.form.get("abstract") or "").strip()
+        methodology = (request.form.get("methodology") or "").strip()
+        requested_budget = request.form.get("requested_budget") or 0
+        expertise_needed = (request.form.get("expertise_needed") or "").strip()
+
+        if not title or not abstract or not methodology:
+            flash("Please fill in the required fields.", "error")
+            return render_template("create_proposal.html", user=current_user, prof=prof, rows=rows)
+
+        scheme_id = (request.form.get("scheme_id") or "").strip()
+
+        if not scheme_id:
+            flash("Please select a grant scheme.", "error")
+            return render_template("create_proposal.html", user=current_user, prof=prof, rows=rows)
+
+        scheme = GrantScheme.query.get(scheme_id)
+        if not scheme:
+            flash("Invalid grant scheme selected.", "error")
+            return render_template("create_proposal.html", user=current_user, prof=prof, rows=rows)
+
+        new = Proposal(
+            scheme_id=scheme_id,
+            project_title=title,
+            abstract=abstract,
+            methodology=methodology,
+            requested_budget=int(requested_budget),
+            expertise_needed=expertise_needed,
+            submission_date=datetime.now(timezone.utc),
+            proposal_status="Pending Review",
+            researcher_id=researcher.researcher_id
+        )
+        db.session.add(new)
+        db.session.commit()
+        flash("Proposal submitted successfully.", "success")
+        return redirect(url_for("researcher_proposals"))
+
+    return render_template("create_proposal.html", user=current_user, prof=prof, rows=rows)
+
+
+@app.route("/researcher/proposals/<proposal_id>")
+@login_required
+def view_proposal(proposal_id):
+    prof = get_profile(current_user.id)
+    if not prof or prof.role != "RESEARCHER":
+        flash("Access denied.", "error")
+        return redirect(url_for("dashboard"))
+
+    proposal = Proposal.query.get(proposal_id)
+    if not proposal:
+        abort(404)
+
+    return render_template("view_proposal.html", user=current_user, prof=prof, proposal=proposal)
+
+
+@app.route("/researcher/proposals/<proposal_id>/feedback")
+@login_required
+def view_proposal_feedback(proposal_id):
+    prof = get_profile(current_user.id)
+    if not prof or prof.role != "RESEARCHER":
+        flash("Access denied.", "error")
+        return redirect(url_for("dashboard"))
+
+    proposal = Proposal.query.get(proposal_id)
+    if not proposal:
+        abort(404)
+
+    reviews = Review.query.filter_by(proposal_id=proposal_id).all()
+    return render_template("view_proposal_feedback.html", user=current_user, prof=prof, proposal=proposal, reviews=reviews)
+
+@app.route("/researcher/projects")
+@login_required
+def researcher_projects():
+    prof = get_profile(current_user.id)
+    if not prof or prof.role != "RESEARCHER":
+        flash("Access denied. Researcher role required.", "error")
+        return redirect(url_for("dashboard"))
+    
+    researcher = get_researcher(current_user.id)
+    if not researcher:
+        flash("Researcher profile not found.", "error")
+        return redirect(url_for("dashboard"))
+    
+    projects = Project.query.filter_by(researcher_id=researcher.researcher_id).all()
+    return render_template("researcher_projects.html", user=current_user, prof=prof, projects=projects)
+
+#---------------------------------------------------------------------------------------------------------
 # ADMIN ROUTES
 #---------------------------------------------------------------------------------------------------------
 
@@ -608,10 +846,84 @@ def register():
 @login_required
 @admin_required
 def admin_dashboard():
-    pending_count = UserProfile.query.filter_by(account_status="PENDING").count()
-    active_count = UserProfile.query.filter_by(account_status="ACTIVE").count()
-    deactivated_count = UserProfile.query.filter_by(account_status="DEACTIVATED").count()
-    return render_template("admin_dashboard.html", pending_count=pending_count, active_count=active_count, deactivated_count=deactivated_count)
+    # --- user counts ---
+    pending_registrations = UserProfile.query.filter_by(account_status="PENDING").count()
+    active_users = UserProfile.query.filter_by(account_status="ACTIVE").count()
+    deactivated_users = UserProfile.query.filter_by(account_status="DEACTIVATED").count()
+
+    # --- proposal pipeline counts ---
+    proposals = Proposal.query.all()
+
+    pending_reviewer_assignment = 0
+    awaiting_hod_decision = 0
+    final_approval_needed = 0
+    awaiting_budget_allocation = 0
+    funded_proposals = 0
+
+    for p in proposals:
+        st = compute_proposal_display_status(p)
+
+        if st == "Pending Assignment":
+            pending_reviewer_assignment += 1
+        elif st == "Pending Endorsement":
+            awaiting_hod_decision += 1
+        elif st == "Pending Approval":
+            final_approval_needed += 1
+        elif st == "Funded":
+            funded_proposals += 1
+
+    pending_funding_q = (
+        db.session.query(Proposal.proposal_id)
+        .join(FinalDecision, FinalDecision.proposal_id == Proposal.proposal_id)
+        .filter(db.func.upper(FinalDecision.decision) == "APPROVED")
+        .join(GrantScheme, GrantScheme.scheme_id == Proposal.scheme_id)
+        .outerjoin(Project, Project.proposal_id == Proposal.proposal_id)
+        .outerjoin(FundingAllocation, FundingAllocation.project_id == Project.project_id)
+        .filter(
+            or_(
+                FundingAllocation.allocation_id.is_(None),
+                db.func.upper(FundingAllocation.allocation_status) != "CONFIRMED"
+            )
+        )
+        .filter(db.func.upper(db.func.coalesce(Proposal.proposal_status, "")) != "FUNDED")
+    )
+
+    awaiting_budget_allocation = pending_funding_q.count()
+
+    # --- grant schemes ---
+    active_grant_schemes = GrantScheme.query.filter_by(scheme_status="OPEN").count()
+
+    # --- Recent Activity (Option A: from ActivityLog) ---
+    recent_activity_rows = (
+        ActivityLog.query
+        .order_by(ActivityLog.created_at.desc())
+        .limit(5)
+        .all()
+    )
+
+    recent_activity = [a.message for a in recent_activity_rows]
+
+    return render_template(
+        "admin_dashboard.html",
+        prof=get_profile(current_user.id),
+
+        # tiles
+        pending_registrations=pending_registrations,
+        pending_reviewer_assignment=pending_reviewer_assignment,
+        awaiting_hod_decision=awaiting_hod_decision,
+        final_approval_needed=final_approval_needed,
+        awaiting_budget_allocation=awaiting_budget_allocation,
+        active_grant_schemes=active_grant_schemes,
+        funded_proposals=funded_proposals,
+
+        # recent activity list
+        recent_activity=recent_activity,
+
+        # keep old values (if other templates still use them)
+        pending_count=pending_registrations,
+        active_count=active_users,
+        deactivated_count=deactivated_users,
+    )  
 
 #------------------
 # User Management
@@ -657,6 +969,13 @@ def admin_approve_user(user_id):
     if role == "RESEARCHER" and not Researcher.query.filter_by(user_id=user_id).first():
         db.session.add(Researcher(user_id=user_id))
 
+    u = db.session.get(User, user_id)
+    log_activity(
+        f"User '{u.full_name}' approved and role set to {role}",
+        action="APPROVE_USER",
+        actor_user_id=current_user.id,
+    )
+
     db.session.commit()
     return redirect(url_for("admin_users", status="PENDING"))
 
@@ -664,15 +983,28 @@ def admin_approve_user(user_id):
 @login_required
 @admin_required
 def admin_reject_user(user_id):
+    # 1) Fetch user FIRST (so we still have name/email before deleting)
+    user = User.query.get(user_id)
+    user_name = user.full_name if user else "Unknown"
+    user_email = user.email if user else "Unknown"
+
+    # 2) Delete profile + user
     prof = get_profile(user_id)
     if prof:
         db.session.delete(prof)
-
-    user = User.query.get(user_id)
     if user:
         db.session.delete(user)
 
+    # 3) Log BEFORE commit (safe + included in same transaction)
+    log_activity(
+        f"User '{user_name}' rejected and removed ({user_email})",
+        action="REJECT_USER",
+        actor_user_id=current_user.id
+    )
+
+    # 4) Commit once
     db.session.commit()
+
     return redirect(url_for("admin_users", status="PENDING"))
 
 @app.route("/admin/users/<user_id>/deactivate", methods=["POST"])
@@ -683,6 +1015,14 @@ def admin_deactivate_user(user_id):
     if not prof:
         abort(404)
     prof.account_status = "DEACTIVATED"
+    u = db.session.get(User, user_id)
+
+    log_activity(
+        f"User '{u.full_name}' deactivated",
+        action="DEACTIVATE_USER",
+        actor_user_id=current_user.id,
+    )
+
     db.session.commit()
     return redirect(url_for("admin_users", status="ACTIVE"))
 
@@ -694,6 +1034,14 @@ def admin_activate_user(user_id):
     if not prof:
         abort(404)
     prof.account_status = "ACTIVE"
+    u = db.session.get(User, user_id)
+
+    log_activity(
+        f"User '{u.full_name}' activated",
+        action="ACTIVATE_USER",
+        actor_user_id=current_user.id,
+    )
+
     db.session.commit()
     return redirect(url_for("admin_users", status="DEACTIVATED"))
 
@@ -701,15 +1049,28 @@ def admin_activate_user(user_id):
 @login_required
 @admin_required
 def admin_remove_user(user_id):
+    # 1) Fetch user FIRST
+    user = User.query.get(user_id)
+    user_name = user.full_name if user else "Unknown"
+    user_email = user.email if user else "Unknown"
+
+    # 2) Delete profile + user
     prof = get_profile(user_id)
     if prof:
         db.session.delete(prof)
-
-    user = User.query.get(user_id)
     if user:
         db.session.delete(user)
 
+    # 3) Log BEFORE commit
+    log_activity(
+        f"User '{user_name}' removed ({user_email})",
+        action="REMOVE_USER",
+        actor_user_id=current_user.id
+    )
+
+    # 4) Commit once
     db.session.commit()
+
     return redirect(url_for("admin_users", status="DEACTIVATED"))
 
 @app.route("/admin/users/create", methods=["POST"])
@@ -755,8 +1116,43 @@ def admin_create_user():
 
     db.session.commit()
 
+    log_activity(
+        f"Admin created user '{new_user.full_name}' ({new_user.email}) with role {role}",
+        action="CREATE_USER",
+        actor_user_id=current_user.id,
+    )
+
     flash(f"User created successfully. Temporary password: {temp_password}", "success")
     return redirect(url_for("admin_users", status="ACTIVE"))
+
+@app.route("/admin/users/<user_id>/profile")
+@login_required
+@admin_required
+def admin_view_user_profile(user_id):
+    user = User.query.get_or_404(user_id)
+
+    # clicked user's profile
+    target_prof = UserProfile.query.filter_by(user_id=user_id).first()
+
+    # role tables (optional — only if exists)
+    admin_row = Admin.query.filter_by(user_id=user_id).first()
+    hod_row = HOD.query.filter_by(user_id=user_id).first()
+    reviewer_row = Reviewer.query.filter_by(user_id=user_id).first()
+    researcher_row = Researcher.query.filter_by(user_id=user_id).first()
+
+    # admin's own profile (for topbar avatar)
+    prof = get_profile(current_user.id)
+
+    return render_template(
+        "admin_view_user_profile.html",
+        user=user,
+        target_prof=target_prof,
+        admin_row=admin_row,
+        hod_row=hod_row,
+        reviewer_row=reviewer_row,
+        researcher_row=researcher_row,
+        prof=prof
+    )
 
 #--------------------------
 # Grant Scheme Management
@@ -912,6 +1308,12 @@ def admin_grant_create():
             scheme_status=scheme_status
         )
 
+        log_activity(
+            f"Grant scheme created for '{department.department_name}': {scheme.description} ({scheme.scheme_status})",
+            action="CREATE_GRANT_SCHEME",
+            actor_user_id=current_user.id,
+        )
+
         db.session.add(scheme)
         db.session.commit()
 
@@ -944,14 +1346,31 @@ def admin_grant_view(scheme_id):
         # OPEN: view/edit/delete (+ close allowed)
         if st == "OPEN":
             if action == "delete":
+
+                log_activity(
+                    f"Grant scheme deleted: {scheme.description}",
+                    action="DELETE_GRANT_SCHEME",
+                    actor_user_id=current_user.id,
+                )
+
                 db.session.delete(scheme)
                 db.session.commit()
+
                 flash("Scheme deleted.", "success")
                 return redirect(url_for("admin_grants"))
 
             if action == "close":
                 scheme.scheme_status = "CLOSED"
+
+                log_activity(
+                    f"Grant scheme closed: {scheme.description}",
+                    action="CLOSE_GRANT_SCHEME",
+                    actor_user_id=current_user.id,
+                    scheme_id=scheme_id
+                )
+
                 db.session.commit()
+
                 flash("Scheme closed.", "success")
                 return redirect(url_for("admin_grants"))
 
@@ -1004,12 +1423,20 @@ def admin_grant_view(scheme_id):
         if st == "DRAFT" and action == "open":
             scheme.scheme_status = "OPEN"
 
+        log_activity(
+            f"Grant scheme updated: {scheme.description} (status: {scheme.scheme_status})",
+            action="UPDATE_GRANT_SCHEME",
+            actor_user_id=current_user.id,
+            scheme_id=scheme_id
+        )
+
         db.session.commit()
+
         flash("Scheme updated.", "success")
         return redirect(url_for("admin_grant_view", scheme_id=scheme_id))
 
     return render_template(
-        "admin_grant_scheme_view.html",
+        "admin_view_grant_scheme.html",
         scheme=scheme,
         departments=departments
     )
@@ -1026,18 +1453,44 @@ def admin_funding_list():
     q = (request.args.get("q") or "").strip()
     dept_id = (request.args.get("dept") or "").strip()   # department_id
     prof = get_profile(current_user.id)
+    tab = (request.args.get("tab") or "ALL").upper()   # ALL / NO_ALLOC / DRAFT
 
     # dropdown options
     departments = Department.query.order_by(Department.department_name.asc()).all()
 
-    # Base: only APPROVED proposals (so status column not needed)
+    # Base: only APPROVED proposals
     query = (
         db.session.query(Proposal, Department)
         .join(FinalDecision, FinalDecision.proposal_id == Proposal.proposal_id)
         .filter(db.func.upper(FinalDecision.decision) == "APPROVED")
         .join(GrantScheme, GrantScheme.scheme_id == Proposal.scheme_id)
         .join(Department, Department.department_id == GrantScheme.department_id)
+
+        # Join funding tables (so we can exclude confirmed)
+        .outerjoin(Project, Project.proposal_id == Proposal.proposal_id)
+        .outerjoin(FundingAllocation, FundingAllocation.project_id == Project.project_id)
+
+        # Show only proposals that are NOT confirmed funded yet
+        # - no allocation yet OR allocation is not CONFIRMED
+        .filter(
+            or_(
+                FundingAllocation.allocation_id.is_(None),
+                db.func.upper(FundingAllocation.allocation_status) != "CONFIRMED"
+            )
+        )
+
+        # If you set proposal_status="FUNDED" on confirm, exclude that too
+        .filter(db.func.upper(db.func.coalesce(Proposal.proposal_status, "")) != "FUNDED")
     )
+
+    if tab == "NO_ALLOC":
+        query = query.filter(FundingAllocation.allocation_id.is_(None))
+
+    elif tab == "DRAFT":
+        query = query.filter(
+            FundingAllocation.allocation_id.is_not(None),
+            db.func.upper(FundingAllocation.allocation_status) == "DRAFT"
+        )    
 
     # department filter
     if dept_id and dept_id != "ALL":
@@ -1058,6 +1511,7 @@ def admin_funding_list():
         rows=rows,
         q=q,
         dept=dept_id or "ALL",
+        tab=tab,
         departments=departments,
         prof=prof
     )
@@ -1116,6 +1570,7 @@ def admin_funding_allocate(proposal_id):
             return redirect(url_for("admin_funding_allocate", proposal_id=proposal_id))
 
         if action == "confirm":
+            proposal.proposal_status = "FUNDED"
             # validate dates
             if not start_date or not end_date:
                 flash("Please fill in Start Date and End Date before confirming.", "error")
@@ -1170,7 +1625,23 @@ def admin_funding_allocate(proposal_id):
         if action == "confirm":
             proposal.proposal_status = "FUNDED"
 
+        if action == "draft":
+            log_activity(
+                f"Funding drafted for '{proposal.project_title}' (Total: {total_amount})",
+                action="DRAFT_FUNDING",
+                proposal_id=proposal.proposal_id,
+                actor_user_id=current_user.id
+            )
+        else:
+            log_activity(
+                f"Funding confirmed for '{proposal.project_title}' (Total: {total_amount})",
+                action="CONFIRM_FUNDING",
+                proposal_id=proposal.proposal_id,
+                actor_user_id=current_user.id
+            )
+
         db.session.commit()
+
         flash("Funding saved as draft." if action == "draft" else "Funding confirmed!", "success")
         return redirect(url_for("admin_funding_list"))
 
@@ -1184,6 +1655,9 @@ def admin_funding_allocate(proposal_id):
         prof=prof
     )
 
+#----------------
+# View Buttons
+#----------------
 @app.route("/admin/proposals/<proposal_id>")
 @login_required
 @admin_required
@@ -1202,6 +1676,62 @@ def admin_view_proposal(proposal_id):
         researcher=researcher,
         scheme=scheme,
         dept=dept,
+        prof=prof
+    )
+
+@app.route("/admin/proposals/<proposal_id>/recommendation")
+@login_required
+@admin_required
+def admin_view_recommendation(proposal_id):
+    proposal = Proposal.query.get_or_404(proposal_id)
+
+    # All reviews for this proposal (what reviewers submitted)
+    reviews = (
+        Review.query
+        .filter_by(proposal_id=proposal_id)
+        .order_by(Review.review_date.desc())
+        .all()
+    )
+
+    # optional extra info for the header
+    researcher = Researcher.query.get(proposal.researcher_id)
+    scheme = GrantScheme.query.get(proposal.scheme_id)
+    dept = Department.query.get(scheme.department_id) if scheme else None
+
+    prof = get_profile(current_user.id)
+
+    return render_template(
+        "admin_view_recommendation.html",
+        proposal=proposal,
+        researcher=researcher,
+        scheme=scheme,
+        dept=dept,
+        reviews=reviews,
+        prof=prof
+    )
+
+
+@app.route("/admin/proposals/<proposal_id>/endorsement")
+@login_required
+@admin_required
+def admin_view_endorsement(proposal_id):
+    proposal = Proposal.query.get_or_404(proposal_id)
+
+    endorsement = HODEndorsement.query.filter_by(proposal_id=proposal_id).first()
+
+    researcher = Researcher.query.get(proposal.researcher_id)
+    scheme = GrantScheme.query.get(proposal.scheme_id)
+    dept = Department.query.get(scheme.department_id) if scheme else None
+
+    prof = get_profile(current_user.id)
+
+    return render_template(
+        "admin_view_endorsement.html",
+        proposal=proposal,
+        researcher=researcher,
+        scheme=scheme,
+        dept=dept,
+        endorsement=endorsement,
         prof=prof
     )
 
@@ -1227,8 +1757,10 @@ def admin_final_approval_list():
         .filter(FinalDecision.proposal_id.is_(None))
     )
 
-    # optional: require HOD endorsement exists (so it's truly ready for final approval)
+    # HOD endorsement exists
     query = query.join(HODEndorsement, HODEndorsement.proposal_id == Proposal.proposal_id)
+    # Only endorsed by HoD
+    query = query.filter(db.func.upper(HODEndorsement.decision) == "ENDORSE")
 
     if dept_id != "ALL":
         query = query.filter(Department.department_id == dept_id)
@@ -1241,6 +1773,8 @@ def admin_final_approval_list():
         )
 
     rows = query.order_by(Proposal.submission_date.desc()).all()
+    # Only include proposals that reviewers recommended
+    rows = [(p, d) for (p, d) in rows if compute_reviewer_recommendation(p.proposal_id) == "Recommended"]
 
     return render_template(
         "admin_final_approval_list.html",
@@ -1273,6 +1807,10 @@ def admin_final_approval_detail(proposal_id):
     if hod_endorse:
         hod_status = "Endorsed" if (hod_endorse.decision or "").upper() == "ENDORSE" else "Not Endorsed"
 
+    if reviewer_status != "Recommended" or hod_status != "Endorsed":
+        flash("This proposal is not ready for final approval (must be Recommended + Endorsed).", "error")
+        return redirect(url_for("admin_final_approval_list"))
+
     # if already decided, show it (and optionally block changes)
     existing_final = FinalDecision.query.filter_by(proposal_id=proposal.proposal_id).first()
 
@@ -1283,6 +1821,7 @@ def admin_final_approval_detail(proposal_id):
             return redirect(url_for("admin_final_approval_detail", proposal_id=proposal_id))
 
         decision = "APPROVED" if action == "approve" else "REJECTED"
+        proposal.proposal_status = decision 
 
         if not existing_final:
             existing_final = FinalDecision(
@@ -1296,7 +1835,15 @@ def admin_final_approval_detail(proposal_id):
             existing_final.decision = decision
             existing_final.decision_date = datetime.now(timezone.utc)
 
+        log_activity(
+            f"Final decision {decision.title()} for '{proposal.project_title}'",
+            action="FINAL_DECISION",
+            proposal_id=proposal.proposal_id,
+            actor_user_id=current_user.id
+        )
+
         db.session.commit()
+
         flash(f"Final decision recorded: {decision}", "success")
         return redirect(url_for("admin_final_approval_list"))
 
@@ -1410,11 +1957,16 @@ def admin_assign_reviewer_detail(proposal_id):
         tags = reviewer_expertise_tags(user)
         for t in tags:
             all_tags.add(t)
+
+        reviewer_prof = get_profile(user.id)   # <--- add this
+        pic = reviewer_prof.profile_picture if reviewer_prof else None  # <--- add this
+
         display.append({
             "reviewer": rv,
             "user": user,
             "tags": tags,
             "checked": (rv.reviewer_id in assigned_ids),
+            "profile_picture": pic,            # <--- add this
         })
 
     # Apply search
@@ -1458,7 +2010,21 @@ def admin_assign_reviewer_detail(proposal_id):
                 assignment_status="ASSIGNED"
             ))
 
+        proposal.proposal_status = "PENDING_REVIEW"
+
+        for rid in selected:
+            rv = Reviewer.query.get(rid)
+            reviewer_user = User.query.get(rv.user_id) if rv else None
+            if reviewer_user:
+                log_activity(
+                    f"Proposal '{proposal.project_title}' assigned to {reviewer_user.full_name}",
+                    action="ASSIGN_REVIEWER",
+                    proposal_id=proposal.proposal_id,
+                    actor_user_id=current_user.id
+                )
+
         db.session.commit()
+
         flash("Reviewers assigned successfully.", "success")
         return redirect(url_for("admin_assign_reviewers"))
 
@@ -1472,6 +2038,42 @@ def admin_assign_reviewer_detail(proposal_id):
         q=rq,
         expertise=expertise_filter,
         prof=prof
+    )
+
+#-----------------
+# Proposal List
+#-----------------
+from sqlalchemy import func
+
+@app.route("/admin/proposal-list")
+@login_required
+@admin_required
+def admin_proposal_list():
+    q = (request.args.get("q") or "").strip()
+    status = (request.args.get("status") or "ALL").strip()  # KEEP as normal string (not .upper())
+
+    query = Proposal.query
+
+    if q:
+        like = f"%{q}%"
+        query = query.filter(Proposal.project_title.ilike(like))
+
+    proposals = query.order_by(Proposal.proposal_id.desc()).all()
+
+    # compute display status for each proposal
+    for p in proposals:
+        p.display_status = compute_proposal_display_status(p)
+
+    # filter by computed display_status (this matches what the user sees)
+    if status != "ALL":
+        proposals = [p for p in proposals if (p.display_status == status)]
+
+    return render_template(
+        "admin_proposal_list.html",
+        proposals=proposals,
+        q=q,
+        status=status,
+        status_options=DISPLAY_STATUS_OPTIONS
     )
 
 #---------------------------------------------------------------------------------------------------------
@@ -1507,6 +2109,244 @@ def hod_reviewers():
 @login_required
 def hod_researchers():
     return render_template("hod_researchers.html")
+
+#-------------------------
+# REVIEWER ROUTES
+#-------------------------
+@app.route("/reviewer/dashboard")
+@login_required
+@reviewer_required
+def reviewer_dashboard():
+    rv = get_reviewer_by_user(current_user.id)
+    if not rv:
+        flash("Reviewer record missing. Contact admin.", "error")
+        return redirect(url_for("dashboard"))
+
+    pending = ReviewersAssignment.query.filter_by(
+        reviewer_id=rv.reviewer_id, assignment_status="ASSIGNED"
+    ).count()
+
+    under_review = ReviewersAssignment.query.filter_by(
+        reviewer_id=rv.reviewer_id, assignment_status="ACCEPTED"
+    ).count()
+
+    completed = Review.query.filter(Review.reviewer_id == rv.reviewer_id).count()
+
+    recent_assignments = (ReviewersAssignment.query
+        .filter_by(reviewer_id=rv.reviewer_id)
+        .order_by(ReviewersAssignment.assigned_date.desc())
+        .limit(5).all())
+
+    recent_reviews = (Review.query
+        .filter_by(reviewer_id=rv.reviewer_id)
+        .order_by(Review.review_date.desc())
+        .limit(5).all())
+
+    return render_template(
+        "reviewer_dashboard.html",
+        pending=pending,
+        under_review=under_review,
+        completed=completed,
+        recent_assignments=recent_assignments,
+        recent_reviews=recent_reviews,
+    )
+
+
+@app.route("/reviewer/assignments")
+@login_required
+@reviewer_required
+def reviewer_assigned_proposals():
+    rv = get_reviewer_by_user(current_user.id)
+
+    q = (request.args.get("q") or "").strip()
+    status = (request.args.get("status") or "ALL").upper()
+
+    query = (
+        db.session.query(ReviewersAssignment, Proposal)
+        .join(Proposal, Proposal.proposal_id == ReviewersAssignment.proposal_id)
+        .filter(ReviewersAssignment.reviewer_id == rv.reviewer_id)
+    )
+
+    if status != "ALL":
+        query = query.filter(db.func.upper(ReviewersAssignment.assignment_status) == status)
+
+    if q:
+        like = f"%{q}%"
+        query = query.filter(Proposal.project_title.ilike(like))
+
+    rows = query.order_by(ReviewersAssignment.assigned_date.desc()).all()
+
+    return render_template("reviewer_assigned_proposals.html", rows=rows, q=q, status=status)
+
+
+
+@app.route("/reviewer/assignments/view/<proposal_id>")
+@login_required
+@reviewer_required
+def reviewer_assignment_view(proposal_id):
+    rv = get_reviewer_by_user(current_user.id)
+
+    # ensure this proposal is actually assigned to this reviewer
+    row = (
+        db.session.query(ReviewersAssignment, Proposal)
+        .join(Proposal, Proposal.proposal_id == ReviewersAssignment.proposal_id)
+        .filter(
+            ReviewersAssignment.reviewer_id == rv.reviewer_id,
+            Proposal.proposal_id == proposal_id
+        )
+        .first()
+    )
+
+    if not row:
+        abort(404)
+
+    assignment, proposal = row
+
+    # format for your template (you used proposal.title/status)
+    view_model = {
+        "id": proposal.proposal_id,
+        "title": proposal.project_title,
+        "status": assignment.assignment_status.title(),  # ASSIGNED -> Assigned
+        "abstract": proposal.abstract,
+        "methodology": proposal.methodology,
+        "assignment_status": assignment.assignment_status,  # raw
+    }
+
+    return render_template("reviewer_assignment_view.html", proposal=view_model)
+
+@app.route("/reviewer/under-review")
+@login_required
+@reviewer_required
+def reviewer_under_review():
+    rv = get_reviewer_by_user(current_user.id)
+
+    rows = (
+        db.session.query(ReviewersAssignment, Proposal)
+        .join(Proposal, Proposal.proposal_id == ReviewersAssignment.proposal_id)
+        .filter(
+            ReviewersAssignment.reviewer_id == rv.reviewer_id,
+            ReviewersAssignment.assignment_status == "ACCEPTED"
+        )
+        .order_by(ReviewersAssignment.assigned_date.desc())
+        .all()
+    )
+
+    return render_template("reviewer_under_review.html", rows=rows)
+
+@app.route("/reviewer/guidelines")
+@login_required
+@reviewer_required
+def reviewer_guidelines():
+    return render_template("reviewer_guidelines.html")
+
+
+@app.route("/reviewer/evaluate/<proposal_id>", methods=["GET", "POST"])
+@login_required
+@reviewer_required
+def reviewer_evaluate(proposal_id):
+    rv = get_reviewer_by_user(current_user.id)
+
+    proposal = Proposal.query.get_or_404(proposal_id)
+
+    # ensure reviewer is assigned
+    assignment = ReviewersAssignment.query.filter_by(
+        proposal_id=proposal_id,
+        reviewer_id=rv.reviewer_id
+    ).first_or_404()
+
+    existing = Review.query.filter_by(
+        proposal_id=proposal_id,
+        reviewer_id=rv.reviewer_id
+    ).first()
+
+    submitted = existing is not None
+    evaluated_at = existing.review_date.strftime("%d %b %Y, %I:%M %p") if existing else None
+
+    if request.method == "POST":
+        feedback = (request.form.get("feedback") or "").strip()
+        recommendation = (request.form.get("recommendation") or "").upper()
+
+        if not feedback:
+            flash("Feedback cannot be empty.", "error")
+            return redirect(request.url)
+
+        if recommendation not in {"RECOMMENDED", "REVISION_REQUIRED", "REJECTED"}:
+            flash("Invalid recommendation.", "error")
+            return redirect(request.url)
+
+        if existing:
+            flash("This review has already been submitted.", "error")
+            return redirect(request.url)
+
+        review = Review(
+            proposal_id=proposal_id,
+            reviewer_id=rv.reviewer_id,
+            feedback=feedback,
+            recommendation=recommendation,
+            review_date=datetime.now(timezone.utc)
+        )
+        db.session.add(review)
+        db.session.commit()
+
+        flash("Review submitted successfully.", "success")
+        return redirect(url_for("reviewer_under_review"))
+
+    return render_template(
+        "reviewer_evaluation.html",
+        proposal=proposal,
+        existing=existing,
+        submitted=submitted,
+        evaluated_at=evaluated_at
+    )
+
+@app.route("/reviewer/history")
+@login_required
+@reviewer_required
+def reviewer_review_history():
+    rv = get_reviewer_by_user(current_user.id)
+
+    rows = (
+        db.session.query(
+            Proposal.proposal_id,
+            Proposal.project_title,
+            Review.recommendation,
+            Review.review_date
+        )
+        .join(Review, Review.proposal_id == Proposal.proposal_id)
+        .filter(Review.reviewer_id == rv.reviewer_id)
+        .order_by(Review.review_date.desc())
+        .all()
+    )
+
+    return render_template("reviewer_history.html", rows=rows)
+
+@app.route("/reviewer/history/view/<proposal_id>")
+@login_required
+@reviewer_required
+def reviewer_history_view(proposal_id):
+    rv = get_reviewer_by_user(current_user.id)
+
+    proposal = Proposal.query.get_or_404(proposal_id)
+
+    review = Review.query.filter_by(
+        proposal_id=proposal_id,
+        reviewer_id=rv.reviewer_id
+    ).first_or_404()
+
+    status_map = {
+        "RECOMMENDED": "Recommended",
+        "REVISION_REQUIRED": "Revision Required",
+        "REJECTED": "Rejected",
+    }
+
+    display_status = status_map.get(review.recommendation, "Unknown")
+
+    return render_template(
+        "reviewer_history_view.html",
+        proposal=proposal,
+        review=review,
+        display_status=display_status,
+    )
 
 if __name__ == '__main__':
     with app.app_context():

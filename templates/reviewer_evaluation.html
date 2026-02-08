@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Evaluation - Researchly</title>
+
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/reviewer_dashboard.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/colors.css') }}">
+
+  <style>
+    .top-row{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;margin-bottom:12px;}
+    .page-title{margin:0;color:#0fa7a1;font-size:26px;font-weight:1000;}
+    .meta{margin:6px 0 0;font-size:16px;font-weight:900;}
+    .meta span{font-weight:700;}
+    .back{display:inline-flex;align-items:center;gap:8px;text-decoration:none;font-weight:900;color:#111;padding:10px 14px;border-radius:12px;white-space:nowrap;}
+    .back:hover{background:rgba(0,0,0,0.06);}
+
+    .grid{display:grid;grid-template-columns: 1.1fr 1fr;gap:18px;align-items:start;}
+    .section-h{margin:0 0 10px;color:#0fa7a1;font-weight:1000;font-size:20px;}
+
+    .overview{
+      border:1px solid rgba(0,0,0,0.10);
+      border-radius:14px;
+      background:#fff;
+      overflow:hidden;
+      display:flex;
+      flex-direction:column;
+      min-height:420px;
+      max-height:520px;
+    }
+    .overview-scroll{padding:14px 16px;overflow:auto;flex:1;}
+    .overview-scroll::-webkit-scrollbar{ width:6px; }
+    .overview-scroll::-webkit-scrollbar-thumb{background: rgba(0,0,0,0.25);border-radius: 6px;}
+
+    .block{margin-bottom:18px;}
+    .block h4{margin:0 0 8px;font-size:14px;font-weight:1000;color:#111;}
+    .block p{margin:0;line-height:1.55;color:#222;font-size:14px;white-space:pre-wrap;word-break:break-word;}
+
+    .overview-footer{padding:10px 16px;border-top:1px solid rgba(0,0,0,0.10);background:rgba(0,0,0,0.02);}
+    .footer-label{font-size:12px;font-weight:1000;color:#7b7b7b;text-transform:uppercase;letter-spacing:.3px;margin-bottom:8px;}
+    .doc-row{display:flex;gap:10px;flex-wrap:wrap;}
+    .doc-pill{padding:7px 12px;border-radius:999px;background:#f1f1f1;border:1px solid rgba(0,0,0,0.10);font-weight:900;font-size:13px;text-decoration:none;color:#555;}
+    .doc-pill:hover{background:#eaeaea;color:#111;}
+
+    .feedback-card{
+      border:none;
+      border-radius:14px;
+      background:#fff;
+      padding:14px 16px;
+    }
+
+    .textarea{
+      width:100%;
+      min-height:220px;
+      border:1px solid rgba(0,0,0,0.14);
+      border-radius:12px;
+      padding:12px;
+      font-size:14px;
+      resize:vertical;
+      background:#fff;
+
+      /* kill browser outline/glow */
+      outline:none !important;
+      box-shadow:none !important;
+      -webkit-appearance:none;
+      appearance:none;
+    }
+    .textarea:focus,
+    .textarea:focus-visible{
+      outline:none !important;
+      box-shadow:none !important;
+      border-color: rgba(15,167,161,0.35) !important;
+    }
+    .textarea:disabled{
+      background:rgba(0,0,0,0.03);
+      color:#333;
+      cursor:not-allowed;
+    }
+
+    .rec-title{margin:14px 0 10px;color:#0fa7a1;font-weight:1000;font-size:18px;}
+    .rec-list{display:flex;flex-direction:column;gap:10px;margin-bottom:10px;}
+    .rec-item{display:flex;align-items:center;gap:10px;font-weight:900;color:#111;}
+    .rec-item input{width:18px;height:18px;}
+    .rec-item input:disabled{cursor:not-allowed;}
+
+    .warning{margin:10px 0 0;font-size:13px;font-weight:900;color:#7b7b7b;display:flex;gap:8px;align-items:flex-start;}
+
+    .submit-row{display:flex;justify-content:flex-end;align-items:center;margin-top:12px;gap:12px;}
+    .btn-submit{padding:10px 18px;border-radius:10px;border:none;background:#11b84a;color:#fff;font-weight:1000;cursor:pointer;}
+    .btn-submit:hover{filter:brightness(0.95);}
+    .submitted-pill{font-weight:1000;color:#7b7b7b;}
+
+    /* confirmation modal */
+    .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.45);display:none;align-items:center;justify-content:center;padding:20px;z-index:9999;}
+    .modal{width:min(520px, 100%);background:#fff;border-radius:16px;border:1px solid rgba(0,0,0,0.12);box-shadow:0 10px 30px rgba(0,0,0,0.25);overflow:hidden;}
+    .modal-head{padding:14px 16px;background:#f2f2f2;font-weight:1000;}
+    .modal-body{padding:14px 16px;color:#222;font-weight:800;line-height:1.45;}
+    .modal-actions{padding:12px 16px;display:flex;justify-content:flex-end;gap:10px;border-top:1px solid rgba(0,0,0,0.10);background:#fff;}
+    .btn{padding:10px 14px;border-radius:10px;font-weight:1000;border:1px solid rgba(0,0,0,0.14);background:#fff;cursor:pointer;}
+    .btn:hover{filter:brightness(0.98);}
+    .btn-danger{border:none;background:#11b84a;color:#fff;}
+    .btn-danger:hover{filter:brightness(0.95);}
+
+    @media (max-width: 980px){
+      .grid{ grid-template-columns: 1fr; }
+      .overview{ max-height:none; }
+    }
+  </style>
+</head>
+
+<body>
+  <header class="topbar">
+    <div class="left">
+      <button class="hamburger" type="button" id="hamburger">&#9776;</button>
+      <div class="brand">Researchly™</div>
+    </div>
+
+    <div class="icons">
+      <span class="icon bell" title="Notifications"></span>
+      <a href="{{ url_for('view_profile') }}" class="icon user" title="Profile">
+        {% if prof and prof.profile_picture %}
+          <img class="top-avatar" src="{{ url_for('static', filename='uploads/' ~ prof.profile_picture) }}" alt="Profile">
+        {% else %}
+          <span class="fallback-user">👤</span>
+        {% endif %}
+      </a>
+    </div>
+  </header>
+
+  <main class="layout" id="layout">
+    <aside class="sidebar" id="sidebar">
+      <a class="side-link" href="{{ url_for('reviewer_dashboard') }}">Reviewer Dashboard</a>
+      <a class="side-link" href="{{ url_for('reviewer_assigned_proposals') }}">Pending Assignments</a>
+      <a class="side-link active" href="{{ url_for('reviewer_under_review') }}">Under Review</a>
+      <a class="side-link" href="{{ url_for('reviewer_review_history') }}">Review History</a>
+      <a class="side-link" href="{{ url_for('reviewer_guidelines') }}">Reviewer Guidelines</a>
+      <div class="side-spacer"></div>
+      <a class="side-link logout" href="{{ url_for('logout') }}">Logout</a>
+    </aside>
+
+    <section class="content">
+      <div class="card">
+
+        <div class="top-row">
+          <div>
+            <h1 class="page-title">Evaluation</h1>
+
+            <div class="meta">
+              Title:
+              <span>
+                {{ proposal.project_title if proposal.project_title is defined else proposal['project_title'] }}
+              </span>
+            </div>
+
+            <div class="meta">
+            Status:
+            <span style="font-style:italic; color:#0fa7a1;">
+                {% if existing %}
+                {{ existing.recommendation.replace('_', ' ').title() }}
+                {% else %}
+                Under review
+                {% endif %}
+            </span>
+            </div>
+          </div>
+
+          <a class="back" href="{{ url_for('reviewer_under_review') }}">← Back</a>
+        </div>
+
+        <div class="grid">
+          <!-- LEFT -->
+          <div>
+            <div class="section-h">Overview</div>
+
+            <div class="overview">
+              <div class="overview-scroll">
+                <div class="block">
+                  <h4>Abstract</h4>
+                  <p>{{ proposal.abstract if proposal.abstract is defined else proposal['abstract'] }}</p>
+                </div>
+
+                <div class="block">
+                  <h4>Methodology</h4>
+                  <p>{{ proposal.methodology if proposal.methodology is defined else proposal['methodology'] }}</p>
+                </div>
+              </div>
+
+              <div class="overview-footer">
+                <div class="footer-label">Attachments</div>
+                <div class="doc-row">
+                  <a class="doc-pill" href="#" onclick="return false;">Proposal.pdf</a>
+                  <a class="doc-pill" href="#" onclick="return false;">Budget_plan.pdf</a>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- RIGHT -->
+          <div>
+            <form id="evalForm" class="feedback-card" method="POST" novalidate>
+              <div class="section-h">Feedback</div>
+
+              <textarea
+                class="textarea"
+                name="feedback"
+                id="feedback"
+                placeholder="Write feedback here..."
+                {% if submitted %}disabled{% else %}required{% endif %}
+              >{% if existing %}
+{{ existing.feedback if existing.feedback is defined else existing.get('feedback','') }}
+{% endif %}</textarea>
+
+              <div class="rec-title">Recommendation</div>
+
+              {% set current = "" %}
+              {% if existing %}
+                {% set current = existing.recommendation if existing.recommendation is defined else existing.get('recommendation','') %}
+              {% endif %}
+
+              <div class="rec-list">
+                <label class="rec-item">
+                  <input type="radio" name="recommendation" value="RECOMMENDED"
+                         {% if current == "RECOMMENDED" %}checked{% endif %}
+                         {% if submitted %}disabled{% else %}required{% endif %}>
+                  Recommended
+                </label>
+
+                <label class="rec-item">
+                  <input type="radio" name="recommendation" value="REVISION_REQUIRED"
+                         {% if current == "REVISION_REQUIRED" %}checked{% endif %}
+                         {% if submitted %}disabled{% else %}required{% endif %}>
+                  Revision required
+                </label>
+
+                <label class="rec-item">
+                  <input type="radio" name="recommendation" value="REJECTED"
+                         {% if current == "REJECTED" %}checked{% endif %}
+                         {% if submitted %}disabled{% else %}required{% endif %}>
+                  Rejected
+                </label>
+              </div>
+
+              {% if not submitted %}
+              <div class="warning">
+                <span>⚠️</span>
+                <span>Once submitted, you can’t undo this. Check your feedback properly.</span>
+              </div>
+              {% endif %}
+
+              <div class="submit-row">
+                {% if submitted %}
+                  <div class="submitted-pill" id="evaluatedAt">
+                    Evaluated at:
+                    {% if existing and existing.review_date is defined %}
+                      {{ existing.review_date.strftime("%d %b %Y, %I:%M %p") }}
+                    {% elif evaluated_at is defined %}
+                      {{ evaluated_at }}
+                    {% else %}
+                      -
+                    {% endif %}
+                  </div>
+                {% else %}
+                  <button class="btn-submit" type="button" id="openConfirm">Submit</button>
+                {% endif %}
+              </div>
+            </form>
+          </div>
+        </div>
+
+      </div>
+    </section>
+  </main>
+
+  <!-- Confirmation Modal -->
+  <div class="modal-overlay" id="confirmOverlay" aria-hidden="true">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="confirmTitle">
+      <div class="modal-head" id="confirmTitle">Confirm submission</div>
+      <div class="modal-body">
+        This will submit your review and you <b>cannot undo</b> it.
+        <br><br>
+        Make sure your feedback and recommendation are correct.
+      </div>
+      <div class="modal-actions">
+        <button class="btn" type="button" id="cancelConfirm">Cancel</button>
+        <button class="btn btn-danger" type="button" id="confirmSubmit">Yes, submit</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // sidebar toggle
+    const hamburger = document.getElementById('hamburger');
+    const sidebar = document.getElementById('sidebar');
+    const layout = document.getElementById('layout');
+    hamburger?.addEventListener('click', () => {
+      sidebar.classList.toggle('collapsed');
+      layout.classList.toggle('sidebar-collapsed');
+    });
+
+    // modal confirm submit
+    const openBtn = document.getElementById('openConfirm');
+    const overlay = document.getElementById('confirmOverlay');
+    const cancelBtn = document.getElementById('cancelConfirm');
+    const confirmBtn = document.getElementById('confirmSubmit');
+    const form = document.getElementById('evalForm');
+
+    function openModal(){ overlay.style.display = 'flex'; overlay.setAttribute('aria-hidden','false'); }
+    function closeModal(){ overlay.style.display = 'none'; overlay.setAttribute('aria-hidden','true'); }
+
+    openBtn?.addEventListener('click', () => {
+      const feedback = document.getElementById('feedback')?.value?.trim() || "";
+      const rec = form.querySelector('input[name="recommendation"]:checked');
+      if (!feedback) { alert("Feedback cannot be empty."); return; }
+      if (!rec) { alert("Please choose a recommendation."); return; }
+      openModal();
+    });
+
+    cancelBtn?.addEventListener('click', closeModal);
+    overlay?.addEventListener('click', (e) => { if (e.target === overlay) closeModal(); });
+    document.addEventListener('keydown', (e) => {
+      if (overlay && overlay.style.display === 'flex' && e.key === 'Escape') closeModal();
+    });
+
+    confirmBtn?.addEventListener('click', () => form.submit());
+  </script>
+</body>
+</html>
