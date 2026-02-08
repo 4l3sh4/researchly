@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>User's Profile - Researchly</title>
+
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/user_profile.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/colors.css') }}">
+  <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='img/researchly_icon.png') }}">
+</head>
+
+<body>
+  <!-- Top bar -->
+  <header class="topbar">
+    <div class="left">
+      <button class="hamburger" type="button" aria-label="Menu" id="hamburger">&#9776;</button>
+      <div class="brand">Researchly™</div>
+    </div>
+
+    <div class="icons">
+      <a href="{{ url_for('notifications') }}" class="icon bell" title="Notifications"></a>
+      <a href="{{ url_for('view_profile') }}" class="icon user" title="Profile">
+        {% if prof.profile_picture %}
+          <img class="top-avatar"
+            src="{{ url_for('static', filename='uploads/' ~ prof.profile_picture) }}"
+            alt="Profile">
+        {% else %}
+          <span class="fallback-user">👤</span>
+        {% endif %}
+      </a>
+    </div>
+  </header>
+
+  <main class="layout" id="layout">
+    <!-- Sidebar -->
+    <aside class="sidebar" id="sidebar">
+      <a class="side-link" href="{{ url_for('hod_dashboard') }}">HOD Dashboard</a>
+      <a class="side-link" href="{{ url_for('hod_department_overview') }}">Department<br/>Overview</a>
+      <a class="side-link" href="{{ url_for('hod_active_projects') }}">Active Projects</a>
+      <a class="side-link" href="{{ url_for('hod_review_proposals') }}">Review Proposals</a>
+      <a class="side-link" href="{{ url_for('hod_reviewers') }}">Reviewers</a>
+      <a class="side-link" href="{{ url_for('hod_researchers') }}">Researchers</a>
+
+      <div class="side-spacer"></div>
+      <a class="side-link logout" href="{{ url_for('logout') }}">Logout</a>
+    </aside>
+
+    <!-- Content -->
+    <section class="content">
+      <h1 class="page-title">User's Profile</h1>
+
+      <div class="profile-container">
+        <div class="profile-main">
+          <div class="profile-header">
+            <div class="profile-picture">
+              {% if user_prof.profile_picture %}
+                <img src="{{ url_for('static', filename='uploads/' ~ user_prof.profile_picture) }}" 
+                     alt="Profile picture">
+              {% else %}
+                <div class="avatar-placeholder">
+                  <div class="avatar-head"></div>
+                  <div class="avatar-body"></div>
+                </div>
+              {% endif %}
+            </div>
+
+            <div class="profile-info">
+              <h2 class="profile-name">{{ user_prof.full_name }}</h2>
+              <div class="badges">
+                <span class="badge badge-role">{{ user_prof.role|title }}</span>
+                <span class="badge badge-department">{{ user_prof.department|title }}</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="profile-details">
+            <div class="detail-group">
+              <h3 class="detail-label">Contact Number</h3>
+              <p class="detail-value">{{ user_prof.phone or '--' }}</p>
+            </div>
+
+            <div class="detail-group">
+              <h3 class="detail-label">Email</h3>
+              <p class="detail-value">{{ user_prof.email }}</p>
+            </div>
+
+            <div class="detail-group">
+              <h3 class="detail-label">Address</h3>
+              <p class="detail-value">{{ user_prof.address or '--' }}</p>
+            </div>
+          </div>
+
+          <div class="emergency-contact">
+            <div class="emergency-row">
+              <div class="detail-group">
+                <h3 class="detail-label">Emergency Contact Name</h3>
+                <p class="detail-value">{{ user_prof.emergency_contact_name or '--' }}</p>
+              </div>
+            </div>
+
+            <div class="emergency-row">
+              <div class="detail-group">
+                <h3 class="detail-label">Emergency Contact Number</h3>
+                <p class="detail-value">{{ user_prof.emergency_contact_number or '--' }}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="profile-sidebar">
+          <h2 class="sidebar-title">Recent Projects</h2>
+          <div class="projects-list">
+            {% if recent_projects %}
+              {% for project in recent_projects %}
+                <div class="project-item">
+                  <span class="project-number">{{ loop.index }}</span>
+                  <span class="project-title">{{ project.title }}</span>
+                  <a href="#" class="project-view-btn">View</a>
+                </div>
+              {% endfor %}
+            {% else %}
+              <div class="empty-projects-message">
+                <p>Researcher hasn't been involved in any projects yet.</p>
+              </div>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    const hamburger = document.getElementById('hamburger');
+    const sidebar = document.getElementById('sidebar');
+    const layout = document.getElementById('layout');
+
+    hamburger.addEventListener('click', () => {
+      sidebar.classList.toggle('collapsed');
+      layout.classList.toggle('sidebar-collapsed');
+    });
+  </script>
+</body>
+</html>

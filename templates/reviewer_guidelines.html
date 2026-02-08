@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Reviewer Guidelines - Researchly</title>
+
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/reviewer_dashboard.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/colors.css') }}">
+  <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='img/researchly_icon.png') }}">
+  <style>
+    .page-title{
+      margin:0 0 14px;
+      color:#0fa7a1;
+      font-size:32px;
+      font-weight:1000;
+    }
+    .guidelines{
+      display:flex; flex-direction:column; gap:16px; margin-top:20px;
+    }
+    .guide{
+      border:1px solid rgba(0,0,0,0.10);
+      border-radius:12px;
+      background:#fff;
+      overflow:hidden;
+    }
+    .guide-title{
+      display:flex; justify-content:space-between; align-items:center;
+      padding:14px 16px;
+      font-size:18px; font-weight:800;
+      cursor:pointer;
+      background:#f5f5f5;
+    }
+    .guide-title .arrow{
+      transition: transform 0.3s ease;
+    }
+    .guide[open] .guide-title .arrow{
+      transform: rotate(90deg);
+    }
+    .guide-body{
+      padding:14px 16px;
+      border-top:1px solid rgba(0,0,0,0.08);
+      animation: fadeIn 0.3s ease;
+    }
+    .guide-text{
+      margin-bottom:10px;
+      font-size:15px; line-height:1.6;
+      color:#333;
+    }
+    .guide-list{
+      list-style-type: disc;
+      padding-left:20px;
+      color:#444;
+    }
+    .guide-list li{
+      margin-bottom:8px;
+      font-size:15px; line-height:1.5;
+    }
+    @keyframes fadeIn{
+      from{ opacity:0; }
+      to{ opacity:1; }
+    }
+  </style>
+</head>
+
+<body>
+  <!-- Top bar -->
+  <header class="topbar">
+    <div class="left">
+      <button class="hamburger" type="button" aria-label="Menu" id="hamburger">&#9776;</button>
+      <div class="brand">Researchly™</div>
+    </div>
+
+    <div class="icons">
+      <a href="{{ url_for('notifications') }}" class="icon bell" title="Notifications"></a>
+      <a href="{{ url_for('view_profile') }}" class="icon user" title="Profile">
+        {% if prof and prof.profile_picture %}
+          <img class="top-avatar"
+               src="{{ url_for('static', filename='uploads/' ~ prof.profile_picture) }}"
+               alt="Profile">
+        {% else %}
+          <span class="fallback-user">👤</span>
+        {% endif %}
+      </a>
+    </div>
+  </header>
+
+  <main class="layout" id="layout">
+    <!-- Sidebar -->
+    <aside class="sidebar" id="sidebar">
+      <a class="side-link" href="{{ url_for('reviewer_dashboard') }}">Reviewer Dashboard</a>
+      <a class="side-link" href="{{ url_for('reviewer_assigned_proposals') }}">Pending Assignments</a>
+      <a class="side-link" href="{{ url_for('reviewer_under_review') }}">Under Review</a>
+      <a class="side-link" href="{{ url_for('reviewer_review_history') }}">Review History</a>
+      <a class="side-link active" href="{{ url_for('reviewer_guidelines') }}">Reviewer Guidelines</a>
+
+      <div class="side-spacer"></div>
+      <a class="side-link logout" href="{{ url_for('logout') }}">Logout</a>
+    </aside>
+
+    <!-- Content -->
+    <section class="content">
+      <div class="card">
+        <h1 class="page-title">Reviewer Guidelines</h1>
+        <p class="muted">
+          Review proposals fairly and consistently. Your feedback directly affects funding decisions.
+        </p>
+
+        <!-- Accordion-style sections (pure HTML details/summary) -->
+        <div class="guidelines">
+
+          <details class="guide" open>
+            <summary class="guide-title">
+            <span>Evaluation Criteria</span>
+            <span class="arrow">▸</span>
+            </summary>
+            <div class="guide-body">
+              <ul class="guide-list">
+                <li><strong>Relevance:</strong> Fits the grant scheme objectives and department scope.</li>
+                <li><strong>Novelty & contribution:</strong> What’s new here? Why should anyone fund it?</li>
+                <li><strong>Methodology quality:</strong> Clear approach, measurable outcomes, realistic methods.</li>
+                <li><strong>Feasibility:</strong> Timeline, resources, team capability, and risks are credible.</li>
+                <li><strong>Budget realism:</strong> Costs match the work; no inflated or missing items.</li>
+                <li><strong>Impact:</strong> Benefits to community/industry/academia; clear stakeholders.</li>
+                <li><strong>Clarity:</strong> Well-structured writing, complete sections, no vague filler.</li>
+              </ul>
+            </div>
+          </details>
+
+          <details class="guide">
+            <summary class="guide-title">
+            <span>Evaluation Approach</span>
+            <span class="arrow">▸</span>
+            </summary>
+            <div class="guide-body">
+              <p class="guide-text">
+                Be consistent. Don’t reward “nice writing” if the plan is weak. Don’t punish simple writing if the plan is solid.
+              </p>
+              <ul class="guide-list">
+                <li>Read the abstract first, then check if the methodology actually delivers it.</li>
+                <li>Identify assumptions and failure points (data access, permissions, equipment, skills).</li>
+                <li>Look for measurable deliverables (models, prototypes, datasets, papers, deployment).</li>
+                <li>Flag missing details: model choice, evaluation metrics, baseline comparisons, validation plans.</li>
+                <li>Prefer specific, actionable feedback over general complaints.</li>
+              </ul>
+              <p class="guide-text">
+                Numerical scoring isn’t required. Your written feedback must justify your recommendation.
+              </p>
+            </div>
+          </details>
+
+          <details class="guide">
+            <summary class="guide-title">
+            <span>Recommendation Guidelines</span>
+            <span class="arrow">▸</span>
+            </summary>
+            <div class="guide-body">
+              <ul class="guide-list">
+                <li><strong>Recommended:</strong> Strong proposal; minor issues only.</li>
+                <li><strong>Revision required:</strong> Fixable, but missing key details (methods, evaluation, budget, feasibility).</li>
+                <li><strong>Rejected:</strong> Fundamentally weak, unrealistic, unethical, or not aligned with the scheme.</li>
+              </ul>
+              <p class="guide-text">
+                If you choose <strong>Revision required</strong>, state exactly what must be changed and how it will be verified.
+              </p>
+            </div>
+          </details>
+
+          <details class="guide">
+            <summary class="guide-title">
+            <span>Ethical Review Conduct</span>
+            <span class="arrow">▸</span>
+            </summary>
+            <div class="guide-body">
+              <ul class="guide-list">
+                <li><strong>Confidentiality:</strong> Do not share proposal content outside the platform.</li>
+                <li><strong>Conflict of interest:</strong> If you have one, decline the assignment.</li>
+                <li><strong>Fairness:</strong> Judge the proposal, not the person or department.</li>
+                <li><strong>Professionalism:</strong> Be direct, but not insulting. Point to evidence.</li>
+                <li><strong>Integrity:</strong> No plagiarism checks? Then don’t accuse—flag as “needs verification”.</li>
+              </ul>
+            </div>
+          </details>
+
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    const hamburger = document.getElementById('hamburger');
+    const sidebar = document.getElementById('sidebar');
+    const layout = document.getElementById('layout');
+
+    hamburger.addEventListener('click', () => {
+      sidebar.classList.toggle('collapsed');
+      layout.classList.toggle('sidebar-collapsed');
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8" />
+	<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+	<title>Notifications - Researchly</title>
+
+	<link rel="stylesheet" href="{{ url_for('static', filename='css/notifications.css') }}">
+	<link rel="stylesheet" href="{{ url_for('static', filename='css/colors.css') }}">
+    <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='img/researchly_icon.png') }}">
+</head>
+
+<body>
+	{% set role = (prof.role or 'RESEARCHER') %}
+	{% set role_label = 'HOD' if role == 'HOD' else role|title %}
+
+	<!-- Topbar -->
+	<header class="topbar">
+		<div class="left">
+			<button class="hamburger" type="button" aria-label="Menu" id="hamburger">&#9776;</button>
+			<div class="brand">Researchly™</div>
+		</div>
+
+		<div class="icons">
+			<a href="{{ url_for('notifications') }}" class="icon bell" title="Notifications"></a>
+			<a href="{{ url_for('view_profile') }}" class="icon user" title="Profile">
+				{% if prof.profile_picture %}
+					<img class="top-avatar"
+						src="{{ url_for('static', filename='uploads/' ~ prof.profile_picture) }}"
+						alt="Profile">
+				{% else %}
+					<span class="fallback-user">👤</span>
+				{% endif %}
+			</a>
+		</div>
+	</header>
+
+	<main class="layout" id="layout">
+		<!-- Sidebar -->
+		<aside class="sidebar" id="sidebar">
+			{% if role == 'HOD' %}
+				<a class="side-link" href="{{ url_for('hod_dashboard') }}">HOD Dashboard</a>
+				<a class="side-link" href="{{ url_for('hod_department_overview') }}">Department<br/>Overview</a>
+				<a class="side-link" href="{{ url_for('hod_active_projects') }}">Active Projects</a>
+				<a class="side-link" href="{{ url_for('hod_review_proposals') }}">Review Proposals</a>
+				<a class="side-link" href="{{ url_for('hod_reviewers') }}">Reviewers</a>
+				<a class="side-link" href="{{ url_for('hod_researchers') }}">Researchers</a>
+			{% elif role == 'ADMIN' %}
+				<a class="side-link" href="{{ url_for('admin_dashboard') }}">Admin Dashboard</a>
+				<a class="side-link" href="{{ url_for('admin_users', status='PENDING') }}">User Management</a>
+				<a class="side-link" href="{{ url_for('admin_grants', status='ALL') }}">Grant Scheme<br/>Management</a>
+				<a class="side-link" href="{{ url_for('admin_funding_list', dept='ALL') }}">Funding Allocation</a>
+				<a class="side-link" href="{{ url_for('admin_final_approval_list', dept='ALL') }}">Final Approval<br/>Decision</a>
+				<a class="side-link" href="{{ url_for('admin_assign_reviewers', dept='ALL') }}">Assign Reviewers</a>
+				<a class="side-link" href="{{ url_for('admin_proposal_list') }}">Proposal List</a>
+			{% elif role == 'REVIEWER' %}
+				<a class="side-link" href="{{ url_for('reviewer_dashboard') }}">Reviewer Dashboard</a>
+				<a class="side-link" href="{{ url_for('reviewer_assigned_proposals') }}">Pending Assignments</a>
+				<a class="side-link" href="{{ url_for('reviewer_under_review') }}">Under Review</a>
+				<a class="side-link" href="{{ url_for('reviewer_review_history') }}">Review History</a>
+				<a class="side-link" href="{{ url_for('reviewer_guidelines') }}">Reviewer Guidelines</a>
+			{% else %}
+				<a class="side-link" href="{{ url_for('researcher_dashboard') }}">{{ role_label }} Dashboard</a>
+				<a class="side-link" href="{{ url_for('researcher_proposals') }}">Proposals</a>
+				<a class="side-link" href="{{ url_for('researcher_projects') }}">Projects</a>
+			{% endif %}
+
+			<div class="side-spacer"></div>
+			<a class="side-link logout" href="{{ url_for('logout') }}">Logout</a>
+		</aside>
+
+		<!-- Content -->
+		<section class="content">
+			<h1 class="page-title">Notifications</h1>
+
+			<div class="notice-card">
+				{% if notifications %}
+					{% for n in notifications %}
+						<div class="notice-row">
+							<span class="notice-text">{{ n.message }}</span>
+							<span class="notice-arrow"></span>
+						</div>
+					{% endfor %}
+				{% else %}
+					<div class="notice-row">
+						<span class="notice-text">No notifications received</span>
+					</div>
+				{% endif %}
+			</div>
+		</section>
+	</main>
+
+	<script>
+		const hamburger = document.getElementById('hamburger');
+		const sidebar = document.getElementById('sidebar');
+		const layout = document.getElementById('layout');
+
+		hamburger.addEventListener('click', () => {
+			sidebar.classList.toggle('collapsed');
+			layout.classList.toggle('sidebar-collapsed');
+		});
+	</script>
+</body>
+</html>

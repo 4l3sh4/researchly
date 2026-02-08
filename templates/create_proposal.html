@@ -113,7 +113,7 @@
     <div class="brand">Researchly™</div>
   </div>
   <div class="icons">
-    <span class="icon bell"></span>
+    <a href="{{ url_for('notifications') }}" class="icon bell"></a>
     <a href="{{ url_for('view_profile') }}" class="icon user">
       {% if prof.profile_picture %}
         <img class="top-avatar" src="{{ url_for('static', filename='uploads/' ~ prof.profile_picture) }}" alt="Profile">
