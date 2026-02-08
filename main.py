@@ -9,7 +9,7 @@ from datetime import datetime, timezone
 from flask import request, abort, flash
 from functools import wraps
 from werkzeug.utils import secure_filename
-from sqlalchemy import exists, and_, or_, func
+from sqlalchemy import exists, and_, or_, func, text
 import uuid
 import os
 
@@ -440,6 +440,16 @@ def get_or_404(model, pk):
         abort(404)
     return obj
 
+def ensure_user_profile_schema():
+    # Lightweight migration for legacy SQLite DBs missing newer columns.
+    with db.engine.connect() as conn:
+        cols = conn.execute(text("PRAGMA table_info(user_profile)")).fetchall()
+        if not cols:
+            return
+        col_names = {row[1] for row in cols}
+        if "expertise_tags" not in col_names:
+            conn.execute(text("ALTER TABLE user_profile ADD COLUMN expertise_tags VARCHAR(255)"))
+
 @app.context_processor
 def inject_profile():
     if current_user.is_authenticated:
@@ -855,10 +865,9 @@ def create_proposal():
         flash("Researcher profile not found.", "error")
         return redirect(url_for("dashboard"))
 
-    rows = (
-        db.session.query(GrantScheme, Department)
-        .outerjoin(Department, GrantScheme.department_id == Department.department_id)
-        .order_by(Department.department_name.asc())
+    schemes = (
+        db.session.query(GrantScheme)
+        .order_by(GrantScheme.scheme_id.asc())
         .all()
     )
 
@@ -874,18 +883,39 @@ def create_proposal():
 
         if not title or not abstract or not methodology:
             flash("Please fill in the required fields.", "error")
-            return render_template("create_proposal.html", user=current_user, prof=prof, rows=rows)
+            return render_template(
+                "create_proposal.html",
+                user=current_user,
+                prof=prof,
+                schemes=schemes,
+                proposal=None,
+                form_action=url_for("create_proposal"),
+            )
 
         scheme_id = (request.form.get("scheme_id") or "").strip()
 
         if not scheme_id:
             flash("Please select a grant scheme.", "error")
-            return render_template("create_proposal.html", user=current_user, prof=prof, rows=rows)
+            return render_template(
+                "create_proposal.html",
+                user=current_user,
+                prof=prof,
+                schemes=schemes,
+                proposal=None,
+                form_action=url_for("create_proposal"),
+            )
 
         scheme = GrantScheme.query.get(scheme_id)
         if not scheme:
             flash("Invalid grant scheme selected.", "error")
-            return render_template("create_proposal.html", user=current_user, prof=prof, rows=rows)
+            return render_template(
+                "create_proposal.html",
+                user=current_user,
+                prof=prof,
+                schemes=schemes,
+                proposal=None,
+                form_action=url_for("create_proposal"),
+            )
 
         proposal_status = "Draft" if action == "draft" else "Pending Review"
 
@@ -910,7 +940,14 @@ def create_proposal():
             if not allowed_file(file.filename):
                 flash("Invalid file type. Please upload PNG/JPG/JPEG/GIF/PDF/DOCX only.", "error")
                 db.session.rollback()
-                return render_template("create_proposal.html", user=current_user, prof=prof, rows=rows)
+                return render_template(
+                    "create_proposal.html",
+                    user=current_user,
+                    prof=prof,
+                    schemes=schemes,
+                    proposal=None,
+                    form_action=url_for("create_proposal"),
+                )
 
             ext = file.filename.rsplit(".", 1)[1].lower()
             stored_name = secure_filename(f"{uuid.uuid4()}.{ext}")
@@ -941,7 +978,7 @@ def create_proposal():
         "create_proposal.html",
         user=current_user,
         prof=prof,
-        rows=rows,
+        schemes=schemes,
         proposal=None,
         form_action=url_for("create_proposal"),
     )
@@ -3063,4 +3100,5 @@ def reviewer_history_view(proposal_id):
 if __name__ == '__main__':
     with app.app_context():
         db.create_all()
+        ensure_user_profile_schema()
     app.run(debug=True)
