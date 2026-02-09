@@ -36,6 +36,11 @@
         Create, view, and track the status of your submitted research proposals.
       </p>
 
+      <div class="status-tabs" role="tablist" aria-label="Proposal status">
+        <button class="status-tab active" type="button" data-status="all">All</button>
+        <button class="status-tab" type="button" data-status="draft">Draft</button>
+      </div>
+
       <!-- Controls -->
       <div class="proposals-header">
         <input
@@ -46,7 +51,6 @@
 
         <select id="proposalStatus" class="filter-dropdown">
           <option value="all">All</option>
-          <option value="draft">Draft</option>
           <option value="pending-review">Pending Review</option>
           <option value="under-review">Under Review</option>
           <option value="revision-required">Revision Required</option>
@@ -95,7 +99,9 @@
 
               <td>
                 {% set status_value = (proposal.proposal_status or '')|lower %}
-                {% if status_value in ['pending review', 'under review'] %}
+                {% if status_value == 'draft' %}
+                  <span class="muted">Not submitted</span>
+                {% elif status_value in ['pending review', 'under review'] %}
                   <span class="muted">Not Reviewed Yet</span>
                 {% else %}
                   <a href="{{ url_for('view_proposal_feedback', proposal_id=proposal.proposal_id) }}"
@@ -117,6 +123,8 @@
   const proposalSearch = document.getElementById("proposalSearch");
   const proposalStatus = document.getElementById("proposalStatus");
   const proposalRows = Array.from(document.querySelectorAll(".proposals-table tbody tr"));
+  const statusTabs = Array.from(document.querySelectorAll(".status-tab"));
+  let tabFilter = "all";
 
   function filterProposals() {
     const text = proposalSearch.value.trim().toLowerCase();
@@ -128,13 +136,32 @@
 
       const matchesText = !text || title.includes(text);
       const matchesStatus = status === "all" || rowStatus === status;
+      const matchesTab = tabFilter === "all" || rowStatus === "draft";
 
-      row.style.display = matchesText && matchesStatus ? "" : "none";
+      row.style.display = matchesText && matchesStatus && matchesTab ? "" : "none";
     });
   }
 
   proposalSearch.addEventListener("input", filterProposals);
   proposalStatus.addEventListener("change", filterProposals);
+
+  statusTabs.forEach((tab) => {
+    tab.addEventListener("click", () => {
+      statusTabs.forEach((btn) => btn.classList.remove("active"));
+      tab.classList.add("active");
+      tabFilter = tab.dataset.status;
+      if (tabFilter === "draft") {
+        proposalStatus.value = "all";
+      }
+      filterProposals();
+    });
+  });
+
+  proposalStatus.addEventListener("change", () => {
+    tabFilter = "all";
+    statusTabs.forEach((btn) => btn.classList.toggle("active", btn.dataset.status === "all"));
+    filterProposals();
+  });
   filterProposals();
 </script>
 </body>
