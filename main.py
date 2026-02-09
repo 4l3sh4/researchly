@@ -637,6 +637,10 @@ def dashboard():
     # Reviewer -> go to reviewer dashboard
     if prof.role == "REVIEWER":
         return redirect(url_for("reviewer_dashboard"))
+    
+    # Researcher -> go to researcher dashboard
+    if prof.role == "RESEARCHER":
+        return redirect(url_for("researcher_dashboard"))
 
     # Others -> normal dashboard (for now reuse the same template or create user_dashboard.html later)
     return render_template("dashboard.html")
