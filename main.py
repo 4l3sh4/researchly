@@ -1433,6 +1433,42 @@ def create_progress_report(project_id):
         abort(404)
 
     proposal = Proposal.query.get(project.proposal_id)
+    reports = (
+        ProgressReport.query.filter_by(project_id=project.project_id)
+        .order_by(ProgressReport.period_start_date.desc())
+        .all()
+    )
+    report_lookup = {
+        (report.period_start_date, report.period_end_date): report
+        for report in reports
+    }
+
+    weekly_periods = []
+    if project.start_date and project.end_date:
+        today = datetime.now(timezone.utc).date()
+        period_end_limit = min(project.end_date, today)
+        week_start = project.start_date
+
+        while week_start <= period_end_limit:
+            week_end = min(week_start + timedelta(days=6), project.end_date)
+            weekly_periods.append(
+                {
+                    "start": week_start,
+                    "end": week_end,
+                    "report": report_lookup.get((week_start, week_end)),
+                }
+            )
+            week_start = week_end + timedelta(days=1)
+
+    allowed_period = None
+    for period in reversed(weekly_periods):
+        if period["report"] is None:
+            allowed_period = period
+            break
+
+    if not allowed_period:
+        flash("No report period available to create.", "error")
+        return redirect(url_for("view_project", project_id=project.project_id))
 
     if request.method == "POST":
         period_start = (request.form.get("period_start_date") or "").strip()
@@ -1467,6 +1503,24 @@ def create_progress_report(project_id):
                 form_data=request.form,
             )
 
+        if start_date != allowed_period["start"] or end_date != allowed_period["end"]:
+            flash("Please submit the report for the current reporting period.", "error")
+            return render_template(
+                "create_progress_report.html",
+                user=current_user,
+                prof=prof,
+                project=project,
+                proposal=proposal,
+                form_data={
+                    "period_start_date": allowed_period["start"].strftime("%Y-%m-%d"),
+                    "period_end_date": allowed_period["end"].strftime("%Y-%m-%d"),
+                    "summary": summary,
+                    "milestones_achieved": milestones,
+                    "challenges": challenges,
+                    "resource_usage": resource_usage,
+                },
+            )
+
         existing_report = ProgressReport.query.filter_by(
             project_id=project.project_id,
             period_start_date=start_date,
@@ -1495,8 +1549,8 @@ def create_progress_report(project_id):
         return redirect(url_for("view_project", project_id=project.project_id))
 
     form_data = {
-        "period_start_date": request.args.get("start", ""),
-        "period_end_date": request.args.get("end", ""),
+        "period_start_date": allowed_period["start"].strftime("%Y-%m-%d"),
+        "period_end_date": allowed_period["end"].strftime("%Y-%m-%d"),
     }
 
     return render_template(
@@ -1535,6 +1589,46 @@ def view_progress_report(project_id, progress_id):
 
     return render_template(
         "view_progress_report.html",
+        user=current_user,
+        prof=prof,
+        project=project,
+        proposal=proposal,
+        report=report,
+        attachments=attachments,
+    )
+
+
+@app.route("/researcher/projects/<project_id>/feedback")
+@login_required
+def view_project_feedback(project_id):
+    prof = get_profile(current_user.id)
+    if not prof or prof.role != "RESEARCHER":
+        flash("Access denied. Researcher role required.", "error")
+        return redirect(url_for("dashboard"))
+
+    researcher = get_researcher(current_user.id)
+    if not researcher:
+        flash("Researcher profile not found.", "error")
+        return redirect(url_for("dashboard"))
+
+    project = Project.query.get(project_id)
+    if not project or project.researcher_id != researcher.researcher_id:
+        abort(404)
+
+    proposal = Proposal.query.get(project.proposal_id)
+    report = (
+        ProgressReport.query.filter_by(project_id=project.project_id)
+        .order_by(ProgressReport.period_end_date.desc())
+        .first()
+    )
+    attachments = []
+    if report:
+        attachments = ProgressReportAttachment.query.filter_by(
+            progress_id=report.progress_id
+        ).all()
+
+    return render_template(
+        "view_project_feedback.html",
         user=current_user,
         prof=prof,
         project=project,
