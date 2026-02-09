@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8" />
+	<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+	<title>Progress Report - Researchly</title>
+
+	<link rel="stylesheet" href="{{ url_for('static', filename='css/hod_progress_report.css') }}">
+	<link rel="stylesheet" href="{{ url_for('static', filename='css/colors.css') }}">
+	<link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='img/researchly_icon.png') }}">
+</head>
+
+<body>
+	<!-- Top bar -->
+	{% include "_topbar.html" %}
+
+	<main class="layout" id="layout">
+		<!-- Sidebar -->
+		<aside class="sidebar" id="sidebar">
+			<a class="side-link" href="{{ url_for('hod_dashboard') }}">HOD Dashboard</a>
+			<a class="side-link" href="{{ url_for('hod_department_overview') }}">Department<br/>Overview</a>
+			<a class="side-link active" href="{{ url_for('hod_active_projects') }}">Active Projects</a>
+			<a class="side-link" href="{{ url_for('hod_review_proposals') }}">Review Proposals</a>
+			<a class="side-link" href="{{ url_for('hod_reviewers') }}">Reviewers</a>
+			<a class="side-link" href="{{ url_for('hod_researchers') }}">Researchers</a>
+
+			<div class="side-spacer"></div>
+			<a class="side-link logout" href="{{ url_for('logout') }}">Logout</a>
+		</aside>
+
+		<!-- Content -->
+		<section class="content">
+			<div class="report-header">
+				<div class="report-number">{{ report_number or "6" }}</div>
+				<h1 class="report-title">Progress Report</h1>
+				<p class="report-subtitle">{{ project_title or "Intelligent Voice-Controlled Wheelchair" }}</p>
+			</div>
+
+			<div class="date-row">
+				<div class="date-group">
+					<div class="date-label">Start Date</div>
+					<div class="date-value">{{ start_date or "12/6/2025" }}</div>
+				</div>
+				<div class="date-group">
+					<div class="date-label">End Date</div>
+					<div class="date-value">{{ end_date or "12/7/2025" }}</div>
+				</div>
+			</div>
+
+			<div class="report-layout">
+				<div class="report-main">
+					<div class="report-section">
+						<h2 class="section-header">Summary</h2>
+						<div class="section-content">
+							{{ report.summary or "There has been successful prototype development, high voice recognition..." }}
+						</div>
+					</div>
+
+					<div class="report-section">
+						<h2 class="section-header">Milestones Achieved</h2>
+						<div class="section-content">
+							{{ report.milestones_achieved or "Prototypes have demonstrated high success rates in recognizing fundamental..." }}
+						</div>
+					</div>
+
+					<div class="report-section">
+						<h2 class="section-header">Challenges Faced</h2>
+						<div class="section-content">
+							{{ report.challenges or "Overcoming noise interference in real-world environments remains a technical challenge for improving voice recognition..." }}
+						</div>
+					</div>
+
+					<div class="report-section">
+						<h2 class="section-header">Resource Usage</h2>
+						<div class="section-content">
+							{{ report.resource_usage or "Android smartphone applications are frequently used as an intermediary interface, connecting via Bluetooth to the..." }}
+						</div>
+					</div>
+				</div>
+
+				<div class="report-sidebar">
+					<form method="POST" action="{{ url_for('hod_progress_report', project_id=project_id, progress_id=progress_id) }}">
+						<div class="comments-section">
+							<h3 class="comments-title">Comments</h3>
+							<textarea 
+								name="hod_comments" 
+								class="comment-textarea" 
+								placeholder="Add your comments here...">{{ report.hod_comments if report.hod_comments else '' }}</textarea>
+						</div>
+
+						<div class="evaluation-section">
+							<h3 class="evaluation-title">Evaluation</h3>
+							<div class="checkbox-group">
+								<label class="checkbox-label">
+									<input type="checkbox" name="request_correction" value="1" {% if request_correction %}checked{% endif %}>
+									Request further correction
+								</label>
+								<label class="checkbox-label">
+									<input type="checkbox" name="acknowledged" value="1" {% if acknowledged %}checked{% endif %}>
+									Acknowledged
+								</label>
+							</div>
+							<button type="submit" class="submit-btn">Submit</button>
+						</div>
+					</form>
+				</div>
+			</div>
+		</section>
+	</main>
+
+	<script>
+		const hamburger = document.getElementById('hamburger');
+		const sidebar = document.getElementById('sidebar');
+		const layout = document.getElementById('layout');
+
+		if (hamburger && sidebar && layout) {
+			hamburger.addEventListener('click', () => {
+				sidebar.classList.toggle('collapsed');
+				layout.classList.toggle('sidebar-collapsed');
+			});
+		}
+	</script>
+</body>
+</html>

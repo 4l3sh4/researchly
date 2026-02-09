@@ -320,9 +320,17 @@ a.icon {
 
 .report-btn {
   background: #e5e5e5;
+    color: #333;
+    text-decoration: none;
+    display: inline-block;
   border: none;
   border-radius: 18px;
   padding: 6px 16px;
+    transition: background 0.2s ease;
+  .report-btn:hover {
+    background: #d5d5d5;
+  }
+
   font-weight: 700;
   cursor: pointer;
 }
@@ -330,6 +338,10 @@ a.icon {
 .report-btn.has-alert {
   position: relative;
   background: #12a1a3;
+  .report-btn.has-alert:hover {
+    background: #0d8486;
+  }
+
   color: #fff;
 }
 

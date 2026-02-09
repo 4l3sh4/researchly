@@ -2978,7 +2978,189 @@ PROJECT_STATUS = [
 @app.route("/HOD/dashboard")
 @login_required
 def hod_dashboard():
-    return render_template("hod_dashboard.html")
+    prof = get_profile(current_user.id)
+    if not prof or prof.role != "HOD":
+        flash("Access denied. HOD role required.", "error")
+        return redirect(url_for("dashboard"))
+
+    department_name = (prof.department_name or "").strip()
+    
+    # 1) Active Projects - count of active projects owned by researchers in the HOD's department
+    active_projects_count = 0
+    if department_name:
+        active_projects_count = (
+            db.session.query(func.count(Project.project_id))
+            .join(Researcher, Researcher.researcher_id == Project.researcher_id)
+            .join(User, User.id == Researcher.user_id)
+            .join(UserProfile, UserProfile.user_id == User.id)
+            .filter(
+                func.lower(UserProfile.department_name) == department_name.lower(),
+                UserProfile.role == "RESEARCHER",
+                func.upper(Project.project_status).in_(["IN PROGRESS", "IN-PROGRESS", "ACTIVE", "ONGOING"])
+            )
+            .scalar() or 0
+        )
+    
+    # 2) Review Proposals - count of proposals assigned to HOD user that haven't been evaluated yet
+    hod_row = HOD.query.filter_by(user_id=current_user.id).first()
+    review_proposals_count = 0
+    if department_name and hod_row:
+        # Get schemes in this department
+        schemes = GrantScheme.query.join(Department).filter(
+            func.lower(Department.department_name) == department_name.lower()
+        ).all()
+        scheme_ids = [s.scheme_id for s in schemes]
+        
+        # Count proposals in those schemes that don't have HOD endorsement
+        if scheme_ids:
+            review_proposals_count = (
+                db.session.query(func.count(Proposal.proposal_id))
+                .filter(Proposal.scheme_id.in_(scheme_ids))
+                .outerjoin(HODEndorsement, HODEndorsement.proposal_id == Proposal.proposal_id)
+                .filter(HODEndorsement.hod_endorsement_id.is_(None))
+                .scalar() or 0
+            )
+    
+    # 3) Reviewers - count of reviewers in the HOD's department
+    reviewers_count = 0
+    if department_name:
+        reviewers_count = (
+            db.session.query(func.count(Reviewer.reviewer_id))
+            .join(User, User.id == Reviewer.user_id)
+            .join(UserProfile, UserProfile.user_id == User.id)
+            .filter(
+                func.lower(UserProfile.department_name) == department_name.lower(),
+                UserProfile.role == "REVIEWER",
+                UserProfile.account_status == "ACTIVE"
+            )
+            .scalar() or 0
+        )
+    
+    # 4) Researchers - count of researchers in the HOD's department
+    researchers_count = 0
+    if department_name:
+        researchers_count = (
+            db.session.query(func.count(Researcher.researcher_id))
+            .join(User, User.id == Researcher.user_id)
+            .join(UserProfile, UserProfile.user_id == User.id)
+            .filter(
+                func.lower(UserProfile.department_name) == department_name.lower(),
+                UserProfile.role == "RESEARCHER",
+                UserProfile.account_status == "ACTIVE"
+            )
+            .scalar() or 0
+        )
+    
+    # 5) Recent Activity - collect recent notifications for the HOD
+    recent_activity = []
+    if department_name:
+        # Get researchers and reviewers recently added to department
+        recent_researchers = (
+            db.session.query(User, UserProfile)
+            .join(UserProfile, UserProfile.user_id == User.id)
+            .filter(
+                func.lower(UserProfile.department_name) == department_name.lower(),
+                UserProfile.role == "RESEARCHER",
+                UserProfile.account_status == "ACTIVE"
+            )
+            .order_by(UserProfile.created_at.desc())
+            .limit(10)
+            .all()
+        )
+        
+        for user, profile in recent_researchers:
+            recent_activity.append({
+                "type": "researcher_added",
+                "message": f"New researcher {user.full_name} added to {department_name} department",
+                "timestamp": profile.created_at
+            })
+        
+        recent_reviewers = (
+            db.session.query(User, UserProfile)
+            .join(UserProfile, UserProfile.user_id == User.id)
+            .filter(
+                func.lower(UserProfile.department_name) == department_name.lower(),
+                UserProfile.role == "REVIEWER",
+                UserProfile.account_status == "ACTIVE"
+            )
+            .order_by(UserProfile.created_at.desc())
+            .limit(10)
+            .all()
+        )
+        
+        for user, profile in recent_reviewers:
+            recent_activity.append({
+                "type": "reviewer_added",
+                "message": f"New reviewer {user.full_name} added to {department_name} department",
+                "timestamp": profile.created_at
+            })
+        
+        # Proposals that need to be reviewed by this HOD
+        schemes = GrantScheme.query.join(Department).filter(
+            func.lower(Department.department_name) == department_name.lower()
+        ).all()
+        scheme_ids = [s.scheme_id for s in schemes]
+        
+        if scheme_ids:
+            proposals_to_review = (
+                db.session.query(Proposal)
+                .filter(Proposal.scheme_id.in_(scheme_ids))
+                .outerjoin(HODEndorsement, HODEndorsement.proposal_id == Proposal.proposal_id)
+                .filter(HODEndorsement.hod_endorsement_id.is_(None))
+                .order_by(Proposal.submission_date.desc())
+                .limit(10)
+                .all()
+            )
+            
+            for proposal in proposals_to_review:
+                recent_activity.append({
+                    "type": "proposal_review",
+                    "message": f"Proposal '{proposal.project_title}' needs review",
+                    "timestamp": proposal.submission_date
+                })
+        
+        # Progress reports made by researchers in the department
+        progress_reports = (
+            db.session.query(ProgressReport, Researcher, User)
+            .join(Researcher, Researcher.researcher_id == ProgressReport.researcher_id)
+            .join(User, User.id == Researcher.user_id)
+            .join(UserProfile, UserProfile.user_id == User.id)
+            .filter(
+                func.lower(UserProfile.department_name) == department_name.lower(),
+                UserProfile.role == "RESEARCHER"
+            )
+            .order_by(ProgressReport.submission_date.desc())
+            .limit(10)
+            .all()
+        )
+        
+        for report, researcher, user in progress_reports:
+            project = Project.query.get(report.project_id)
+            project_title = ""
+            if project:
+                proposal = Proposal.query.get(project.proposal_id)
+                if proposal:
+                    project_title = proposal.project_title
+            
+            recent_activity.append({
+                "type": "progress_report",
+                "message": f"Progress report submitted for project '{project_title}' by {user.full_name}",
+                "timestamp": report.submission_date
+            })
+    
+    # Sort by timestamp descending and take top 5
+    recent_activity.sort(key=lambda x: x["timestamp"], reverse=True)
+    recent_activity = recent_activity[:5]
+    
+    return render_template(
+        "hod_dashboard.html",
+        prof=prof,
+        active_projects_count=active_projects_count,
+        review_proposals_count=review_proposals_count,
+        reviewers_count=reviewers_count,
+        researchers_count=researchers_count,
+        recent_activity=recent_activity
+    )
 
 @app.route("/HOD/department-overview", methods=["GET", "POST"])
 @login_required
@@ -3060,11 +3242,28 @@ def hod_department_overview():
         for u, p in researcher_rows
     ]
 
+    # Count completed projects by researchers in the department
+    completed_projects_count = 0
+    if department_name:
+        completed_projects_count = (
+            db.session.query(func.count(Project.project_id))
+            .join(Researcher, Researcher.researcher_id == Project.researcher_id)
+            .join(User, User.id == Researcher.user_id)
+            .join(UserProfile, UserProfile.user_id == User.id)
+            .filter(
+                func.lower(UserProfile.department_name) == department_name.lower(),
+                UserProfile.role == "RESEARCHER",
+                func.upper(Project.project_status) == "COMPLETED"
+            )
+            .scalar() or 0
+        )
+
     return render_template(
         "hod_department_overview.html",
         prof=prof,
         department_name=department_name or "Department",
         member_count=member_count,
+        completed_projects_count=completed_projects_count,
         recent_reviewers=recent_reviewers,
         recent_researchers=recent_researchers,
         department_description=(department.department_description if department else "")
@@ -3140,6 +3339,154 @@ def hod_active_projects():
         status_filter=status_filter
     )
 
+@app.route("/HOD/active-projects/<project_id>")
+@login_required
+def hod_view_active_project(project_id):
+    prof = get_profile(current_user.id)
+    if not prof or prof.role != "HOD":
+        flash("Access denied. HOD role required.", "error")
+        return redirect(url_for("dashboard"))
+
+    department_name = (prof.department_name or "").strip()
+    
+    # Get the project
+    project = Project.query.get_or_404(project_id)
+    
+    # Get the proposal associated with the project
+    proposal = Proposal.query.get(project.proposal_id)
+    if not proposal:
+        abort(404)
+    
+    # Get the researcher
+    researcher = Researcher.query.get(project.researcher_id)
+    researcher_user = User.query.get(researcher.user_id) if researcher else None
+    researcher_profile = get_profile(researcher_user.id) if researcher_user else None
+    
+    # Verify the project belongs to the HOD's department
+    if researcher_profile and department_name.lower() != (researcher_profile.department_name or "").lower():
+        flash("Access denied. Project not in your department.", "error")
+        return redirect(url_for("hod_active_projects"))
+    
+    # Get scheme for additional context
+    scheme = GrantScheme.query.get(project.scheme_id)
+
+    # Get all progress reports for this project
+    progress_reports = ProgressReport.query.filter_by(project_id=project.project_id).order_by(
+        ProgressReport.period_start_date.desc()
+    ).all()
+
+    # Format progress reports for display
+    formatted_reports = []
+    for idx, report in enumerate(reversed(progress_reports)):
+        formatted_reports.append({
+            "report_number": idx + 1,
+            "progress_id": report.progress_id,
+            "start_date": report.period_start_date.strftime("%m/%d/%Y") if report.period_start_date else "",
+            "end_date": report.period_end_date.strftime("%m/%d/%Y") if report.period_end_date else "",
+            "status": report.status,
+            "has_alert": report.status == "Needs Correction",
+        })
+    formatted_reports.reverse()  # Show most recent first
+    
+    department = Department.query.get(scheme.department_id) if scheme else None
+    
+    return render_template(
+        "hod_view_active_projects.html",
+        prof=prof,
+        project_id=project.project_id,
+        project_title=proposal.project_title,
+        project_abstract=proposal.abstract if proposal else "",
+        project_owner_name=researcher_user.full_name if researcher_user else "",
+        project_owner_picture=researcher_profile.profile_picture if researcher_profile else None,
+        project_start=project.start_date.strftime("%m/%d/%Y") if project.start_date else "",
+        project_end=project.end_date.strftime("%m/%d/%Y") if project.end_date else "",
+        project_status=project.project_status,
+        progress_reports=formatted_reports,
+        department_name=department_name or "Department"
+    )
+
+@app.route("/HOD/active-projects/<project_id>/reports/<progress_id>", methods=["GET", "POST"])
+@login_required
+def hod_progress_report(project_id, progress_id):
+    prof = get_profile(current_user.id)
+    if not prof or prof.role != "HOD":
+        flash("Access denied. HOD role required.", "error")
+        return redirect(url_for("dashboard"))
+
+    department_name = (prof.department_name or "").strip()
+    
+    # Get the project
+    project = Project.query.get_or_404(project_id)
+    
+    # Get the progress report
+    report = ProgressReport.query.get_or_404(progress_id)
+    
+    # Verify the report belongs to the project
+    if report.project_id != project.project_id:
+        flash("Invalid progress report for this project.", "error")
+        return redirect(url_for("hod_view_active_project", project_id=project_id))
+    
+    # Get the researcher and proposal
+    researcher = Researcher.query.get(project.researcher_id)
+    researcher_user = User.query.get(researcher.user_id) if researcher else None
+    researcher_profile = get_profile(researcher_user.id) if researcher_user else None
+    
+    # Verify the project belongs to the HOD's department
+    if researcher_profile and department_name.lower() != (researcher_profile.department_name or "").lower():
+        flash("Access denied. Project not in your department.", "error")
+        return redirect(url_for("hod_active_projects"))
+    
+    # Get the proposal for project title
+    proposal = Proposal.query.get(project.proposal_id)
+    
+    # Get all progress reports for this project to find the report number
+    all_reports = ProgressReport.query.filter_by(project_id=project.project_id).order_by(ProgressReport.period_start_date.asc()).all()
+    report_number = next((idx + 1 for idx, r in enumerate(all_reports) if r.progress_id == progress_id), 1)
+    
+    # Handle POST request (form submission)
+    if request.method == "POST":
+        hod_comments = request.form.get("hod_comments", "").strip()
+        request_correction = request.form.get("request_correction") == "1"
+        acknowledged = request.form.get("acknowledged") == "1"
+        
+        # Update the report
+        report.hod_comments = hod_comments
+        
+        # Update report status based on checkboxes
+        if acknowledged and not request_correction:
+            report.status = "Acknowledged"
+        elif request_correction:
+            report.status = "Needs Correction"
+        else:
+            report.status = "Under Review"
+        
+        try:
+            db.session.commit()
+            flash("Progress report evaluation submitted successfully.", "success")
+            return redirect(url_for("hod_view_active_project", project_id=project_id))
+        except Exception as e:
+            db.session.rollback()
+            flash("Error submitting evaluation. Please try again.", "error")
+    
+    # Prepare checkbox states
+    request_correction = report.status == "Needs Correction"
+    acknowledged = report.status == "Acknowledged"
+    
+    return render_template(
+        "hod_progress_report.html",
+        prof=prof,
+        project_id=project.project_id,
+        progress_id=report.progress_id,
+        project_title=proposal.project_title if proposal else "Project",
+        report_number=report_number,
+        start_date=report.period_start_date.strftime("%m/%d/%Y") if report.period_start_date else "",
+        end_date=report.period_end_date.strftime("%m/%d/%Y") if report.period_end_date else "",
+        report=report,
+        request_correction=request_correction,
+        acknowledged=acknowledged,
+        department_name=department_name or "Department"
+    )
+
 @app.route("/HOD/review-proposals")
 @login_required
 def hod_review_proposals():
@@ -3163,6 +3510,42 @@ def hod_review_proposals():
         prof=prof,
         proposals=proposals,
         department_name=prof.department_name
+    )
+
+@app.route("/HOD/review-proposals/<proposal_id>")
+@login_required
+def hod_view_review_proposal(proposal_id):
+    prof = get_profile(current_user.id)
+    if not prof or prof.role != "HOD":
+        flash("Access denied. HOD role required.", "error")
+        return redirect(url_for("dashboard"))
+
+    proposal = Proposal.query.get_or_404(proposal_id)
+    scheme = GrantScheme.query.get(proposal.scheme_id)
+    dept = Department.query.get(scheme.department_id) if scheme else None
+
+    department_name = (prof.department_name or "").strip()
+    dept_name = (dept.department_name or "").strip() if dept else ""
+    if not dept_name or department_name.lower() != dept_name.lower():
+        flash("Access denied. Not your department proposal.", "error")
+        return redirect(url_for("hod_review_proposals"))
+
+    researcher = Researcher.query.get(proposal.researcher_id)
+    researcher_user = User.query.get(researcher.user_id) if researcher else None
+    researcher_profile = get_profile(researcher_user.id) if researcher_user else None
+    if researcher_profile and department_name.lower() != (researcher_profile.department_name or "").lower():
+        flash("Access denied. Researcher not in your department.", "error")
+        return redirect(url_for("hod_review_proposals"))
+
+    attachments = ProposalAttachment.query.filter_by(proposal_id=proposal.proposal_id).all()
+
+    return render_template(
+        "hod_view_review_proposals.html",
+        prof=prof,
+        proposal=proposal,
+        attachments=attachments,
+        researcher_name=researcher_user.full_name if researcher_user else "",
+        department_name=department_name or "Department",
     )
 
 @app.route("/HOD/endorse/<proposal_id>", methods=["POST"])

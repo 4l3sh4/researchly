@@ -10,29 +10,8 @@
 </head>
 
 <body>
-  <!-- Topbar -->
-  <header class="topbar">
-    <div class="left">
-      <button class="hamburger" type="button" aria-label="Menu" id="hamburger">&#9776;</button>
-      <div class="brand">Researchly™</div>
-    </div>
-
-    <div class="icons">
-      <a class="icon bell" title="Notifications" href="{{ url_for('notifications') }}"></a>
-
-      <a href="{{ url_for('view_profile') }}" class="icon user" title="Profile">
-        {% if prof and prof.profile_picture %}
-          <img class="top-avatar"
-               src="{{ url_for('static', filename='uploads/' ~ prof.profile_picture) }}"
-               alt="Profile">
-        {% else %}
-          <span class="avatar-fallback" aria-hidden="true"></span>
-        {% endif %}
-      </a>
-
-      <a class="logout" href="{{ url_for('logout') }}" title="Logout">Logout</a>
-    </div>
-  </header>
+  <!-- Top bar -->
+  {% include "_topbar.html" %}
 
   <div class="layout">
     <!-- Sidebar -->

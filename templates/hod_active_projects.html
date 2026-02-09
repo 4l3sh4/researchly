@@ -60,7 +60,7 @@
               {% for project in projects %}
                 <div class="project-item">
                   <span class="project-title">{{ project.project_title }}</span>
-                  <button class="btn-view">View</button>
+                  <a href="{{ url_for('hod_view_active_project', project_id=project.project_id) }}" class="btn-view">View</a>
                 </div>
               {% endfor %}
             {% else %}

@@ -10,6 +10,8 @@
   <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='img/researchly_icon.png') }}">
 </head>
 <body>
+  <!-- Top bar -->
+  {% include "_topbar.html" %}
 
   <form method="POST" action="{{ url_for('edit_profile') }}" enctype="multipart/form-data">
     <div class="page">

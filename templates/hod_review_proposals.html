@@ -57,12 +57,11 @@
           <div class="proposals-list" id="proposalsList">
             {% if proposals and proposals|length > 0 %}
               {% for p in proposals %}
-              <div class="proposal-item" data-status="{{ (p.proposal_status or '')|lower }}">
+                <div class="proposal-item" data-status="{{ (p.proposal_status or '')|lower }}" data-title="{{ p.project_title or '' }}">
                 <span class="proposal-title">{{ p.project_title }}</span>
 
                 <div class="proposal-actions">
-                    <!-- View proposal details (use your existing admin_view_proposal equivalent if you have a hod view route) -->
-                    <a class="btn-view" href="{{ url_for('admin_view_proposal', proposal_id=p.proposal_id) }}">View</a>
+                  <a class="btn-view" href="{{ url_for('hod_view_review_proposal', proposal_id=p.proposal_id) }}">View</a>
 
                     <!-- HoD Decision -->
                     <form method="POST" action="{{ url_for('hod_endorse', proposal_id=p.proposal_id) }}" class="decision-form">
@@ -94,11 +93,40 @@
     const hamburger = document.getElementById('hamburger');
     const sidebar = document.getElementById('sidebar');
     const layout = document.getElementById('layout');
+    const searchInput = document.getElementById('searchInput');
+    const filterSelect = document.getElementById('filterSelect');
+    const proposalsList = document.getElementById('proposalsList');
 
     hamburger.addEventListener('click', () => {
       sidebar.classList.toggle('collapsed');
       layout.classList.toggle('sidebar-collapsed');
     });
+
+    const applyFilters = () => {
+      if (!proposalsList) {
+        return;
+      }
+
+      const query = (searchInput?.value || '').trim().toLowerCase();
+      const status = (filterSelect?.value || '').trim().toLowerCase();
+      const items = proposalsList.querySelectorAll('.proposal-item');
+
+      items.forEach((item) => {
+        const title = (item.dataset.title || '').toLowerCase();
+        const itemStatus = (item.dataset.status || '').toLowerCase();
+        const matchesQuery = !query || title.includes(query);
+        const matchesStatus = !status || itemStatus.includes(status);
+        item.style.display = (matchesQuery && matchesStatus) ? '' : 'none';
+      });
+    };
+
+    if (searchInput) {
+      searchInput.addEventListener('input', applyFilters);
+    }
+
+    if (filterSelect) {
+      filterSelect.addEventListener('change', applyFilters);
+    }
   </script>
 </body>
 </html>

@@ -250,6 +250,8 @@ a.icon {
 .doc-pill {
   background: #ececec;
   color: #1a1a1a;
+  text-decoration: none;
+  display: inline-block;
   padding: 6px 14px;
   border-radius: 20px;
   font-size: 14px;

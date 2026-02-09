@@ -68,36 +68,18 @@
 				<div class="reports-card">
 					<h2>Progress Reports</h2>
 					<div class="reports-list">
-						<div class="report-row">
-							<span class="report-index">6</span>
-							<span class="report-date">12/6/2025 – 12/7/2025</span>
-							<button class="report-btn has-alert" type="button">View</button>
-						</div>
-						<div class="report-row">
-							<span class="report-index">5</span>
-							<span class="report-date">12/5/2025 – 12/6/2025</span>
-							<button class="report-btn" type="button">View</button>
-						</div>
-						<div class="report-row">
-							<span class="report-index">4</span>
-							<span class="report-date">12/4/2025 – 12/5/2025</span>
-							<button class="report-btn" type="button">View</button>
-						</div>
-						<div class="report-row">
-							<span class="report-index">3</span>
-							<span class="report-date">12/3/2025 – 12/4/2025</span>
-							<button class="report-btn" type="button">View</button>
-						</div>
-						<div class="report-row">
-							<span class="report-index">2</span>
-							<span class="report-date">12/2/2025 – 12/3/2025</span>
-							<button class="report-btn" type="button">View</button>
-						</div>
-						<div class="report-row">
-							<span class="report-index">1</span>
-							<span class="report-date">12/1/2025 – 12/2/2025</span>
-							<button class="report-btn" type="button">View</button>
-						</div>
+						{% if progress_reports %}
+							{% for report in progress_reports %}
+							<div class="report-row">
+								<span class="report-index">{{ report.report_number }}</span>
+								<span class="report-date">{{ report.start_date }} – {{ report.end_date }}</span>
+								<a href="{{ url_for('hod_progress_report', project_id=project_id, progress_id=report.progress_id) }}" 
+								   class="report-btn {% if report.has_alert %}has-alert{% endif %}">View</a>
+							</div>
+							{% endfor %}
+						{% else %}
+							<p style="padding: 20px; text-align: center; color: #999;">No progress reports yet.</p>
+						{% endif %}
 					</div>
 				</div>
 			</div>

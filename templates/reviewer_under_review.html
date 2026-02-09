@@ -83,6 +83,8 @@
 </head>
 
 <body>
+  <!-- Top bar -->
+  {% include "_topbar.html" %}
   <header class="topbar">
     <div class="left">
       <button class="hamburger" type="button" id="hamburger">&#9776;</button>
@@ -90,7 +92,13 @@
     </div>
 
     <div class="icons">
-      <span class="icon bell" title="Notifications"></span>
+      <a href="{{ url_for('notifications') }}" class="icon bell" title="Notifications">
+        {% if unread_notifications and unread_notifications > 0 %}
+          <span class="notif-badge">
+            {% if unread_notifications > 99 %}99+{% else %}{{ unread_notifications }}{% endif %}
+          </span>
+        {% endif %}
+      </a>
       <a href="{{ url_for('view_profile') }}" class="icon user" title="Profile">
         {% if prof and prof.profile_picture %}
           <img class="top-avatar" src="{{ url_for('static', filename='uploads/' ~ prof.profile_picture) }}" alt="Profile">

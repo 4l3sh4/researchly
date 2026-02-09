@@ -36,33 +36,35 @@
         <div class="stats-grid">
           <div class="stat-card">
             <div class="stat-title">Active Projects</div>
-            <div class="stat-number">7</div>
+            <div class="stat-number">{{ active_projects_count }}</div>
           </div>
 
           <div class="stat-card">
             <div class="stat-title">Review Proposals</div>
-            <div class="stat-number">8</div>
+            <div class="stat-number">{{ review_proposals_count }}</div>
           </div>
 
           <div class="stat-card">
             <div class="stat-title">Reviewers</div>
-            <div class="stat-number">9</div>
+            <div class="stat-number">{{ reviewers_count }}</div>
           </div>
 
           <div class="stat-card">
             <div class="stat-title">Researchers</div>
-            <div class="stat-number">30</div>
+            <div class="stat-number">{{ researchers_count }}</div>
           </div>
         </div>
 
         <div class="activity-section">
           <h2>Recent Activity</h2>
           <ul class="activity-list">
-            <li>Proposal X needs to be reviewed</li>
-            <li>Project M has a new progress report</li>
-            <li>Proposal C needs to be reviewed</li>
-            <li>A new researcher has been assigned to the Engineering department</li>
-            <li>A new reviewer has been assigned to the Engineering department</li>
+            {% if recent_activity %}
+              {% for activity in recent_activity %}
+                <li>{{ activity.message }}</li>
+              {% endfor %}
+            {% else %}
+              <li>No recent activity</li>
+            {% endif %}
           </ul>
         </div>
       </div>
