@@ -1,4 +1,4 @@
-from flask import Flask, render_template, url_for, redirect
+from flask import Flask, render_template, url_for, redirect, send_from_directory
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import UserMixin, login_user, LoginManager, login_required, logout_user, current_user
 from flask_wtf import FlaskForm
@@ -148,6 +148,12 @@ class Proposal(db.Model):
     expertise_needed = db.Column(db.String(500), nullable=True)
     submission_date = db.Column(db.DateTime, nullable=False)
     proposal_status = db.Column(db.String(15), nullable=False)
+    attachments = db.relationship(
+        "ProposalAttachment",
+        backref="proposal",
+        lazy=True,
+        cascade="all, delete-orphan"
+    )
 
 class ProposalAttachment(db.Model):
     attachment_id = db.Column(db.String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
@@ -945,6 +951,11 @@ def researcher_dashboard():
         active_projects=active_projects,
         recent_activity=recent_activity,
     )
+
+@app.route("/uploads/<filename>")
+@login_required
+def uploaded_file(filename):
+    return send_from_directory(app.config["UPLOAD_FOLDER"], filename, as_attachment=True)
 
 @app.route("/researcher/grant-schemes")
 @login_required
@@ -2741,14 +2752,20 @@ def admin_assign_reviewers():
 
     departments = Department.query.order_by(Department.department_name.asc()).all()
 
-    # Proposals that have NO reviewer assignments yet
+    # Proposals that need assignment:
+    # - no assignments OR
+    # - all assignments declined
     query = (
         db.session.query(Proposal, Department)
         .join(GrantScheme, GrantScheme.scheme_id == Proposal.scheme_id)
         .join(Department, Department.department_id == GrantScheme.department_id)
-        .outerjoin(ReviewersAssignment, ReviewersAssignment.proposal_id == Proposal.proposal_id)
-        .filter(ReviewersAssignment.proposal_id.is_(None))
-        .filter(db.func.lower(db.func.coalesce(Proposal.proposal_status, "")) != "draft")
+        .filter(func.lower(func.coalesce(Proposal.proposal_status, "")) != "draft")
+        .filter(
+            ~exists().where(and_(
+                ReviewersAssignment.proposal_id == Proposal.proposal_id,
+                func.upper(func.trim(ReviewersAssignment.assignment_status)).in_(["ASSIGNED", "ACCEPTED", "COMPLETED"])
+            ))
+        )
     )
 
     if dept_id != "ALL":
@@ -3597,17 +3614,21 @@ def reviewer_assignment_view(proposal_id):
         "DECLINED": "Declined",
     }.get(raw, "Pending")
 
+    attachments = ProposalAttachment.query.filter_by(proposal_id=proposal.proposal_id).all()
+
     view_model = {
-        "id": proposal.proposal_id,
         "title": proposal.project_title,
-        "status": display_status,     # UI label
+        "status": display_status,
         "abstract": proposal.abstract,
         "methodology": proposal.methodology,
-        "assignment_status": raw,     # RAW logic
+        "assignment_status": raw,
         "attachments": [
-            {"name": "Proposal.pdf", "url": "#"},
-            {"name": "Budget_plan.pdf", "url": "#"},
-        ],
+            {
+                "stored_filename": a.stored_filename,
+                "original_filename": a.original_filename
+            }
+            for a in attachments
+        ]
     }
 
     return render_template("reviewer_assignment_view.html", proposal=view_model)
@@ -3649,6 +3670,7 @@ def reviewer_evaluate(proposal_id):
     rv = get_reviewer_by_user(current_user.id)
 
     proposal = Proposal.query.get_or_404(proposal_id)
+    attachments = ProposalAttachment.query.filter_by(proposal_id=proposal_id).all()
 
     # ensure reviewer is assigned
     assignment = ReviewersAssignment.query.filter_by(
@@ -3742,6 +3764,7 @@ def reviewer_evaluate(proposal_id):
     return render_template(
         "reviewer_evaluation.html",
         proposal=proposal,
+        attachments=attachments,
         existing=existing,
         submitted=submitted,
         evaluated_at=evaluated_at
@@ -3781,12 +3804,13 @@ def reviewer_history_view(proposal_id):
         reviewer_id=rv.reviewer_id
     ).first_or_404()
 
+    attachments = ProposalAttachment.query.filter_by(proposal_id=proposal_id).all()
+
     status_map = {
         "RECOMMENDED": "Recommended",
         "REVISION_REQUIRED": "Revision Required",
         "REJECTED": "Rejected",
     }
-
     display_status = status_map.get(review.recommendation, "Unknown")
 
     return render_template(
@@ -3794,6 +3818,7 @@ def reviewer_history_view(proposal_id):
         proposal=proposal,
         review=review,
         display_status=display_status,
+        attachments=attachments
     )
 
 if __name__ == '__main__':

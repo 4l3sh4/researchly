@@ -148,7 +148,13 @@
 
             <div class="meta">
               Status:
-              <span class="status-pill {{ cls }}">{{ proposal.status }}</span>
+              <span class="status-pill {{ cls }}">
+                {% if raw == "ASSIGNED" %}
+                  Pending
+                {% else %}
+                  {{ raw.title() }}
+                {% endif %}
+              </span>
             </div>
           </div>
 
@@ -171,14 +177,17 @@
           <div class="box-footer">
             <div class="footer-label">Attachments</div>
             <div class="doc-row">
-              {% for a in proposal.attachments %}
-                <a class="doc-pill" href="{{ a.url }}">{{ a.name }}</a>
-              {% endfor %}
+            {% for a in proposal.attachments %}
+              <a class="doc-pill"
+                href="{{ url_for('uploaded_file', filename=a.stored_filename) }}">
+                {{ a.original_filename }}
+              </a>
+            {% endfor %}
             </div>
           </div>
         </div>
 
-      {% if raw == "PENDING" %}
+      {% if raw == "ASSIGNED" %}
         <div class="detail-actions" id="actionButtons">
           <form method="POST" style="display:inline;">
             <input type="hidden" name="decision" value="ACCEPTED">
