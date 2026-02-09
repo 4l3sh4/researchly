@@ -955,9 +955,6 @@ def researcher_dashboard():
 @app.route("/uploads/<filename>")
 @login_required
 def uploaded_file(filename):
-    # Optional: security checks (recommended)
-    # - verify file exists in DB
-    # - verify current_user is allowed to access it (assigned reviewer / owner / admin)
     return send_from_directory(app.config["UPLOAD_FOLDER"], filename, as_attachment=True)
 
 @app.route("/researcher/grant-schemes")
@@ -3579,6 +3576,7 @@ def reviewer_evaluate(proposal_id):
     rv = get_reviewer_by_user(current_user.id)
 
     proposal = Proposal.query.get_or_404(proposal_id)
+    attachments = ProposalAttachment.query.filter_by(proposal_id=proposal_id).all()
 
     # ensure reviewer is assigned
     assignment = ReviewersAssignment.query.filter_by(
@@ -3672,6 +3670,7 @@ def reviewer_evaluate(proposal_id):
     return render_template(
         "reviewer_evaluation.html",
         proposal=proposal,
+        attachments=attachments,
         existing=existing,
         submitted=submitted,
         evaluated_at=evaluated_at
@@ -3711,12 +3710,13 @@ def reviewer_history_view(proposal_id):
         reviewer_id=rv.reviewer_id
     ).first_or_404()
 
+    attachments = ProposalAttachment.query.filter_by(proposal_id=proposal_id).all()
+
     status_map = {
         "RECOMMENDED": "Recommended",
         "REVISION_REQUIRED": "Revision Required",
         "REJECTED": "Rejected",
     }
-
     display_status = status_map.get(review.recommendation, "Unknown")
 
     return render_template(
@@ -3724,6 +3724,7 @@ def reviewer_history_view(proposal_id):
         proposal=proposal,
         review=review,
         display_status=display_status,
+        attachments=attachments
     )
 
 if __name__ == '__main__':

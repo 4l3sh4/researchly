@@ -148,7 +148,13 @@
 
             <div class="meta">
               Status:
-              <span class="status-pill {{ cls }}">{{ proposal.status }}</span>
+              <span class="status-pill {{ cls }}">
+                {% if raw == "ASSIGNED" %}
+                  Pending
+                {% else %}
+                  {{ raw.title() }}
+                {% endif %}
+              </span>
             </div>
           </div>
 

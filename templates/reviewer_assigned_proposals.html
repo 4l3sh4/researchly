@@ -47,7 +47,7 @@
 
     /* fixed column sizing so header/body align */
     .col-title{ width:70%; }
-    .col-status{ width:140px; white-space:nowrap; }  /* ✅ status one line */
+    .col-status{ width:140px; white-space:nowrap; }  
     .col-actions{ width:120px; text-align:right; }
 
     /* tbody scroll */
@@ -221,6 +221,7 @@
 
     searchInput.addEventListener('input', applyFilters);
     filterSelect.addEventListener('change', applyFilters);
+    filterSelect.value = "Pending";
     applyFilters();
   </script>
 </body>

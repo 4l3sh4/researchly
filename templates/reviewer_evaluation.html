@@ -217,8 +217,16 @@
             <div class="overview-foot">
               <div class="footer-label">Attachments</div>
               <div class="doc-row">
-                <a class="doc-pill" href="#" onclick="return false;">Proposal.pdf</a>
-                <a class="doc-pill" href="#" onclick="return false;">Budget_plan.pdf</a>
+                {% if attachments and attachments|length > 0 %}
+                  {% for a in attachments %}
+                    <a class="doc-pill"
+                      href="{{ url_for('uploaded_file', filename=a.stored_filename) }}">
+                      {{ a.original_filename }}
+                    </a>
+                  {% endfor %}
+                {% else %}
+                  <span style="opacity:.6; font-weight:900;">No attachments</span>
+                {% endif %}
               </div>
             </div>
 
@@ -322,10 +330,13 @@
     const hamburger = document.getElementById('hamburger');
     const sidebar = document.getElementById('sidebar');
     const layout = document.getElementById('layout');
-    hamburger?.addEventListener('click', () => {
-      sidebar.classList.toggle('collapsed');
-      layout.classList.toggle('sidebar-collapsed');
-    });
+
+    if (hamburger) {
+      hamburger.addEventListener('click', () => {
+        sidebar.classList.toggle('collapsed');
+        layout.classList.toggle('sidebar-collapsed');
+      });
+    }
 
     // modal confirm submit
     const openBtn = document.getElementById('openConfirm');
@@ -334,24 +345,49 @@
     const confirmBtn = document.getElementById('confirmSubmit');
     const form = document.getElementById('evalForm');
 
-    function openModal(){ overlay.style.display = 'flex'; overlay.setAttribute('aria-hidden','false'); }
-    function closeModal(){ overlay.style.display = 'none'; overlay.setAttribute('aria-hidden','true'); }
+    function openModal() {
+      if (!overlay) return;
+      overlay.style.display = 'flex';
+      overlay.setAttribute('aria-hidden', 'false');
+    }
 
-    openBtn?.addEventListener('click', () => {
-      const feedback = document.getElementById('feedback')?.value?.trim() || "";
-      const rec = form.querySelector('input[name="recommendation"]:checked');
-      if (!feedback) { alert("Feedback cannot be empty."); return; }
-      if (!rec) { alert("Please choose a recommendation."); return; }
-      openModal();
-    });
+    function closeModal() {
+      if (!overlay) return;
+      overlay.style.display = 'none';
+      overlay.setAttribute('aria-hidden', 'true');
+    }
 
-    cancelBtn?.addEventListener('click', closeModal);
-    overlay?.addEventListener('click', (e) => { if (e.target === overlay) closeModal(); });
+    if (openBtn) {
+      openBtn.addEventListener('click', () => {
+        const feedbackEl = document.getElementById('feedback');
+        const feedback = feedbackEl ? (feedbackEl.value || "").trim() : "";
+        const rec = form ? form.querySelector('input[name="recommendation"]:checked') : null;
+
+        if (!feedback) { alert("Feedback cannot be empty."); return; }
+        if (!rec) { alert("Please choose a recommendation."); return; }
+
+        openModal();
+      });
+    }
+
+    if (cancelBtn) cancelBtn.addEventListener('click', closeModal);
+
+    if (overlay) {
+      overlay.addEventListener('click', (e) => {
+        if (e.target === overlay) closeModal();
+      });
+    }
+
     document.addEventListener('keydown', (e) => {
       if (overlay && overlay.style.display === 'flex' && e.key === 'Escape') closeModal();
     });
 
-    confirmBtn?.addEventListener('click', () => form.submit());
+    if (confirmBtn) {
+      confirmBtn.addEventListener('click', () => {
+        if (form) form.submit();
+      });
+    }
   </script>
+
 </body>
 </html>
