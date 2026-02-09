@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Grant Schemes - Researchly</title>
+
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/colors.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/researcher_dashboard.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/researcher_proposals.css') }}">
+  <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='img/researchly_icon.png') }}">
+</head>
+
+<body>
+
+<!-- Topbar -->
+<header class="topbar">
+  <div class="left">
+    <button class="hamburger" type="button">&#9776;</button>
+    <div class="brand">Researchly&#8482;</div>
+  </div>
+
+  <div class="icons">
+    <a href="{{ url_for('notifications') }}" class="icon bell"></a>
+    <a href="{{ url_for('view_profile') }}" class="icon user">
+      {% if prof.profile_picture %}
+        <img class="top-avatar"
+             src="{{ url_for('static', filename='uploads/' ~ prof.profile_picture) }}"
+             alt="Profile">
+      {% else %}
+        <span class="fallback-user">&#128100;</span>
+      {% endif %}
+    </a>
+  </div>
+</header>
+
+<main class="layout">
+
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <a class="side-link" href="{{ url_for('researcher_dashboard') }}">Researcher Dashboard</a>
+    <a class="side-link" href="{{ url_for('researcher_proposals') }}">Proposals</a>
+    <a class="side-link" href="{{ url_for('researcher_projects') }}">Projects</a>
+    <a class="side-link active" href="{{ url_for('researcher_grant_schemes') }}">Grant Scheme</a>
+
+    <div class="side-spacer"></div>
+    <a class="side-link logout" href="{{ url_for('logout') }}">Logout</a>
+  </aside>
+
+  <!-- Content -->
+  <section class="content">
+    <div class="card">
+      <h1>Grant Schemes</h1>
+      <p class="muted">Open grant schemes and their guidelines.</p>
+
+      <div class="table-card">
+        <table class="proposals-table">
+          <thead>
+            <tr>
+              <th>Department</th>
+              <th>Description</th>
+              <th>Eligibility</th>
+              <th>Required Documents</th>
+              <th>Reporting Requirements</th>
+              <th>Application Period</th>
+              <th>Max Budget (RM)</th>
+              <th>Duration (Months)</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for scheme, dept in schemes %}
+            <tr>
+              <td class="proposal-name">{{ dept.department_name }}</td>
+              <td>{{ scheme.description }}</td>
+              <td>{{ scheme.eligibiliity }}</td>
+              <td>{{ scheme.required_documents }}</td>
+              <td>{{ scheme.reporting_requirements }}</td>
+              <td>
+                {{ scheme.open_date.strftime('%Y-%m-%d') if scheme.open_date else '' }}
+                &#8211;
+                {{ scheme.close_date.strftime('%Y-%m-%d') if scheme.close_date else '' }}
+              </td>
+              <td>{{ scheme.max_budget }}</td>
+              <td>{{ scheme.project_duration_limit }}</td>
+            </tr>
+            {% else %}
+            <tr>
+              <td colspan="8" class="muted">No open grant schemes available.</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+</main>
+</body>
+</html>

@@ -9,52 +9,73 @@
   <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='img/researchly_icon.png') }}">
 </head>
 <body>
-<header class="topbar">
-  <div class="left">
-    <button class="hamburger" type="button">&#9776;</button>
-    <div class="brand">Researchly™</div>
-  </div>
-  <div class="icons">
-    <a href="{{ url_for('notifications') }}" class="icon bell"></a>
-    <a href="{{ url_for('view_profile') }}" class="icon user">
-      {% if prof.profile_picture %}
-        <img class="top-avatar" src="{{ url_for('static', filename='uploads/' ~ prof.profile_picture) }}" alt="Profile">
-      {% else %}
-        <span class="fallback-user">👤</span>
-      {% endif %}
-    </a>
-  </div>
-</header>
+{% include "_topbar.html" %}
 
 <main class="layout">
   <aside class="sidebar">
-    <a class="side-link" href="{{ url_for('researcher_dashboard') }}">Dashboard</a>
+    <a class="side-link" href="{{ url_for('researcher_dashboard') }}">ResearcherDashboard</a>
     <a class="side-link active" href="{{ url_for('researcher_proposals') }}">Proposals</a>
     <a class="side-link" href="{{ url_for('researcher_projects') }}">Projects</a>
+    <a class="side-link" href="{{ url_for('researcher_grant_schemes') }}">Grant Schemes</a>
     <div class="side-spacer"></div>
     <a class="side-link logout" href="{{ url_for('logout') }}">Logout</a>
   </aside>
 
   <section class="content">
     <div class="card">
-      <h1>Feedback for: {{ proposal.project_title }}</h1>
-      <p class="muted">Proposal status: {{ proposal.proposal_status }}</p>
+      <h1>Feedback</h1>
+      <p class="muted">
+        Proposal: <strong>{{ proposal.project_title }}</strong>
+      </p>
+      <p class="muted">
+        Status: <span class="status-badge status-{{ proposal.proposal_status.lower().replace(' ', '-') }}">
+          {{ proposal.proposal_status }}
+        </span>
+      </p>
 
-      {% if reviews %}
-        <ul class="activity-list">
-          {% for r in reviews %}
-            <li>
-              <strong>{{ r.recommendation }}</strong> — {{ r.feedback }}
-              <div style="font-size:12px;color:#888">By reviewer {{ r.reviewer_id }} on {{ r.review_date }}</div>
-            </li>
-          {% endfor %}
-        </ul>
-      {% else %}
-        <p>No feedback available yet.</p>
-      {% endif %}
+      <div class="feedback-card">
+        <div class="feedback-row">
+          <div class="feedback-label">Reviewer:</div>
+          <div class="feedback-status">
+            {% if latest_review %}
+              {{ latest_review.recommendation }}
+            {% else %}
+              Not Reviewed Yet
+            {% endif %}
+          </div>
+        </div>
+
+        {% if latest_review %}
+        <div class="feedback-details">
+          {{ latest_review.feedback }}
+          <div class="feedback-meta">Reviewed on {{ latest_review.review_date.strftime('%B %d, %Y') }}</div>
+        </div>
+        {% endif %}
+
+        <div class="feedback-row">
+          <div class="feedback-label">Head of Department:</div>
+          <div class="feedback-status">
+            {% if hod_feedback %}
+              {{ hod_feedback.decision }}
+            {% else %}
+              Not Reviewed Yet
+            {% endif %}
+          </div>
+        </div>
+
+        {% if hod_feedback %}
+        <div class="feedback-details">
+          {{ hod_feedback.remarks }}
+          <div class="feedback-meta">Reviewed on {{ hod_feedback.decision_date.strftime('%B %d, %Y') }}</div>
+        </div>
+        {% endif %}
+      </div>
 
       <div class="cta-row">
         <a class="btn ghost" href="{{ url_for('view_proposal', proposal_id=proposal.proposal_id) }}">Back</a>
+        {% if 'revision' in (proposal.proposal_status or '')|lower %}
+        <a class="btn primary" href="{{ url_for('edit_proposal', proposal_id=proposal.proposal_id) }}">Edit Proposal</a>
+        {% endif %}
       </div>
     </div>
   </section>

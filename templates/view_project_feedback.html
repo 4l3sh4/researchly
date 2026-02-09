@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Project Feedback - Researchly</title>
+
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/colors.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/researcher_dashboard.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/researcher_projects.css') }}">
+    <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='img/researchly_icon.png') }}">
+</head>
+
+<body>
+<header class="topbar">
+    <div class="left">
+        <button class="hamburger" type="button">&#9776;</button>
+        <div class="brand">Researchly™</div>
+    </div>
+
+    <div class="icons">
+        <a href="{{ url_for('notifications') }}" class="icon bell"></a>
+        <a href="{{ url_for('view_profile') }}" class="icon user">
+            {% if prof.profile_picture %}
+                <img class="top-avatar"
+                     src="{{ url_for('static', filename='uploads/' ~ prof.profile_picture) }}"
+                     alt="Profile">
+            {% else %}
+                <span class="fallback-user">👤</span>
+            {% endif %}
+        </a>
+    </div>
+</header>
+
+<main class="layout">
+    <aside class="sidebar">
+        <a class="side-link" href="{{ url_for('researcher_dashboard') }}">Researcher Dashboard</a>
+        <a class="side-link" href="{{ url_for('researcher_proposals') }}">Proposals</a>
+        <a class="side-link active" href="{{ url_for('researcher_projects') }}">Projects</a>
+        <a class="side-link" href="{{ url_for('researcher_grant_schemes') }}">Grant Scheme</a>
+
+        <div class="side-spacer"></div>
+        <a class="side-link logout" href="{{ url_for('logout') }}">Logout</a>
+    </aside>
+
+    <section class="content">
+        <div class="card">
+            <div class="feedback-header">
+                <div>
+                    <div class="eyebrow">Feedback</div>
+                    <div class="feedback-meta">
+                        <span class="feedback-label">Project:</span>
+                        <span class="feedback-value">{{ proposal.project_title }}</span>
+                    </div>
+                    {% if report %}
+                    <div class="feedback-meta">
+                        <span class="feedback-label">Progress Report:</span>
+                        <span class="feedback-value">
+                            {{ report.period_start_date.strftime('%m/%d/%Y') }} – {{ report.period_end_date.strftime('%m/%d/%Y') }}
+                        </span>
+                    </div>
+                    {% endif %}
+                </div>
+                <a class="back-link" href="{{ url_for('researcher_projects') }}">← Back</a>
+            </div>
+
+            {% if report %}
+            <div class="feedback-grid">
+                <div class="feedback-panel">
+                    <div class="report-dates">
+                        <div class="report-date-block">
+                            <div class="detail-title">Start Date</div>
+                            <div class="detail-text">{{ report.period_start_date.strftime('%m/%d/%Y') }}</div>
+                        </div>
+                        <div class="report-date-block">
+                            <div class="detail-title">End Date</div>
+                            <div class="detail-text">{{ report.period_end_date.strftime('%m/%d/%Y') }}</div>
+                        </div>
+                    </div>
+
+                    <div class="detail-block">
+                        <div class="detail-title">Summary</div>
+                        <div class="detail-text">{{ report.summary }}</div>
+                    </div>
+                    <div class="detail-block">
+                        <div class="detail-title">Milestones Achieved</div>
+                        <div class="detail-text">{{ report.milestones_achieved }}</div>
+                    </div>
+                    <div class="detail-block">
+                        <div class="detail-title">Challenges Faced</div>
+                        <div class="detail-text">{{ report.challenges }}</div>
+                    </div>
+                    <div class="detail-block">
+                        <div class="detail-title">Resource Usage</div>
+                        <div class="detail-text">{{ report.resource_usage }}</div>
+                    </div>
+                    {% if attachments %}
+                    <div class="detail-block">
+                        <div class="detail-title">Attachment(s)</div>
+                        <div class="detail-text">
+                            <div class="doc-pills">
+                                {% for attachment in attachments %}
+                                    <a class="doc-pill" href="{{ url_for('static', filename='uploads/' ~ attachment.stored_filename) }}" target="_blank" rel="noopener">
+                                        {{ attachment.original_filename }}
+                                    </a>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+
+                <div class="feedback-panel">
+                    <div class="detail-title">
+                        Head of Department:
+                        {% if report.status %}
+                            <span class="hod-status">{{ report.status }}</span>
+                        {% else %}
+                            <span class="hod-status">Pending</span>
+                        {% endif %}
+                    </div>
+                    <div class="feedback-comment">
+                        {% if report.hod_comments %}
+                            {{ report.hod_comments }}
+                        {% else %}
+                            No comments yet.
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            {% else %}
+            <p class="muted">No progress report feedback is available for this project yet.</p>
+            {% endif %}
+        </div>
+    </section>
+</main>
+</body>
+</html>

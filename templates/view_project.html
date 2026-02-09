@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Project Details - Researchly</title>
+
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/colors.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/researcher_dashboard.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/researcher_projects.css') }}">
+    <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='img/researchly_icon.png') }}">
+</head>
+
+<body>
+<!-- Topbar -->
+<header class="topbar">
+    <div class="left">
+        <button class="hamburger" type="button">&#9776;</button>
+        <div class="brand">Researchly™</div>
+    </div>
+
+    <div class="icons">
+        <a href="{{ url_for('notifications') }}" class="icon bell"></a>
+        <a href="{{ url_for('view_profile') }}" class="icon user">
+            {% if prof.profile_picture %}
+                <img class="top-avatar"
+                     src="{{ url_for('static', filename='uploads/' ~ prof.profile_picture) }}"
+                     alt="Profile">
+            {% else %}
+                <span class="fallback-user">👤</span>
+            {% endif %}
+        </a>
+    </div>
+</header>
+
+<main class="layout">
+    <!-- Sidebar -->
+    <aside class="sidebar">
+        <a class="side-link" href="{{ url_for('researcher_dashboard') }}">Researcher Dashboard</a>
+        <a class="side-link" href="{{ url_for('researcher_proposals') }}">Proposals</a>
+        <a class="side-link active" href="{{ url_for('researcher_projects') }}">Projects</a>
+        <a class="side-link" href="{{ url_for('researcher_grant_schemes') }}">Grant Scheme</a>
+
+        <div class="side-spacer"></div>
+        <a class="side-link logout" href="{{ url_for('logout') }}">Logout</a>
+    </aside>
+
+    <!-- Content -->
+    <section class="content">
+        <div class="project-shell">
+            <div class="project-header">
+                <div>
+                    <div class="eyebrow">Project Details</div>
+                    <h1 class="project-title">Title: {{ proposal.project_title }}</h1>
+                </div>
+                <a class="back-link" href="{{ url_for('researcher_projects') }}">← Back</a>
+            </div>
+
+            <div class="project-grid">
+                <div class="overview-card">
+                    <h2>Project Details</h2>
+                    {% if proposal %}
+                        <div class="detail-block">
+                            <div class="detail-title">Abstract</div>
+                            <div class="detail-text">{{ proposal.abstract or "No abstract provided." }}</div>
+                        </div>
+                        <div class="detail-block">
+                            <div class="detail-title">Methodology</div>
+                            <div class="detail-text">{{ proposal.methodology or "No methodology provided." }}</div>
+                        </div>
+                        <div class="detail-block">
+                            <div class="detail-title">Requested Budget</div>
+                            <div class="detail-text">${{ "{:,}".format(proposal.requested_budget or 0) }}</div>
+                        </div>
+                        <div class="detail-block">
+                            <div class="detail-title">Project Timeline</div>
+                            <div class="detail-text detail-text-tight">
+                                {{ project.start_date.strftime('%m/%d/%Y') }} – {{ project.end_date.strftime('%m/%d/%Y') }}
+                            </div>
+                        </div>
+                    {% else %}
+                        <p class="overview-text">Project details are not available.</p>
+                    {% endif %}
+
+                    <div class="doc-pills">
+                        {% if attachments %}
+                            {% for attachment in attachments %}
+                                <a class="doc-pill" href="{{ url_for('static', filename='uploads/' ~ attachment.stored_filename) }}" target="_blank" rel="noopener">
+                                    {{ attachment.original_filename }}
+                                </a>
+                            {% endfor %}
+                        {% else %}
+                            <span class="doc-pill muted">No attachments</span>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <div class="reports-card">
+                    <div class="reports-header">
+                        <h2>Progress Reports</h2>
+                    </div>
+                    <div class="reports-list">
+                        {% if weekly_periods %}
+                            {% for period in weekly_periods|reverse %}
+                            <div class="report-row">
+                                <span class="report-index">{{ loop.index }}</span>
+                                <span class="report-date">
+                                    {{ period.start.strftime('%m/%d/%Y') }} – {{ period.end.strftime('%m/%d/%Y') }}
+                                </span>
+                                {% if period.report %}
+                                    <a class="report-btn" href="{{ url_for('view_progress_report', project_id=project.project_id, progress_id=period.report.progress_id) }}">View</a>
+                                {% elif period.allow_create %}
+                                    <a class="report-btn create" href="{{ url_for('create_progress_report', project_id=project.project_id, start=period.start.strftime('%Y-%m-%d'), end=period.end.strftime('%Y-%m-%d')) }}">Create</a>
+                                {% else %}
+                                    <span class="report-btn placeholder">Pending</span>
+                                {% endif %}
+                            </div>
+                            {% endfor %}
+                        {% else %}
+                            <div class="report-empty">No progress periods available yet.</div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+</main>
+</body>
+</html>

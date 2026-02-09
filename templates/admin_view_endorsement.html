@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>HoD Endorsement</title>
+
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/colors.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/admin_view_endorsement.css') }}">
+</head>
+
+<body>
+  <!-- Topbar -->
+  {% include "_topbar.html" %}
+
+  <div class="layout">
+    <!-- Sidebar -->
+    <aside class="sidebar" id="sidebar">
+      <nav class="nav">
+        <a href="{{ url_for('admin_dashboard') }}" class="nav-link">Dashboard</a>
+        <a href="{{ url_for('admin_users') }}" class="nav-link">User Management</a>
+        <a href="{{ url_for('admin_grants') }}" class="nav-link">Grant Schemes</a>
+        <a href="{{ url_for('admin_assign_reviewers') }}" class="nav-link">Assign Reviewers</a>
+        <a href="{{ url_for('admin_final_approval_list') }}" class="nav-link">Final Approval</a>
+        <a href="{{ url_for('admin_funding_list') }}" class="nav-link">Funding</a>
+      </nav>
+    </aside>
+
+    <!-- Main -->
+    <main class="content">
+      <div class="content-inner">
+
+        <a class="back-link" href="{{ url_for('admin_view_proposal', proposal_id=proposal.proposal_id) }}">
+          &#8592; Back to Proposal
+        </a>
+
+        <div class="page-head">
+          <div>
+            <h1 class="title">HoD Endorsement</h1>
+            <p class="subtitle">Decision and remarks from Head of Department.</p>
+          </div>
+
+          <div class="badge-wrap">
+            {% if endorsement %}
+              <span class="status-badge">{{ endorsement.decision }}</span>
+            {% else %}
+              <span class="status-badge muted">Pending</span>
+            {% endif %}
+          </div>
+        </div>
+
+        <!-- Proposal summary -->
+        <section class="card">
+          <div class="card-head">
+            <h2 class="card-title">Proposal Summary</h2>
+          </div>
+
+          <div class="grid">
+            <div class="field">
+              <div class="label">Project Title</div>
+              <div class="value">{{ proposal.project_title }}</div>
+            </div>
+
+            <div class="field">
+              <div class="label">Department</div>
+              <div class="value">{{ dept.department_name if dept else '-' }}</div>
+            </div>
+
+            <div class="field">
+              <div class="label">Grant Scheme</div>
+              <div class="value">{{ scheme.description if scheme else '-' }}</div>
+            </div>
+
+            <div class="field">
+              <div class="label">Researcher ID</div>
+              <div class="value mono">{{ proposal.researcher_id }}</div>
+            </div>
+
+            <div class="field">
+              <div class="label">Submission Date</div>
+              <div class="value">
+                {% if proposal.submission_date %}
+                  {{ proposal.submission_date.strftime("%d %b %Y, %I:%M %p") }}
+                {% else %}
+                  -
+                {% endif %}
+              </div>
+            </div>
+
+            <div class="field">
+              <div class="label">Current Proposal Status</div>
+              <div class="value">{{ proposal.proposal_status }}</div>
+            </div>
+          </div>
+        </section>
+
+        <!-- Endorsement decision -->
+        <section class="card">
+          <div class="card-head">
+            <h2 class="card-title">Endorsement Details</h2>
+          </div>
+
+          {% if endorsement %}
+            <div class="endorse-grid">
+              <div class="big-field">
+                <div class="label">Decision</div>
+                <div class="decision-row">
+                  <span class="pill {{ (endorsement.decision or '')|lower }}">{{ endorsement.decision }}</span>
+                </div>
+              </div>
+
+              <div class="big-field">
+                <div class="label">Decision Date</div>
+                <div class="value">
+                  {% if endorsement.decision_date %}
+                    {{ endorsement.decision_date.strftime("%d %b %Y, %I:%M %p") }}
+                  {% else %}
+                    -
+                  {% endif %}
+                </div>
+              </div>
+
+              <div class="big-field full">
+                <div class="label">Remarks</div>
+                <div class="remarks">
+                  {{ endorsement.remarks }}
+                </div>
+              </div>
+            </div>
+          {% else %}
+            <div class="empty">
+              <div class="empty-title">No HoD endorsement submitted</div>
+              <div class="empty-sub">This proposal is still waiting for HoD decision.</div>
+            </div>
+          {% endif %}
+        </section>
+
+      </div>
+    </main>
+  </div>
+
+  <script>
+    const hamburger = document.getElementById("hamburger");
+    const sidebar = document.getElementById("sidebar");
+    if (hamburger && sidebar) {
+      hamburger.addEventListener("click", () => sidebar.classList.toggle("open"));
+    }
+  </script>
+</body>
+</html>

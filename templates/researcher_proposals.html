@@ -13,33 +13,16 @@
 <body>
 
 <!-- Topbar -->
-<header class="topbar">
-  <div class="left">
-    <button class="hamburger" type="button">&#9776;</button>
-    <div class="brand">Researchly™</div>
-  </div>
-
-  <div class="icons">
-    <a href="{{ url_for('notifications') }}" class="icon bell"></a>
-    <a href="{{ url_for('view_profile') }}" class="icon user">
-      {% if prof.profile_picture %}
-        <img class="top-avatar"
-             src="{{ url_for('static', filename='uploads/' ~ prof.profile_picture) }}"
-             alt="Profile">
-      {% else %}
-        <span class="fallback-user">👤</span>
-      {% endif %}
-    </a>
-  </div>
-</header>
+{% include "_topbar.html" %}
 
 <main class="layout">
 
   <!-- Sidebar -->
   <aside class="sidebar">
-    <a class="side-link" href="{{ url_for('researcher_dashboard') }}">Dashboard</a>
+    <a class="side-link" href="{{ url_for('researcher_dashboard') }}">Researcher Dashboard</a>
     <a class="side-link active" href="{{ url_for('researcher_proposals') }}">Proposals</a>
     <a class="side-link" href="{{ url_for('researcher_projects') }}">Projects</a>
+    <a class="side-link" href="{{ url_for('researcher_grant_schemes') }}">Grant Scheme</a>
 
     <div class="side-spacer"></div>
     <a class="side-link logout" href="{{ url_for('logout') }}">Logout</a>
@@ -53,20 +36,26 @@
         Create, view, and track the status of your submitted research proposals.
       </p>
 
+      <div class="status-tabs" role="tablist" aria-label="Proposal status">
+        <button class="status-tab active" type="button" data-status="all">All</button>
+        <button class="status-tab" type="button" data-status="draft">Draft</button>
+      </div>
+
       <!-- Controls -->
       <div class="proposals-header">
         <input
           type="text"
+          id="proposalSearch"
           class="search-input"
           placeholder="Search proposals">
 
-        <select class="filter-dropdown">
-          <option>All Status</option>
-          <option>Pending Review</option>
-          <option>Under Review</option>
-          <option>Approved</option>
-          <option>Rejected</option>
-          <option>Return for Revision</option>
+        <select id="proposalStatus" class="filter-dropdown">
+          <option value="all">All</option>
+          <option value="pending-review">Pending Review</option>
+          <option value="under-review">Under Review</option>
+          <option value="revision-required">Revision Required</option>
+          <option value="approved">Approved</option>
+          <option value="rejected">Rejected</option>
         </select>
 
         <a href="{{ url_for('create_proposal') }}" class="create-btn">
@@ -88,12 +77,18 @@
 
           <tbody>
             {% for proposal in proposals %}
-            <tr>
+            <tr data-title="{{ (proposal.project_title or '')|lower }}"
+              data-status="{{ (proposal.proposal_status or 'unknown')|lower|replace(' ', '-') }}">
               <td class="proposal-name">{{ proposal.project_title }}</td>
 
               <td>
-                <a href="{{ url_for('view_proposal', proposal_id=proposal.proposal_id) }}"
+                 {% if (proposal.proposal_status or '')|lower == 'draft' %}
+                 <a href="{{ url_for('edit_proposal', proposal_id=proposal.proposal_id) }}"
+                   class="btn-view">Edit</a>
+                 {% else %}
+                 <a href="{{ url_for('view_proposal', proposal_id=proposal.proposal_id) }}"
                    class="btn-view">View</a>
+                 {% endif %}
               </td>
 
               <td>
@@ -103,8 +98,15 @@
               </td>
 
               <td>
-                <a href="{{ url_for('view_proposal_feedback', proposal_id=proposal.proposal_id) }}"
-                   class="btn-view">View</a>
+                {% set status_value = (proposal.proposal_status or '')|lower %}
+                {% if status_value == 'draft' %}
+                  <span class="muted">Not submitted</span>
+                {% elif status_value in ['pending review', 'under review'] %}
+                  <span class="muted">Not Reviewed Yet</span>
+                {% else %}
+                  <a href="{{ url_for('view_proposal_feedback', proposal_id=proposal.proposal_id) }}"
+                     class="btn-view">View Feedback</a>
+                {% endif %}
               </td>
             </tr>
             {% endfor %}
@@ -116,5 +118,51 @@
   </section>
 
 </main>
+
+<script>
+  const proposalSearch = document.getElementById("proposalSearch");
+  const proposalStatus = document.getElementById("proposalStatus");
+  const proposalRows = Array.from(document.querySelectorAll(".proposals-table tbody tr"));
+  const statusTabs = Array.from(document.querySelectorAll(".status-tab"));
+  let tabFilter = "all";
+
+  function filterProposals() {
+    const text = proposalSearch.value.trim().toLowerCase();
+    const status = proposalStatus.value;
+
+    proposalRows.forEach((row) => {
+      const title = row.dataset.title || "";
+      const rowStatus = row.dataset.status || "";
+
+      const matchesText = !text || title.includes(text);
+      const matchesStatus = status === "all" || rowStatus === status;
+      const matchesTab = tabFilter === "all" || rowStatus === "draft";
+
+      row.style.display = matchesText && matchesStatus && matchesTab ? "" : "none";
+    });
+  }
+
+  proposalSearch.addEventListener("input", filterProposals);
+  proposalStatus.addEventListener("change", filterProposals);
+
+  statusTabs.forEach((tab) => {
+    tab.addEventListener("click", () => {
+      statusTabs.forEach((btn) => btn.classList.remove("active"));
+      tab.classList.add("active");
+      tabFilter = tab.dataset.status;
+      if (tabFilter === "draft") {
+        proposalStatus.value = "all";
+      }
+      filterProposals();
+    });
+  });
+
+  proposalStatus.addEventListener("change", () => {
+    tabFilter = "all";
+    statusTabs.forEach((btn) => btn.classList.toggle("active", btn.dataset.status === "all"));
+    filterProposals();
+  });
+  filterProposals();
+</script>
 </body>
 </html>

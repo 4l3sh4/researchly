@@ -9,13 +9,7 @@
     <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='img/researchly_icon.png') }}">
 </head>
 <body>
-    <header class="topbar">
-        <div class="logo">Researchly™</div>
-        <div class="icons">
-            <a href="{{ url_for('notifications') }}" class="icon bell"></a>
-            <span class="icon user"></span>
-        </div>
-    </header>
+    {% include "_topbar.html" %}
 
     <main class="page">
         <section class="card">

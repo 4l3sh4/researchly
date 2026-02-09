@@ -63,12 +63,113 @@ body {
   cursor: pointer;
 }
 
-.icon.bell {
-  background-image: url('../img/white_bell.png');
-  background-size: contain;
-  background-repeat: no-repeat;
-  background-position: center;
+/* Bell badge */
+.icon.bell { position: relative; }
+
+.notif-badge{
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: 999px;
+  background: #ff3b30;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 900;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid rgba(255,255,255,0.75);
 }
+
+/* Page head */
+.page-head{
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+/* Buttons */
+.btn-outline{
+  border: 1px solid #dcdcdc;
+  background: #fff;
+  padding: 8px 12px;
+  border-radius: 10px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.btn-outline:hover{ background: #f3f3f3; }
+
+.btn-link{
+  border: none;
+  background: transparent;
+  color: var(--accent-2);
+  font-weight: 900;
+  cursor: pointer;
+  padding: 6px 8px;
+  border-radius: 10px;
+}
+
+.btn-link:hover{ background: #f2f2f2; }
+
+/* Notification row layout */
+.notice-row{
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.notice-main{
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.notice-meta{
+  color: #666;
+  font-size: 12px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.notice-actions{
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+/* Unread highlight */
+.notice-row.unread{
+  background: #fff8e6;
+  border: 1px solid #f1e0b5;
+}
+
+/* Type pill */
+.type-pill{
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 900;
+  border: 1px solid #e6e6e6;
+  background: #f3f3f3;
+  color: #222;
+}
+
+.type-pill.info{ background: #eef6ff; border-color: #cfe4ff; }
+.type-pill.success{ background: #eaf7ea; border-color: #cfe9cf; }
+.type-pill.warning{ background: #fff6dd; border-color: #f1e1ae; }
+.type-pill.error{ background: #fdecec; border-color: #f7c9c9; }
 
 .icon.user {
   width: 40px;
@@ -177,10 +278,11 @@ a.icon {
   box-shadow: 0 2px 6px rgba(0,0,0,0.05);
 }
 
+/* Notification row */
 .notice-row {
   display: grid;
-  grid-template-columns: 1fr 30px;
-  gap: 12px;
+  grid-template-columns: 1fr auto;   
+  gap: 14px;
   align-items: center;
   padding: 14px 16px;
   border-bottom: 1px solid #e0e0e0;
@@ -188,23 +290,23 @@ a.icon {
   color: #1a1a1a;
 }
 
-.notice-row:last-child {
-  border-bottom: none;
+/* Right side actions */
+.notice-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  min-width: 110px;                 
 }
 
-.notice-text {
-  overflow: hidden;
-  text-overflow: ellipsis;
+/* Keep “Mark read” on one line */
+.btn-link {
   white-space: nowrap;
 }
 
+/* Hide the arrow if you don’t need it */
 .notice-arrow {
-  width: 0;
-  height: 0;
-  border-left: 8px solid transparent;
-  border-right: 8px solid transparent;
-  border-top: 12px solid #b0b0b0;
-  justify-self: end;
+  display: none;
 }
 
 @media (max-width: 900px) {

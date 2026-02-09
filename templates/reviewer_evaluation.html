@@ -34,6 +34,45 @@
     .overview-scroll::-webkit-scrollbar{ width:6px; }
     .overview-scroll::-webkit-scrollbar-thumb{background: rgba(0,0,0,0.25);border-radius: 6px;}
 
+    .overview-card{
+      border:1px solid rgba(0,0,0,0.10);
+      border-radius:14px;
+      background:#fff;
+      overflow:hidden;
+
+      display:flex;
+      flex-direction:column;
+
+      height:520px; /* controls card height */
+    }
+
+    /* header INSIDE box */
+    .overview-head{
+      padding:14px 16px;
+      border-bottom:1px solid rgba(0,0,0,0.10);
+      color:#0fa7a1;
+      font-weight:1000;
+      font-size:20px;
+      background:#fff;
+    }
+
+    /* only body scroll */
+    .overview-body{
+      padding:14px 16px;
+      overflow:auto;
+      flex:1;
+    }
+    .overview-body::-webkit-scrollbar{ width:6px; }
+    .overview-body::-webkit-scrollbar-thumb{ background:rgba(0,0,0,0.25); border-radius:6px; }
+
+    /* footer fixed */
+    .overview-foot{
+      padding:10px 16px;
+      border-top:1px solid rgba(0,0,0,0.10);
+      background:rgba(0,0,0,0.02);
+    }
+
+
     .block{margin-bottom:18px;}
     .block h4{margin:0 0 8px;font-size:14px;font-weight:1000;color:#111;}
     .block p{margin:0;line-height:1.55;color:#222;font-size:14px;white-space:pre-wrap;word-break:break-word;}
@@ -111,23 +150,7 @@
 </head>
 
 <body>
-  <header class="topbar">
-    <div class="left">
-      <button class="hamburger" type="button" id="hamburger">&#9776;</button>
-      <div class="brand">Researchly™</div>
-    </div>
-
-    <div class="icons">
-      <a href="{{ url_for('notifications') }}" class="icon bell" title="Notifications"></a>
-      <a href="{{ url_for('view_profile') }}" class="icon user" title="Profile">
-        {% if prof and prof.profile_picture %}
-          <img class="top-avatar" src="{{ url_for('static', filename='uploads/' ~ prof.profile_picture) }}" alt="Profile">
-        {% else %}
-          <span class="fallback-user">👤</span>
-        {% endif %}
-      </a>
-    </div>
-  </header>
+  {% include "_topbar.html" %}
 
   <main class="layout" id="layout">
     <aside class="sidebar" id="sidebar">
@@ -170,32 +193,45 @@
         </div>
 
         <div class="grid">
-          <!-- LEFT -->
-          <div>
-            <div class="section-h">Overview</div>
+        <!-- LEFT -->
+        <div>
+          <div class="overview-card">
 
-            <div class="overview">
-              <div class="overview-scroll">
-                <div class="block">
-                  <h4>Abstract</h4>
-                  <p>{{ proposal.abstract if proposal.abstract is defined else proposal['abstract'] }}</p>
-                </div>
+            <!-- CARD HEADER (stays fixed, inside white box) -->
+            <div class="overview-head">Overview</div>
 
-                <div class="block">
-                  <h4>Methodology</h4>
-                  <p>{{ proposal.methodology if proposal.methodology is defined else proposal['methodology'] }}</p>
-                </div>
+            <!-- ONLY THIS PART SCROLLS -->
+            <div class="overview-body">
+              <div class="block">
+                <h4>Abstract</h4>
+                <p>{{ proposal.abstract if proposal.abstract is defined else proposal['abstract'] }}</p>
               </div>
 
-              <div class="overview-footer">
-                <div class="footer-label">Attachments</div>
-                <div class="doc-row">
-                  <a class="doc-pill" href="#" onclick="return false;">Proposal.pdf</a>
-                  <a class="doc-pill" href="#" onclick="return false;">Budget_plan.pdf</a>
-                </div>
+              <div class="block">
+                <h4>Methodology</h4>
+                <p>{{ proposal.methodology if proposal.methodology is defined else proposal['methodology'] }}</p>
               </div>
             </div>
+
+            <!-- FOOTER FIXED -->
+            <div class="overview-foot">
+              <div class="footer-label">Attachments</div>
+              <div class="doc-row">
+                {% if attachments and attachments|length > 0 %}
+                  {% for a in attachments %}
+                    <a class="doc-pill"
+                      href="{{ url_for('uploaded_file', filename=a.stored_filename) }}">
+                      {{ a.original_filename }}
+                    </a>
+                  {% endfor %}
+                {% else %}
+                  <span style="opacity:.6; font-weight:900;">No attachments</span>
+                {% endif %}
+              </div>
+            </div>
+
           </div>
+        </div>
 
           <!-- RIGHT -->
           <div>
@@ -294,10 +330,13 @@
     const hamburger = document.getElementById('hamburger');
     const sidebar = document.getElementById('sidebar');
     const layout = document.getElementById('layout');
-    hamburger?.addEventListener('click', () => {
-      sidebar.classList.toggle('collapsed');
-      layout.classList.toggle('sidebar-collapsed');
-    });
+
+    if (hamburger) {
+      hamburger.addEventListener('click', () => {
+        sidebar.classList.toggle('collapsed');
+        layout.classList.toggle('sidebar-collapsed');
+      });
+    }
 
     // modal confirm submit
     const openBtn = document.getElementById('openConfirm');
@@ -306,24 +345,49 @@
     const confirmBtn = document.getElementById('confirmSubmit');
     const form = document.getElementById('evalForm');
 
-    function openModal(){ overlay.style.display = 'flex'; overlay.setAttribute('aria-hidden','false'); }
-    function closeModal(){ overlay.style.display = 'none'; overlay.setAttribute('aria-hidden','true'); }
+    function openModal() {
+      if (!overlay) return;
+      overlay.style.display = 'flex';
+      overlay.setAttribute('aria-hidden', 'false');
+    }
 
-    openBtn?.addEventListener('click', () => {
-      const feedback = document.getElementById('feedback')?.value?.trim() || "";
-      const rec = form.querySelector('input[name="recommendation"]:checked');
-      if (!feedback) { alert("Feedback cannot be empty."); return; }
-      if (!rec) { alert("Please choose a recommendation."); return; }
-      openModal();
-    });
+    function closeModal() {
+      if (!overlay) return;
+      overlay.style.display = 'none';
+      overlay.setAttribute('aria-hidden', 'true');
+    }
 
-    cancelBtn?.addEventListener('click', closeModal);
-    overlay?.addEventListener('click', (e) => { if (e.target === overlay) closeModal(); });
+    if (openBtn) {
+      openBtn.addEventListener('click', () => {
+        const feedbackEl = document.getElementById('feedback');
+        const feedback = feedbackEl ? (feedbackEl.value || "").trim() : "";
+        const rec = form ? form.querySelector('input[name="recommendation"]:checked') : null;
+
+        if (!feedback) { alert("Feedback cannot be empty."); return; }
+        if (!rec) { alert("Please choose a recommendation."); return; }
+
+        openModal();
+      });
+    }
+
+    if (cancelBtn) cancelBtn.addEventListener('click', closeModal);
+
+    if (overlay) {
+      overlay.addEventListener('click', (e) => {
+        if (e.target === overlay) closeModal();
+      });
+    }
+
     document.addEventListener('keydown', (e) => {
       if (overlay && overlay.style.display === 'flex' && e.key === 'Escape') closeModal();
     });
 
-    confirmBtn?.addEventListener('click', () => form.submit());
+    if (confirmBtn) {
+      confirmBtn.addEventListener('click', () => {
+        if (form) form.submit();
+      });
+    }
   </script>
+
 </body>
 </html>

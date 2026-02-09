@@ -65,31 +65,43 @@
       font-weight: 700;
       margin: 3px 6px 3px 0;
     }
+
+    .attachment-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 8px;
+    }
+
+    .attachment-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 10px;
+      border-radius: 10px;
+      border: 1px solid rgba(0,0,0,0.12);
+      background: #fff;
+      color: #333;
+      text-decoration: none;
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    .attachment-pill:hover {
+      border-color: var(--accent-2);
+      color: var(--accent-2);
+    }
   </style>
 </head>
 <body>
-<header class="topbar">
-  <div class="left">
-    <button class="hamburger" type="button">&#9776;</button>
-    <div class="brand">Researchly™</div>
-  </div>
-  <div class="icons">
-    <a href="{{ url_for('notifications') }}" class="icon bell"></a>
-    <a href="{{ url_for('view_profile') }}" class="icon user">
-      {% if prof.profile_picture %}
-        <img class="top-avatar" src="{{ url_for('static', filename='uploads/' ~ prof.profile_picture) }}" alt="Profile">
-      {% else %}
-        <span class="fallback-user">👤</span>
-      {% endif %}
-    </a>
-  </div>
-</header>
+{% include "_topbar.html" %}
 
 <main class="layout">
   <aside class="sidebar">
-    <a class="side-link" href="{{ url_for('researcher_dashboard') }}">Dashboard</a>
+    <a class="side-link" href="{{ url_for('researcher_dashboard') }}">Researcher Dashboard</a>
     <a class="side-link active" href="{{ url_for('researcher_proposals') }}">Proposals</a>
     <a class="side-link" href="{{ url_for('researcher_projects') }}">Projects</a>
+    <a class="side-link" href="{{ url_for('researcher_grant_schemes') }}">Grant Scheme</a>
     <div class="side-spacer"></div>
     <a class="side-link logout" href="{{ url_for('logout') }}">Logout</a>
   </aside>
@@ -131,6 +143,23 @@
       <div class="section">
         <div class="section-title">Requested Budget</div>
         <div class="section-content">${{ "{:,}".format(proposal.requested_budget) }}</div>
+      </div>
+
+      <div class="section">
+        <div class="section-title">Attachment(s)</div>
+        {% if attachments %}
+        <div class="attachment-list">
+          {% for attachment in attachments %}
+          <a class="attachment-pill"
+             href="{{ url_for('static', filename='uploads/' ~ attachment.stored_filename) }}"
+             target="_blank" rel="noopener">
+            {{ attachment.original_filename }}
+          </a>
+          {% endfor %}
+        </div>
+        {% else %}
+        <div class="section-content">No attachments uploaded.</div>
+        {% endif %}
       </div>
 
       <div class="cta-row">
