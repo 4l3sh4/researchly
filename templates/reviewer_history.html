@@ -10,9 +10,8 @@
   <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='img/researchly_icon.png') }}">
 
   <style>
-    /* Match Pending Assignments look */
     .page-title{
-      margin:0 0 14px;
+      margin:0 0 16px;
       color:#0fa7a1;
       font-size:32px;
       font-weight:1000;
@@ -65,56 +64,50 @@
       padding:16px;
       border-bottom:1px solid rgba(0,0,0,0.08);
       vertical-align:middle;
-      font-size:14px;
+      font-size:16px;
     }
     tbody tr:last-child td{ border-bottom:none; }
 
-    .col-rec{ width:200px; }
-    .col-date{ width:140px; }
+    .col-rec{ width:200px; white-space:nowrap; }
+    .col-date{ width:140px; white-space:nowrap; }
     .actions{ width:110px; text-align:right; }
 
     .title{
       font-weight:700;
-      font-size:14px;
+      font-size:16px;
       color:#111;
     }
 
     .rec{
-      font-weight:900;
+      font-weight:500;
       color:#0fa7a1;
-      font-size:14px;
+      font-size:16px;
       white-space:nowrap;
     }
 
     .date{
-      font-weight:800;
+      font-weight:500;
       color:#111;
-      font-size:14px;
+      font-size:16px;
       white-space:nowrap;
     }
 
     .btn-view{
-      display:inline-block;
-      padding:10px 16px;
-      border-radius:10px;
-      background:#0fa7a1;
-      color:#fff;
-      font-weight:900;
-      text-decoration:none;
+      display:inline-block; padding:8px 16px; border-radius:8px;
+      background:#0fa7a1; color:#fff; font-weight:700; text-decoration:none;
     }
     .btn-view:hover{ filter:brightness(0.95); }
 
-    /* Scroll area like your screenshot */
-    .table-scroll{
-      max-height:520px;
-      overflow:auto;
+    .table-wrap{
+      max-height:540px;
+      overflow:hidden;
     }
-    .table-scroll::-webkit-scrollbar{ width:10px; }
-    .table-scroll::-webkit-scrollbar-thumb{
+    .table-wrap::-webkit-scrollbar{ width:10px; }
+    .table-wrap::-webkit-scrollbar-thumb{
       background: rgba(0,0,0,0.25);
       border-radius: 10px;
     }
-    .table-scroll::-webkit-scrollbar-track{ background: rgba(0,0,0,0.06); }
+    .table-wrap::-webkit-scrollbar-track{ background: rgba(0,0,0,0.06); }
 
     .empty{
       padding:18px;
@@ -133,23 +126,7 @@
 </head>
 
 <body>
-  <header class="topbar">
-    <div class="left">
-      <button class="hamburger" type="button" id="hamburger">&#9776;</button>
-      <div class="brand">Researchly™</div>
-    </div>
-
-    <div class="icons">
-      <a href="{{ url_for('notifications') }}" class="icon bell" title="Notifications"></a>
-      <a href="{{ url_for('view_profile') }}" class="icon user" title="Profile">
-        {% if prof and prof.profile_picture %}
-          <img class="top-avatar" src="{{ url_for('static', filename='uploads/' ~ prof.profile_picture) }}" alt="Profile">
-        {% else %}
-          <span class="fallback-user">👤</span>
-        {% endif %}
-      </a>
-    </div>
-  </header>
+  {% include "_topbar.html" %}
 
   <main class="layout" id="layout">
     <aside class="sidebar" id="sidebar">
@@ -182,65 +159,48 @@
         </div>
 
         <div class="table-wrap">
-          <table>
+          <table class="table-unified">
             <thead>
               <tr>
-                <th>Past Proposals</th>
+                <th class="col-title">Past Proposals</th>
                 <th class="col-rec">Recommendation</th>
                 <th class="col-date">Date</th>
                 <th class="actions"></th>
               </tr>
             </thead>
+
+            <tbody id="tableBody">
+              {% for row in rows %}
+              <tr class="row"
+                  data-title="{{ (row.project_title or '')|lower }}"
+                  data-rec="{{ (row.recommendation or '')|upper }}">
+
+                <td class="col-title title">{{ row.project_title }}</td>
+
+                <td class="col-rec rec">
+                  {{ row.recommendation.replace('_',' ').title() }}
+                </td>
+
+                <td class="col-date date">
+                  {{ row.review_date.strftime("%d/%m/%Y") if row.review_date else "-" }}
+                </td>
+
+                <td class="actions">
+                  <a class="btn-view"
+                    href="{{ url_for('reviewer_history_view', proposal_id=row.proposal_id) }}">
+                    View
+                  </a>
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
           </table>
 
-          <div class="table-scroll">
-            <table>
-              <tbody id="tableBody">
-                {% for row in rows %}
-                  {# normalize dict/object #}
-                  {% set title = row.project_title if row.project_title is defined else row['project_title'] %}
-                  {% set rec_raw = row.recommendation if row.recommendation is defined else row['recommendation'] %}
-                  {% set pid = row.proposal_id if row.proposal_id is defined else row['proposal_id'] %}
-                  {% set dt = row.review_date if row.review_date is defined else row.get('review_date') %}
-
-                  <tr class="row"
-                      data-title="{{ (title or '')|lower }}"
-                      data-rec="{{ (rec_raw or '')|upper }}">
-                    <td class="title">{{ title }}</td>
-
-                    <td class="rec col-rec">
-                      {% if rec_raw == "REVISION_REQUIRED" %}
-                        Revision required
-                      {% elif rec_raw == "RECOMMENDED" %}
-                        Recommended
-                      {% elif rec_raw == "REJECTED" %}
-                        Rejected
-                      {% else %}
-                        {{ rec_raw }}
-                      {% endif %}
-                    </td>
-
-                    <td class="date col-date">
-                      {% if dt %}
-                        {{ dt.strftime("%d/%m/%Y") }}
-                      {% else %}
-                        -
-                      {% endif %}
-                    </td>
-
-                    <td class="actions">
-                      <a class="btn-view" href="{{ url_for('reviewer_history_view', proposal_id=pid) }}">View</a>
-                    </td>
-                  </tr>
-                {% endfor %}
-              </tbody>
-            </table>
-
-            <div id="emptyState" class="empty" style="display:none;">
-              No proposals match your search/filter.
-            </div>
+          <div id="emptyState" class="empty" style="display:none;">
+            No proposals match your search/filter.
           </div>
         </div>
+
 
       </div>
     </section>

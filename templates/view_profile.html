@@ -10,24 +10,7 @@
 </head>
 
 <body>
-  <header class="topbar">
-    <div class="left">
-      <button class="hamburger" type="button" aria-label="Menu">&#9776;</button>
-      <div class="brand">Researchly™</div>
-    </div>
-    <div class="icons">
-      <a href="{{ url_for('notifications') }}" class="icon bell" title="Notifications"></a>
-      <a href="{{ url_for('view_profile') }}" class="icon user" title="Profile">
-        {% if prof.profile_picture %}
-          <img class="top-avatar"
-            src="{{ url_for('static', filename='uploads/' ~ prof.profile_picture) }}"
-            alt="Profile">
-        {% else %}
-          <span class="fallback-user">👤</span>
-        {% endif %}
-      </a>
-    </div>
-  </header>
+  {% include "_topbar.html" %}
 
   <main class="page">
     <h2 class="title">View Profile</h2>
@@ -126,9 +109,25 @@
 
       <aside class="actions">
         <a class="btn primary" href="{{ url_for('edit_profile') }}">Edit Profile</a>
+        <a class="btn ghost" href="{{ url_for('change_password') }}">Change Password</a>
         <a class="btn ghost" href="{{ url_for('dashboard') }}">Back to Dashboard</a>
       </aside>
     </div>
   </main>
+
+  {# Flash messages (global) #}
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        <div class="flash-wrap">
+          {% for category, message in messages %}
+            <div class="flash {{ category }}">
+              <span class="flash-text">{{ message }}</span>
+              <button class="flash-x" type="button" onclick="this.parentElement.remove()">×</button>
+            </div>
+          {% endfor %}
+        </div>
+      {% endif %}
+  {% endwith %}
+   
 </body>
 </html>

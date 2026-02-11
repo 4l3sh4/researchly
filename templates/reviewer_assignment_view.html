@@ -7,7 +7,6 @@
 
   <link rel="stylesheet" href="{{ url_for('static', filename='css/reviewer_dashboard.css') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/colors.css') }}">
-  <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='img/researchly_icon.png') }}">
 
   <style>
     .header-row{
@@ -18,6 +17,14 @@
     .meta{ margin:6px 0 0; font-size:18px; font-weight:900; }
     .meta span{ font-weight:700; }
 
+    .status-pill{
+      font-style:italic;
+      font-weight:1000;
+      color:#0fa7a1;
+    }
+    .status-pill.accepted{ color:#11b84a; }
+    .status-pill.declined{ color:#e53935; }
+
     .back{
       display:inline-flex; align-items:center; gap:8px;
       text-decoration:none; font-weight:900; color:#111;
@@ -25,50 +32,49 @@
     }
     .back:hover{ background:rgba(0,0,0,0.06); }
 
-    /* Scrollable content box ONLY */
     .box{
       border:1px solid rgba(0,0,0,0.10);
       border-radius:14px;
       background:#fff;
-      padding:18px;
-
-      max-height:520px;
-      overflow:auto;
-
-      /* key: allow attachments to sit at bottom */
       display:flex;
       flex-direction:column;
-      gap:18px;
+      max-height:520px;
+      overflow:hidden;
     }
-
+    .box-scroll{
+      padding:18px;
+      overflow:auto;
+      flex:1;
+    }
     .sec-title{ font-weight:900; margin:0 0 10px; font-size:20px; }
     .sec p{ margin:0; line-height:1.6; color:#222; }
+    .sec{ margin-bottom:18px; }
 
-    /* attachments pinned to bottom, muted, smaller */
-    .attachments{
-      margin-top:auto;              /* pushes attachments to bottom of scroll area */
-      padding-top:12px;
-      border-top:1px dashed rgba(0,0,0,0.15);
-      display:flex;
-      gap:10px;
-      flex-wrap:wrap;
-      align-items:center;
+    .box-footer{
+      padding:12px 18px;
+      border-top:1px solid rgba(0,0,0,0.08);
+      background:rgba(0,0,0,0.02);
     }
+    .footer-label{
+      font-size:12px;
+      letter-spacing:0.3px;
+      text-transform:uppercase;
+      color:#7b7b7b;
+      font-weight:900;
+      margin-bottom:8px;
+    }
+    .doc-row{ display:flex; gap:10px; flex-wrap:wrap; }
     .doc-pill{
-    padding:8px 12px;
-    border-radius:999px;
-    background:#f1f1f1;
-    border:1px solid rgba(0,0,0,0.10);
-    font-weight:800;
-    font-size:14px;
-    text-decoration:none;
-    color:#555;
+      padding:8px 12px;
+      border-radius:999px;
+      background:#f1f1f1;
+      border:1px solid rgba(0,0,0,0.10);
+      font-weight:800;
+      font-size:14px;
+      text-decoration:none;
+      color:#555;
     }
-
-    .doc-pill:hover{
-    background:#eaeaea;
-    color:#111;
-    }
+    .doc-pill:hover{ background:#eaeaea; color:#111; }
 
     .actions{
       margin-top:18px;
@@ -78,57 +84,19 @@
       padding:12px 22px; border-radius:12px;
       font-weight:1000; border:2px solid transparent;
       text-decoration:none; display:inline-block;
+      cursor:pointer;
     }
     .btn-accept{ background:#11b84a; color:#fff; }
     .btn-decline{ background:#e53935; color:#fff; }
     .btn-accept:hover,.btn-decline:hover{ filter:brightness(0.95); }
 
-    .hint{ color:#7b7b7b; margin:10px 0 0; }
-
-    /* optional: prettier scrollbar */
-    .box::-webkit-scrollbar{ width:6px; }
-    .box::-webkit-scrollbar-thumb{
-      background: rgba(0,0,0,0.25);
-      border-radius: 6px;
+    .detail-actions{
+      margin-top:18px;
+      display:flex;
+      justify-content:flex-end;  /* push to right */
+      gap:12px;
+      width:100%;
     }
-
-    .box{
-    border:1px solid rgba(0,0,0,0.10);
-    border-radius:14px;
-    background:#fff;
-
-    /* key: make it a column layout */
-    display:flex;
-    flex-direction:column;
-
-    max-height:520px; /* your limit */
-    overflow:hidden;  /* important: stop footer from scrolling out */
-    }
-
-    /* only this part scrolls */
-    .box-scroll{
-    padding:18px;
-    overflow:auto;
-    flex:1; /* take remaining height */
-    }
-
-    /* pinned footer */
-    .box-footer{
-    padding:12px 18px;
-    border-top:1px solid rgba(0,0,0,0.08);
-    background:rgba(0,0,0,0.02);
-    }
-
-    .footer-label{
-    font-size:12px;
-    letter-spacing:0.3px;
-    text-transform:uppercase;
-    color:#7b7b7b;
-    font-weight:900;
-    margin-bottom:8px;
-    }
-
-    .doc-row{ display:flex; gap:10px; flex-wrap:wrap; }
   </style>
 </head>
 
@@ -140,7 +108,7 @@
     </div>
 
     <div class="icons">
-      <a href="{{ url_for('notifications') }}" class="icon bell" title="Notifications"></a>
+      <span class="icon bell" title="Notifications"></span>
       <a href="{{ url_for('view_profile') }}" class="icon user" title="Profile">
         {% if prof and prof.profile_picture %}
           <img class="top-avatar" src="{{ url_for('static', filename='uploads/' ~ prof.profile_picture) }}" alt="Profile">
@@ -164,15 +132,29 @@
 
     <section class="content">
       <div class="card">
+
+        {% set raw = (proposal.assignment_status or "")|upper|trim %}
+        {# support legacy "REJECTED" value if it exists #}
+        {% if raw == "REJECTED" %}{% set raw = "DECLINED" %}{% endif %}
+
+        {% set cls = "" %}
+        {% if raw == "ACCEPTED" %}{% set cls = "accepted" %}{% endif %}
+        {% if raw == "DECLINED" %}{% set cls = "declined" %}{% endif %}
+
         <div class="header-row">
           <div>
             <div class="page-h1">Proposal Details</div>
             <div class="meta">Title: <span>{{ proposal.title }}</span></div>
+
             <div class="meta">
-            Status:
-            <span id="statusText" style="font-style:italic; color:#0fa7a1;">
-                {{ proposal.status }}
-            </span>
+              Status:
+              <span class="status-pill {{ cls }}">
+                {% if raw == "ASSIGNED" %}
+                  Pending
+                {% else %}
+                  {{ raw.title() }}
+                {% endif %}
+              </span>
             </div>
           </div>
 
@@ -180,71 +162,65 @@
         </div>
 
         <div class="box">
-        <div class="box-scroll">
+          <div class="box-scroll">
             <div class="sec">
-            <div class="sec-title">Abstract</div>
-            <p>{{ proposal.abstract }}</p>
+              <div class="sec-title">Abstract</div>
+              <p>{{ proposal.abstract }}</p>
             </div>
 
             <div class="sec">
-            <div class="sec-title">Methodology</div>
-            <p>{{ proposal.methodology }}</p>
+              <div class="sec-title">Methodology</div>
+              <p>{{ proposal.methodology }}</p>
             </div>
-        </div>
+          </div>
 
-        <div class="box-footer">
+          <div class="box-footer">
             <div class="footer-label">Attachments</div>
             <div class="doc-row">
-            <a class="doc-pill" href="#">Proposal.pdf</a>
-            <a class="doc-pill" href="#">Budget_plan.pdf</a>
+            {% for a in proposal.attachments %}
+              <a class="doc-pill"
+                href="{{ url_for('uploaded_file', filename=a.stored_filename) }}">
+                {{ a.original_filename }}
+              </a>
+            {% endfor %}
             </div>
-        </div>
+          </div>
         </div>
 
-        {% if proposal.status and proposal.status|lower == "pending" %}
-        <div class="actions" id="actionButtons">
-        <button class="btn-big btn-accept" onclick="handleDecision('ACCEPTED')">
-            Accept
-        </button>
-        <button class="btn-big btn-decline" onclick="handleDecision('DECLINED')">
-            Decline
-        </button>
+      {% if raw == "ASSIGNED" %}
+        <div class="detail-actions" id="actionButtons">
+          <form method="POST" style="display:inline;">
+            <input type="hidden" name="decision" value="ACCEPTED">
+            <button type="submit" class="btn-big btn-accept"
+              onclick="return confirm('Are you sure you want to ACCEPT this assignment?')">
+              Accept
+            </button>
+          </form>
+
+          <form method="POST" style="display:inline;">
+            <input type="hidden" name="decision" value="DECLINED">
+            <button type="submit" class="btn-big btn-decline"
+              onclick="return confirm('Are you sure you want to DECLINE this assignment?')">
+              Decline
+            </button>
+          </form>
         </div>
-        {% endif %}
+      {% endif %}
+
       </div>
     </section>
   </main>
 
-<script>
-  const hamburger = document.getElementById('hamburger');
-  const sidebar = document.getElementById('sidebar');
-  const layout = document.getElementById('layout');
+  <script>
+    const hamburger = document.getElementById('hamburger');
+    const sidebar = document.getElementById('sidebar');
+    const layout = document.getElementById('layout');
 
-  hamburger.addEventListener('click', () => {
-    sidebar.classList.toggle('collapsed');
-    layout.classList.toggle('sidebar-collapsed');
-  });
-
-  function handleDecision(decision){
-    const confirmMsg =
-      decision === 'ACCEPTED'
-        ? 'Are you sure you want to ACCEPT this assignment?'
-        : 'Are you sure you want to DECLINE this assignment?';
-
-    if(!confirm(confirmMsg)) return;
-
-    // Update status text
-    const statusEl = document.getElementById('statusText');
-    statusEl.textContent = decision === 'ACCEPTED' ? 'Accepted' : 'Rejected';
-
-    statusEl.style.color =
-      decision === 'ACCEPTED' ? '#11b84a' : '#e53935';
-
-    // Hide buttons
-    const actions = document.getElementById('actionButtons');
-    if(actions) actions.style.display = 'none';
-  }
-</script>
+    hamburger.addEventListener('click', () => {
+      sidebar.classList.toggle('collapsed');
+      layout.classList.toggle('sidebar-collapsed');
+    });
+  </script>
 
 </body>
 </html>

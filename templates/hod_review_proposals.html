@@ -12,25 +12,7 @@
 
 <body>
   <!-- Top bar -->
-  <header class="topbar">
-    <div class="left">
-      <button class="hamburger" type="button" aria-label="Menu" id="hamburger">&#9776;</button>
-      <div class="brand">Researchly™</div>
-    </div>
-
-    <div class="icons">
-      <a href="{{ url_for('notifications') }}" class="icon bell" title="Notifications"></a>
-      <a href="{{ url_for('view_profile') }}" class="icon user" title="Profile">
-        {% if prof.profile_picture %}
-          <img class="top-avatar"
-            src="{{ url_for('static', filename='uploads/' ~ prof.profile_picture) }}"
-            alt="Profile">
-        {% else %}
-          <span class="fallback-user">👤</span>
-        {% endif %}
-      </a>
-    </div>
-  </header>
+  {% include "_topbar.html" %}
 
   <main class="layout" id="layout">
     <!-- Sidebar -->
@@ -72,41 +54,36 @@
         <div class="proposals-section">
           <h2>Review Proposals in the Engineering Department</h2>
           
-          <div class="proposals-list">
-            <div class="proposal-item">
-              <span class="proposal-title">Automated Hybrid Smart Door Control System</span>
-              <button class="btn-view">View</button>
-            </div>
+          <div class="proposals-list" id="proposalsList">
+            {% if proposals and proposals|length > 0 %}
+              {% for p in proposals %}
+              <div class="proposal-item" data-status="{{ (p.proposal_status or '')|lower }}">
+                <span class="proposal-title">{{ p.project_title }}</span>
 
-            <div class="proposal-item">
-              <span class="proposal-title">Redesign of AC Electrical Motors</span>
-              <button class="btn-view">View</button>
-            </div>
+                <div class="proposal-actions">
+                    <!-- View proposal details (use your existing admin_view_proposal equivalent if you have a hod view route) -->
+                    <a class="btn-view" href="{{ url_for('admin_view_proposal', proposal_id=p.proposal_id) }}">View</a>
 
-            <div class="proposal-item">
-              <span class="proposal-title">Solar Simulators' Trends Overview</span>
-              <button class="btn-view">View</button>
-            </div>
+                    <!-- HoD Decision -->
+                    <form method="POST" action="{{ url_for('hod_endorse', proposal_id=p.proposal_id) }}" class="decision-form">
+                      <select name="decision" class="decision-select" required>
+                        <option value="" selected disabled>Decision</option>
+                        <option value="ENDORSE">Endorse</option>
+                        <option value="REJECT">Reject</option>
+                      </select>
 
-            <div class="proposal-item">
-              <span class="proposal-title">Designing Efficient Water Management Systems for Urban Areas</span>
-              <button class="btn-view">View</button>
-            </div>
+                      <input name="remarks" class="remarks-input" placeholder="Remarks (optional)">
 
-            <div class="proposal-item">
-              <span class="proposal-title">Studying the Effects of Urbanization on Biodiversity</span>
-              <button class="btn-view">View</button>
-            </div>
-
-            <div class="proposal-item">
-              <span class="proposal-title">Structural Characteristics of Soilcrete Blocks</span>
-              <button class="btn-view">View</button>
-            </div>
-
-            <div class="proposal-item">
-              <span class="proposal-title">Development of Eco-Friendly Recycled Designer Plastic Tiles and Bricks</span>
-              <button class="btn-view">View</button>
-            </div>
+                      <button class="btn-submit" type="submit">Submit</button>
+                    </form>
+                  </div>
+                </div>
+              {% endfor %}
+            {% else %}
+              <div class="proposal-item">
+                <span class="proposal-title">No proposals found for your department.</span>
+              </div>
+            {% endif %}
           </div>
         </div>
       </div>

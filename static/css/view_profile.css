@@ -188,3 +188,58 @@ body { margin: 0; background: #f7f7f7; }
   object-fit: cover;
   display: block;
 }
+
+/* Flash messages */
+.flash-wrap{
+  position: fixed;
+  top: 76px;            /* below your 64px topbar */
+  right: 18px;
+  z-index: 9999;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: min(420px, calc(100vw - 36px));
+}
+
+.flash{
+  background: #fff;
+  border-radius: 14px;
+  padding: 12px 14px;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.12);
+  border: 2px solid rgba(0,0,0,0.12);
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.flash-text{
+  font-weight: 700;
+  color: #111;
+  line-height: 1.25;
+}
+
+.flash-x{
+  border: none;
+  background: transparent;
+  font-size: 18px;
+  font-weight: 900;
+  cursor: pointer;
+  line-height: 1;
+  opacity: 0.7;
+}
+.flash-x:hover{ opacity: 1; }
+
+/* category styling */
+.flash.success{
+  border-color: rgba(46, 204, 113, 0.55);
+}
+.flash.error{
+  border-color: rgba(231, 76, 60, 0.55);
+}
+.flash.info{
+  border-color: rgba(52, 152, 219, 0.55);
+}
+.flash.warning{
+  border-color: rgba(241, 196, 15, 0.65);
+}
